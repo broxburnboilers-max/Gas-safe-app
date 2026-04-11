@@ -2649,7 +2649,7 @@ function ClientContactsScreen({ onBack, onHome }) {
   );
 }
 
-function HomeScreen({ onNew, onRecords, onGscEmail, onBsEmail, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes }) {
+function HomeScreen({ onNew, onRecords, onGscEmail, onBsEmail, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine }) {
   const trialStatus = getTrialStatus();
   const daysLeft = getTrialDaysLeft();
   const [showFeedback, setShowFeedback] = useState(false);
@@ -2900,6 +2900,14 @@ function HomeScreen({ onNew, onRecords, onGscEmail, onBsEmail, onReport, onLogou
             <span style={{ fontSize:26 }}>👥</span>
           </PillBtn>
         </div>
+        <PillBtn onClick={onCombine} label="Combine PDFs" color="#fff200" iconBg="#1a3a26">
+          <svg width="30" height="28" viewBox="0 0 52 48" fill="none">
+            <rect x="4" y="4" width="26" height="34" rx="3" fill="rgba(255,255,255,0.35)" stroke="white" strokeWidth="2"/>
+            <rect x="16" y="10" width="26" height="34" rx="3" fill="rgba(255,255,255,0.6)" stroke="white" strokeWidth="2"/>
+            <rect x="22" y="6" width="26" height="34" rx="3" fill="white" stroke="white" strokeWidth="1"/>
+            <polyline points="29,20 35,26 42,16" fill="none" stroke="#1a3a26" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </PillBtn>
       </div>
 
       {/* Support / feedback strip */}
@@ -15196,6 +15204,482 @@ function BSPDFPreview({ serviceData, engineerData, signatureData, onClose, autoD
   );
 }
 
+
+// ── COMBINE MULTIPLE CERTIFICATES ────────────────────────────────────────────
+
+function CombineCertsScreen({ records, onBack, onHome }) {
+  const [selected, setSelected] = React.useState(new Set());
+  const [generating, setGenerating] = React.useState(false);
+  const [progress, setProgress] = React.useState({ current: 0, total: 0 });
+  const renderContainerRef = React.useRef(null);
+
+  // Build a flat list of all records with a display label and a unique key
+  const allItems = React.useMemo(() => {
+    return (records || []).map((r, idx) => {
+      let label = "Certificate";
+      let sub = "";
+      if (r.type === "gsc") {
+        label = r.certData?.clientName || r.certData?.instName || "Gas Safety Cert";
+        sub = r.certData?.instAddr1 || r.certData?.clientAddr1 || "";
+      } else if (r.type === "bs") {
+        label = r.serviceData?.clientName || r.serviceData?.instAddr1 || "Boiler Service";
+        sub = r.serviceData?.instAddr1 || r.serviceData?.clientAddr1 || "";
+      } else if (r.type === "wn") {
+        label = r.wnFormData?.instAddr1 || r.wnFormData?.clientName || "Warning Notice";
+        sub = r.wnFormData?.instAddr2 || "";
+      } else if (r.type === "gw") {
+        label = r.gwData?.project || r.gwData?.address || "Gas Works";
+        sub = r.gwData?.address || "";
+      } else if (r.type === "gi") {
+        label = r.giData?.propertyName || r.giData?.contractName || "Gas Isolation";
+        sub = r.giData?.date || "";
+      } else if (r.certLabel) {
+        label = r.form?.clientName || r.certLabel;
+        sub = r.form?.clientAddr || r.form?.clientAddr1 || "";
+      }
+      const dateStr = r.savedAt ? new Date(r.savedAt).toLocaleDateString("en-GB") : "";
+      return { idx, record: r, label, sub, dateStr, type: r.type };
+    });
+  }, [records]);
+
+  // Group by cert type for display
+  const TYPE_LABELS = {
+    gsc: "Gas Safety Certificate",
+    bs: "Boiler Service Record",
+    wn: "Warning Notice",
+    gw: "Gas Works",
+    gi: "Gas Isolation",
+    leisure_gsc: "Leisure Gas Safety",
+    lpg_gsc: "LPG Gas Safety",
+    cooling_off: "Cooling Off Exemption",
+    benchmark: "Benchmark Checklist",
+    commercial_gsc: "Commercial Gas Safety",
+    gas_install_report: "Gas Install Report",
+    catering_inspection: "Catering Inspection",
+    gas_test_purge: "Gas Test & Purge",
+  };
+
+  const TYPE_COLORS = {
+    gsc: "#1a6b3a",
+    bs: "#1a3a8f",
+    wn: "#b45309",
+    gw: "#6d28d9",
+    gi: "#0e7490",
+    leisure_gsc: "#1d7a4a",
+    lpg_gsc: "#2563eb",
+    cooling_off: "#0891b2",
+    benchmark: "#6d9b3a",
+    commercial_gsc: "#b45309",
+    gas_install_report: "#374151",
+    catering_inspection: "#7c3aed",
+    gas_test_purge: "#065f46",
+  };
+
+  const grouped = React.useMemo(() => {
+    const groups = {};
+    allItems.forEach(item => {
+      const key = item.type;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
+    });
+    return groups;
+  }, [allItems]);
+
+  const toggleItem = (idx) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
+  const toggleGroup = (typeKey) => {
+    const groupIdxs = (grouped[typeKey] || []).map(i => i.idx);
+    const allSelected = groupIdxs.every(i => selected.has(i));
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (allSelected) {
+        groupIdxs.forEach(i => next.delete(i));
+      } else {
+        groupIdxs.forEach(i => next.add(i));
+      }
+      return next;
+    });
+  };
+
+  // Load libs helper
+  const loadLibs = () => Promise.all([
+    new Promise((res, rej) => {
+      if (window.html2canvas) return res();
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    }),
+    new Promise((res, rej) => {
+      if (window.jspdf) return res();
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    }),
+  ]);
+
+  // Render a single record's cert HTML into a hidden container and capture to canvas
+  const renderRecordToCanvas = async (item) => {
+    const container = renderContainerRef.current;
+    if (!container) throw new Error("Render container missing");
+
+    // Render the correct PDF preview component
+    const RENDER_WIDTH = 900;
+    let el = null;
+
+    // We create a temporary div inside the container, render JSX into it, capture it
+    const wrapper = document.createElement("div");
+    wrapper.style.position = "absolute";
+    wrapper.style.left = "0";
+    wrapper.style.top = "0";
+    wrapper.style.width = RENDER_WIDTH + "px";
+    wrapper.style.maxWidth = RENDER_WIDTH + "px";
+    wrapper.style.minWidth = RENDER_WIDTH + "px";
+    wrapper.style.background = "#fff";
+    container.appendChild(wrapper);
+
+    await new Promise(resolve => {
+      const r = item.record;
+      let node = null;
+      if (r.type === "gsc") {
+        node = React.createElement(PDFPreview, {
+          certData: r.certData,
+          appliances: r.appliances,
+          faults: r.faults,
+          finalChecks: r.finalChecks,
+          signatureData: r.signatureData,
+          engineerData: r.engineerData,
+          onClose: () => {},
+          attachments: r.attachments,
+        });
+      } else if (r.type === "bs") {
+        node = React.createElement(BSPDFPreview, {
+          serviceData: r.serviceData,
+          engineerData: r.bsEngData,
+          signatureData: r.bsSigData,
+          onClose: () => {},
+          attachments: r.attachments,
+        });
+      } else if (r.type === "wn") {
+        node = React.createElement(WNPDFPreview, {
+          wnFormData: r.wnFormData,
+          wnEngData: r.wnEngData,
+          wnSigData: r.wnSigData,
+          onClose: () => {},
+          attachments: r.attachments,
+        });
+      } else if (r.type === "gw") {
+        node = React.createElement(GasWorksPDFPreview, {
+          form: r.gwData,
+          onClose: () => {},
+        });
+      } else if (r.type === "gi") {
+        node = React.createElement(GasIsolationPDFPreview, {
+          form: r.giData,
+          onClose: () => {},
+        });
+      } else if (r.certLabel) {
+        const config = Object.values(GENERIC_CERT_CONFIGS).find(c => c.type === r.type);
+        if (config) {
+          node = React.createElement(GenericCertPDF, {
+            certLabel: r.certLabel,
+            config,
+            form: r.form,
+            engineerData: r.engineerData,
+            onClose: () => {},
+            onSave: () => {},
+          });
+        }
+      }
+      if (!node) { resolve(); return; }
+      ReactDOM.render(node, wrapper, resolve);
+    });
+
+    // Find the cert content div (exclude the sticky top-bar by looking for a white background div)
+    // We capture the whole wrapper but clip the toolbar by finding the cert ref div
+    el = wrapper.querySelector("[data-certref]") || wrapper.querySelector("div[style*='background:#fff']") || wrapper.querySelector("div[style*='background: #fff']") || wrapper.querySelector("div[style*='background:white']") || wrapper;
+
+    // Force width
+    el.style.width = RENDER_WIDTH + "px";
+    el.style.maxWidth = RENDER_WIDTH + "px";
+    el.style.minWidth = RENDER_WIDTH + "px";
+    await new Promise(r => setTimeout(r, 200));
+
+    const canvas = await window.html2canvas(el, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      width: RENDER_WIDTH,
+      height: el.scrollHeight,
+      windowWidth: RENDER_WIDTH,
+      scrollX: 0,
+      scrollY: 0,
+    });
+
+    // Unmount and remove
+    try { ReactDOM.unmountComponentAtNode(wrapper); } catch(e) {}
+    container.removeChild(wrapper);
+
+    return canvas;
+  };
+
+  const generateCombinedPDF = async () => {
+    const selectedItems = allItems.filter(item => selected.has(item.idx));
+    if (selectedItems.length === 0) {
+      alert("Please select at least one certificate.");
+      return;
+    }
+
+    setGenerating(true);
+    setProgress({ current: 0, total: selectedItems.length });
+
+    try {
+      await loadLibs();
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pdfW = 210;
+      const pdfH = 297;
+
+      for (let i = 0; i < selectedItems.length; i++) {
+        const item = selectedItems[i];
+        setProgress({ current: i + 1, total: selectedItems.length });
+
+        try {
+          const canvas = await renderRecordToCanvas(item);
+          if (!canvas) continue;
+
+          // Slice canvas into A4 pages
+          const pageHeightPx = Math.round(canvas.width * (pdfH / pdfW));
+          let y = 0;
+          let firstPageOfCert = true;
+
+          while (y < canvas.height) {
+            const sliceH = Math.min(canvas.height - y, pageHeightPx);
+            const pageCanvas = document.createElement("canvas");
+            pageCanvas.width = canvas.width;
+            pageCanvas.height = sliceH;
+            pageCanvas.getContext("2d").drawImage(
+              canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH
+            );
+            // Add a new page for every page except the very first cert's first page
+            if (i > 0 || !firstPageOfCert) pdf.addPage();
+            pdf.addImage(
+              pageCanvas.toDataURL("image/jpeg", 0.92),
+              "JPEG", 0, 0, pdfW, sliceH * (pdfW / canvas.width)
+            );
+            y += sliceH;
+            firstPageOfCert = false;
+          }
+
+          // Append attachments if present
+          const r = item.record;
+          const attachments = r.attachments || [];
+          if (attachments.length > 0) {
+            await appendAttachmentPages(pdf, attachments, "portrait");
+          }
+        } catch (e) {
+          console.warn("Failed to render cert at index", item.idx, e);
+        }
+      }
+
+      const filename = "combined_certificates_" + new Date().toISOString().slice(0, 10) + ".pdf";
+      pdf.save(filename);
+    } catch (e) {
+      alert("Error generating combined PDF: " + e.message);
+    }
+
+    setGenerating(false);
+  };
+
+  const selectedCount = selected.size;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#f0f4f8", fontFamily: "'Segoe UI', sans-serif" }}>
+      <Header title="Combine Certificates" onBack={onBack} onHome={onHome} />
+
+      {/* Instruction strip */}
+      <div style={{ background: "#03180d", padding: "10px 16px", color: "rgba(255,255,255,0.85)", fontSize: 13 }}>
+        Select certificates from any folder below, then tap <strong style={{ color: "#fff200" }}>Generate Combined PDF</strong>.
+      </div>
+
+      {/* Certificate list */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px 120px" }}>
+        {allItems.length === 0 ? (
+          <div style={{ textAlign: "center", color: "#aaa", marginTop: 60, fontSize: 15 }}>No certificates saved yet</div>
+        ) : Object.keys(grouped).map(typeKey => {
+          const items = grouped[typeKey];
+          const color = TYPE_COLORS[typeKey] || "#374151";
+          const groupLabel = TYPE_LABELS[typeKey] || typeKey;
+          const allGroupSelected = items.every(i => selected.has(i.idx));
+          const someGroupSelected = items.some(i => selected.has(i.idx));
+
+          return (
+            <div key={typeKey} style={{ marginBottom: 16 }}>
+              {/* Group header */}
+              <div
+                onClick={() => toggleGroup(typeKey)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  background: color, color: "#fff",
+                  borderRadius: 10, padding: "10px 14px",
+                  cursor: "pointer", marginBottom: 6,
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                  userSelect: "none",
+                }}
+              >
+                <div style={{
+                  width: 22, height: 22, borderRadius: 4,
+                  border: "2px solid rgba(255,255,255,0.8)",
+                  background: allGroupSelected ? "#fff200" : someGroupSelected ? "rgba(255,242,0,0.4)" : "transparent",
+                  flexShrink: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {allGroupSelected && <svg width="13" height="13" viewBox="0 0 13 13"><polyline points="1,7 5,11 12,2" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                </div>
+                <span style={{ fontWeight: 700, fontSize: 14, flex: 1 }}>{groupLabel}</span>
+                <span style={{ fontSize: 12, opacity: 0.85 }}>{items.length} cert{items.length !== 1 ? "s" : ""}</span>
+              </div>
+
+              {/* Individual items */}
+              {items.map(item => {
+                const isSelected = selected.has(item.idx);
+                return (
+                  <div
+                    key={item.idx}
+                    onClick={() => toggleItem(item.idx)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 12,
+                      background: isSelected ? "#e8f5e9" : "#fff",
+                      border: isSelected ? `2px solid ${color}` : "2px solid transparent",
+                      borderRadius: 8, padding: "10px 14px",
+                      marginBottom: 6, marginLeft: 8,
+                      cursor: "pointer",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+                      transition: "border-color 0.15s, background 0.15s",
+                      userSelect: "none",
+                    }}
+                  >
+                    <div style={{
+                      width: 22, height: 22, borderRadius: 4,
+                      border: `2px solid ${isSelected ? color : "#ccc"}`,
+                      background: isSelected ? color : "transparent",
+                      flexShrink: 0,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {isSelected && <svg width="13" height="13" viewBox="0 0 13 13"><polyline points="1,7 5,11 12,2" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {item.label}
+                      </div>
+                      {item.sub && (
+                        <div style={{ fontSize: 12, color: "#666", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {item.sub}
+                        </div>
+                      )}
+                    </div>
+                    {item.dateStr && (
+                      <div style={{ fontSize: 11, color: "#999", flexShrink: 0 }}>{item.dateStr}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Fixed bottom bar */}
+      <div style={{
+        position: "fixed", bottom: 0, left: 0, right: 0,
+        background: "#03180d", padding: "14px 20px",
+        display: "flex", alignItems: "center", gap: 12,
+        boxShadow: "0 -4px 20px rgba(0,0,0,0.3)",
+        zIndex: 100,
+      }}>
+        <div style={{ flex: 1, color: "rgba(255,255,255,0.8)", fontSize: 13 }}>
+          {selectedCount === 0
+            ? "No certificates selected"
+            : `${selectedCount} certificate${selectedCount !== 1 ? "s" : ""} selected`}
+        </div>
+        <button
+          onClick={generateCombinedPDF}
+          disabled={selectedCount === 0 || generating}
+          style={{
+            background: selectedCount === 0 || generating ? "#555" : "#fff200",
+            color: selectedCount === 0 || generating ? "#999" : "#03180d",
+            border: "none", borderRadius: 10,
+            padding: "12px 20px", fontWeight: 800, fontSize: 14,
+            cursor: selectedCount === 0 || generating ? "default" : "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {generating
+            ? `Generating… (${progress.current}/${progress.total})`
+            : "Generate Combined PDF"}
+        </button>
+      </div>
+
+      {/* Off-screen render container */}
+      <div
+        ref={renderContainerRef}
+        style={{
+          position: "fixed",
+          left: "-9999px",
+          top: 0,
+          width: "920px",
+          overflow: "visible",
+          pointerEvents: "none",
+          zIndex: -1,
+        }}
+      />
+
+      {/* Generating overlay */}
+      {generating && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          zIndex: 9999,
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 20, padding: "32px 28px",
+            textAlign: "center", maxWidth: 320, width: "88%",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
+          }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>📄</div>
+            <div style={{ fontWeight: 800, fontSize: 17, color: "#222", marginBottom: 8 }}>
+              Building Combined PDF
+            </div>
+            <div style={{ fontSize: 13, color: "#666", marginBottom: 20 }}>
+              Rendering certificate {progress.current} of {progress.total}…
+            </div>
+            <div style={{ background: "#f0f2f8", borderRadius: 99, height: 8, overflow: "hidden" }}>
+              <div style={{
+                background: "#03180d",
+                height: "100%",
+                width: progress.total > 0 ? Math.round((progress.current / progress.total) * 100) + "%" : "0%",
+                transition: "width 0.4s ease",
+                borderRadius: 99,
+              }} />
+            </div>
+            <div style={{ fontSize: 12, color: "#aaa", marginTop: 8 }}>
+              {progress.current} of {progress.total} complete
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function App({ onLogout }) {
   const currentUser = getCurrentUser();
 
@@ -15818,7 +16302,7 @@ function App({ onLogout }) {
       onPaymentSubmitted={()=>{ /* profile updated by markPaymentSubmitted, force re-render */ setScreen("home"); }}
     />;
   }
-  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onGscEmail={()=>setScreen("gscEmail")} onBsEmail={()=>setScreen("bsEmail")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("✅ "+n+" demo records added!\n\nGo to Records → Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes}/>;
+  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onGscEmail={()=>setScreen("gscEmail")} onBsEmail={()=>setScreen("bsEmail")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("✅ "+n+" demo records added!\n\nGo to Records → Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")}/>;
   if (screen === "contacts") return <ClientContactsScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
   if (screen === "emailImport") return <EmailImportScreen onBack={()=>setScreen("home")} onHome={goHome} defaultEngineerData={engineerData} onImportCerts={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
   if (screen === "giEmail") return <GasIsolationEmailScreen onBack={()=>setScreen("home")} onHome={goHome} onImport={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
@@ -16038,6 +16522,8 @@ function App({ onLogout }) {
       </>
     );
   }
+
+  if (screen === "combineCerts") return <CombineCertsScreen records={records} onBack={()=>setScreen("home")} onHome={goHome}/>;
 
   return null;
 }
