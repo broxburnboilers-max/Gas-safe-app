@@ -16731,7 +16731,7 @@ function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone })
 function AppWithAuth() {
   const [authed, setAuthed] = useState(() => !!getCurrentUser());
   // "landing" | "login" | "profileSetup"
-  const [screen, setScreen] = useState("landing");
+  const [screen, setScreen] = useState(window.location.hash === "#signin" ? "login" : "landing");
 
   function handleLogin(user) {
     setCurrentUser(user);
