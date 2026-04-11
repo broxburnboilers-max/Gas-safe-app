@@ -5,9 +5,15 @@
 [[redirects]]
   from = "/"
   to = "/landing.html"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/app"
+  to = "/index.html"
   status = 200
 
 [[redirects]]
-  from = "/app/*"
+  from = "/*"
   to = "/index.html"
   status = 200
