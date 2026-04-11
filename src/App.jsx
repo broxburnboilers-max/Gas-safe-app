@@ -1393,73 +1393,129 @@ function MonthlyReportScreen({ onBack, onHome, invoices, onSaveReport, userId })
 
   function handleFile(file) {
     if (!file) return;
-    // Use the uploaded filename (strip .csv, keep the rest)
-    const baseName = file.name.replace(/\.csv$/i, "").replace(/\s+/g,"_");
+    const name = file.name.toLowerCase();
+    const baseName = file.name.replace(/\.(csv|xlsx|xls|qif|pdf)$/i,"").replace(/\s+/g,"_");
     setUploadedFileName(baseName);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target.result;
-      const rows = parseCSV(text);
-      if (!rows.length) { alert("Could not read CSV — please check the file is a valid bank statement export."); return; }
 
-      // Determine period from dates
+    // ── Shared: process normalised row objects ──────────────────────────────
+    function processRows(rows) {
+      if (!rows.length) { alert("No transactions found. Check this is a valid bank statement export."); return; }
       const dates = rows.map(r => r["Date"]).filter(Boolean).sort();
       if (dates.length) {
-        const parseAnyDate = (s) => {
-          // Try ISO first (YYYY-MM-DD), then DD/MM/YYYY
-          let d = new Date(s);
-          if (isNaN(d.getTime())) {
-            const uk = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-            if (uk) d = new Date(`${uk[3]}-${uk[2].padStart(2,"0")}-${uk[1].padStart(2,"0")}`);
-          }
-          return d;
-        };
-        const first = parseAnyDate(dates[0]);
-        const last = parseAnyDate(dates[dates.length-1]);
-        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-        const fmt = d => isNaN(d.getTime()) ? "?" : `${String(d.getDate()).padStart(2,"0")} ${months[d.getMonth()]} ${d.getFullYear()}`;
-        setPeriod(`${fmt(first)} to ${fmt(last)}`);
+        const pd = (s) => { let d=new Date(s); if(isNaN(d)){const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m)d=new Date(`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`);} return d; };
+        const mn=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const fmt=d=>isNaN(d.getTime())?"?":`${String(d.getDate()).padStart(2,"0")} ${mn[d.getMonth()]} ${d.getFullYear()}`;
+        setPeriod(`${fmt(pd(dates[0]))} to ${fmt(pd(dates[dates.length-1]))}`);
       }
-
       const learned = loadLearned();
-
-      // Enrich each row
+      const catMap = { "bills":"Bills","entertainment":"General","eating out":"Meals","transport":"Travel","shopping":"General","expenses":"General","holidays":"Travel","insurance":"Insurance","savings":"General","taxes":"Tax","wages":"Wages","software":"Software" };
       const enriched = rows.map(row => {
         const amount = parseFloat(row["Amount"]) || 0;
         const isIncome = amount > 0;
         const bankCategory = row["Category"] || row["Type"] || row["Transaction Type"] || "General";
         const desc = (row["Name"] || row["Description"] || "").trim();
-        // Map common bank categories to our categories
-        const catMap = {
-          "bills": "Bills", "entertainment": "General", "eating out": "Meals",
-          "transport": "Travel", "shopping": "General", "expenses": "General",
-          "holidays": "Travel", "insurance": "Insurance", "savings": "General",
-          "taxes": "Tax", "wages": "Wages", "software": "Software"
-        };
-        const fallbackCat = catMap[bankCategory.toLowerCase()] || "General";
-        // Use learned category if we've seen this description before, otherwise fallback
         const learnedCat = learned[desc.toLowerCase()] || null;
         const matchedInvoice = isIncome ? matchInvoice(row, invoices) : null;
-
-        return {
-          date: row["Date"] || "",
-          description: desc,
-          amount: Math.abs(amount),
-          isIncome,
-          balance: parseFloat(row["Balance"]) || 0,
-          category: isIncome ? "Income" : (learnedCat || fallbackCat),
-          invoiceNo: matchedInvoice || "",
-          bankCategory,
-          _learned: !isIncome && !!learnedCat,
-          _raw: row,
-        };
+        return { date:row["Date"]||"", description:desc, amount:Math.abs(amount), isIncome, balance:parseFloat(row["Balance"])||0, category:isIncome?"Income":(learnedCat||(catMap[bankCategory.toLowerCase()]||"General")), invoiceNo:matchedInvoice||"", bankCategory, _learned:!isIncome&&!!learnedCat, _raw:row };
       });
-
       setCsvRows(rows);
       setTransactions(enriched);
       setStep("review");
-    };
-    reader.readAsText(file);
+    }
+
+    // ── Normalise XLSX/CSV column names ────────────────────────────────────
+    function norm(r) {
+      const o={};
+      for (const [k,v] of Object.entries(r)) {
+        const key=k.trim();
+        if (/^date$/i.test(key))                              o["Date"]        = String(v||"");
+        else if (/^name|description|payee|merchant/i.test(key)) o["Name"]      = String(v||"");
+        else if (/^amount|payment|credit|value/i.test(key))   o["Amount"]      = String(v||"");
+        else if (/^balance/i.test(key))                        o["Balance"]     = String(v||"");
+        else if (/^category/i.test(key))                       o["Category"]    = String(v||"");
+        else if (/^notes?|memo|reference/i.test(key))          o["Notes"]       = String(v||"");
+        else o[key] = String(v||"");
+      }
+      return o;
+    }
+
+    // ── QIF parser ─────────────────────────────────────────────────────────
+    function parseQIF(text) {
+      const rows=[]; let cur={};
+      for (const raw of text.split(/\r?\n/)) {
+        const line=raw.trim();
+        if (!line||/^!Type/i.test(line)) continue;
+        if (line==="^") {
+          if (cur.Date||cur.Amount) rows.push({ Date:cur.Date||"", Amount:cur.Amount||"0", Name:cur.Payee||cur.Memo||"", Description:cur.Memo||"", Balance:"0", Category:cur.Category||"General" });
+          cur={};
+        } else {
+          const c=line[0],v=line.slice(1);
+          if (c==="D") cur.Date=v; else if (c==="T"||c==="U") cur.Amount=v.replace(/,/g,""); else if (c==="P") cur.Payee=v; else if (c==="M") cur.Memo=v; else if (c==="L") cur.Category=v;
+        }
+      }
+      return rows;
+    }
+
+    // ── Load XLSX lib async ────────────────────────────────────────────────
+    function withXLSX(cb) {
+      if (window.XLSX) { cb(window.XLSX); return; }
+      const s=document.createElement("script");
+      s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      s.onload=()=>cb(window.XLSX);
+      s.onerror=()=>alert("Could not load spreadsheet library. Please try again.");
+      document.head.appendChild(s);
+    }
+
+    // ── Route by format ────────────────────────────────────────────────────
+    if (name.endsWith(".qif")) {
+      const r=new FileReader();
+      r.onload=ev=>processRows(parseQIF(ev.target.result));
+      r.readAsText(file);
+
+    } else if (name.endsWith(".pdf")) {
+      const loadPDF = (cb) => {
+        if (window.pdfjsLib) { cb(); return; }
+        const s=document.createElement("script");
+        s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+        s.onload=()=>{ window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; cb(); };
+        s.onerror=()=>alert("Could not load PDF library.");
+        document.head.appendChild(s);
+      };
+      loadPDF(() => {
+        const r=new FileReader();
+        r.onload=ev=>{
+          window.pdfjsLib.getDocument({data:new Uint8Array(ev.target.result)}).promise.then(pdf=>{
+            const pages=[]; for(let p=1;p<=pdf.numPages;p++) pages.push(p);
+            pages.reduce((chain,p)=>chain.then(txt=>pdf.getPage(p).then(pg=>pg.getTextContent()).then(ct=>txt+ct.items.map(i=>i.str).join(" ")+"\n")), Promise.resolve(""))
+            .then(txt=>{
+              const re=/(\d{2}[\/\-]\d{2}[\/\-]\d{4}|\d{4}-\d{2}-\d{2})\s+(.+?)\s+([-+]?\d[\d,]*\.?\d*)\s+([-+]?\d[\d,]*\.?\d*)?/g;
+              const rows=[]; let m;
+              while((m=re.exec(txt))!==null) rows.push({Date:m[1],Name:m[2].trim(),Amount:m[3].replace(/,/g,""),Balance:(m[4]||"0").replace(/,/g,""),Description:m[2].trim(),Category:"General"});
+              if(!rows.length){alert("Could not extract transactions from this PDF. Try CSV or XLSX instead.");return;}
+              processRows(rows);
+            }).catch(e=>alert("PDF read error: "+e.message));
+          }).catch(e=>alert("PDF error: "+e.message));
+        };
+        r.readAsArrayBuffer(file);
+      });
+
+    } else if (name.endsWith(".xlsx")||name.endsWith(".xls")) {
+      const r=new FileReader();
+      r.onload=ev=>withXLSX(XL=>{
+        try {
+          const wb=XL.read(ev.target.result,{type:"binary"});
+          const ws=wb.Sheets[wb.SheetNames[0]];
+          processRows(XL.utils.sheet_to_json(ws,{defval:""}).map(norm));
+        } catch(e) { alert("Could not read spreadsheet: "+e.message); }
+      });
+      r.readAsBinaryString(file);
+
+    } else {
+      // CSV default
+      const r=new FileReader();
+      r.onload=ev=>processRows(parseCSV(ev.target.result));
+      r.readAsText(file);
+    }
   }
 
   async function generateReport() {
@@ -1582,15 +1638,15 @@ function MonthlyReportScreen({ onBack, onHome, invoices, onSaveReport, userId })
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
         <div style={{ background:"#fff", borderRadius:12, padding:20, marginBottom:14, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", textAlign:"center" }}>
           <div style={{ fontSize:48, marginBottom:8 }}>📂</div>
-          <div style={{ fontWeight:700, fontSize:16, color:"#222", marginBottom:6 }}>Upload Bank Statement CSV</div>
+          <div style={{ fontWeight:700, fontSize:16, color:"#222", marginBottom:6 }}>Upload Bank Statement</div>
           <div style={{ fontSize:13, color:"#888", marginBottom:8, lineHeight:1.6 }}>
-            Export a CSV statement from your bank's app or website.<br/>
+            Supports <strong>CSV</strong>, <strong>XLSX</strong>, <strong>QIF</strong> and <strong>PDF</strong> exports.<br/>
             The app will match payments to your invoices automatically.
           </div>
-          <input ref={fileRef} type="file" accept=".csv" style={{ display:"none" }}
+          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls,.qif,.pdf,text/csv,text/plain,application/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf,application/x-qif" style={{ display:"none" }}
             onChange={e => { if(e.target.files[0]) handleFile(e.target.files[0]); }}/>
           <button onClick={()=>fileRef.current?.click()} style={BLUE_BTN}>
-            📁 Choose Bank Statement CSV
+            📁 Choose File (CSV, XLSX, QIF or PDF)
           </button>
         </div>
 
@@ -1995,6 +2051,19 @@ function ProfileForm({ initial, onSave, onBack, isSetup, onRegistered }) {
           {inp("Engineer Name", "engineerName", { required:true })}
           {inp("Gas Safe Registration No.", "gasSafeNo", { required:true })}
           {inp("Engineer ID (Gas Safe ID number)", "gasId", { required:true })}
+        </div>
+
+        {/* Engineer Signature */}
+        <div style={{ background:"#fff", borderRadius:16, padding:20, marginBottom:14 }}>
+          <div style={{ fontWeight:700, fontSize:15, color:"#03180d", marginBottom:6, paddingBottom:10, borderBottom:"1px solid #f0f0f0" }}>✍️ My Signature</div>
+          <div style={{ fontSize:13, color:"#666", marginBottom:12, lineHeight:1.5 }}>
+            Draw your signature once here — it will automatically appear on all certificates.
+          </div>
+          <SigPad
+            storageKey="gsc_engineer_sig"
+            value={null}
+            onChange={()=>{}}
+          />
         </div>
 
         {error && <div style={{ background:"#fdecea", border:"1px solid #f5c6c6", borderRadius:8, padding:"10px 14px", color:"#d32f2f", fontSize:14, marginBottom:14 }}>{error}</div>}
@@ -2580,7 +2649,7 @@ function ClientContactsScreen({ onBack, onHome }) {
   );
 }
 
-function HomeScreen({ onNew, onRecords, onGscEmail, onBsEmail, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails }) {
+function HomeScreen({ onNew, onRecords, onGscEmail, onBsEmail, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes }) {
   const trialStatus = getTrialStatus();
   const daysLeft = getTrialDaysLeft();
   const [showFeedback, setShowFeedback] = useState(false);
@@ -2595,6 +2664,12 @@ function HomeScreen({ onNew, onRecords, onGscEmail, onBsEmail, onReport, onLogou
     s.id = "wlg-contacts-pulse-style";
     s.textContent = "@keyframes wlgContactsPulse{0%{box-shadow:0 0 0 0 rgba(211,47,47,0.8);}60%{box-shadow:0 0 0 18px rgba(211,47,47,0);}100%{box-shadow:0 0 0 0 rgba(211,47,47,0);}} .wlg-contacts-pulse{animation:wlgContactsPulse 1.1s ease-in-out infinite;}";
     document.head.appendChild(s);
+    if (!document.getElementById("wlg-desktop-widgets-style")) {
+      const d = document.createElement("style");
+      d.id = "wlg-desktop-widgets-style";
+      d.textContent = "@media(min-width:700px){.wlg-dashboard-widgets{max-width:100%!important;}}";
+      document.head.appendChild(d);
+    }
   }, []);
   const [feedbackType, setFeedbackType] = useState("Bug Report");
   const [feedbackMsg, setFeedbackMsg] = useState("");
@@ -2722,6 +2797,74 @@ function HomeScreen({ onNew, onRecords, onGscEmail, onBsEmail, onReport, onLogou
           </div>
         </div>
       )}
+
+      {/* ── Stat Cards ─────────────────────────────────────────────── */}
+      {(() => {
+        const now=new Date(), tm=now.getMonth(), ty=now.getFullYear();
+        const lm=tm===0?11:tm-1, ly=tm===0?ty-1:ty;
+        const isT=d=>{try{const x=new Date(d);return x.getMonth()===tm&&x.getFullYear()===ty;}catch{return false;}};
+        const isL=d=>{try{const x=new Date(d);return x.getMonth()===lm&&x.getFullYear()===ly;}catch{return false;}};
+        const aR=(records||[]).filter(r=>!r.isDemo),aI=(invoices||[]).filter(r=>!r.isDemo),aQ=(quotes||[]).filter(r=>!r.isDemo);
+        const rT=aR.filter(r=>isT(r.savedAt)).length,rL=aR.filter(r=>isL(r.savedAt)).length;
+        const iT=aI.filter(r=>isT(r.createdAt)).length,iL=aI.filter(r=>isL(r.createdAt)).length;
+        const qT=aQ.filter(r=>isT(r.createdAt)).length,qL=aQ.filter(r=>isL(r.createdAt)).length;
+        const pct=(c,p)=>p===0?(c>0?100:0):Math.round(((c-p)/p)*100);
+        const Card=({label,count,prev})=>{const ch=pct(count,prev),up=ch>0,nl=ch===0;return(
+          <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:14,padding:"10px 10px 8px",backdropFilter:"blur(4px)",minWidth:0}}>
+            <div style={{color:"rgba(255,255,255,0.55)",fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:6,lineHeight:1.3}}>{label}</div>
+            <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:4}}>
+              <span style={{color:nl?"#fff200":up?"#4ade80":"#f87171",fontSize:12}}>{nl?"→":up?"↑":"↓"}</span>
+              <span style={{color:"#fff",fontWeight:800,fontSize:22,lineHeight:1}}>{count}</span>
+            </div>
+            <div style={{color:nl?"rgba(255,255,255,0.45)":up?"#4ade80":"#f87171",fontSize:9,fontWeight:600}}>{ch===0?"0% from last month":`${Math.abs(ch)}% ${up?"▲":"▼"} last month`}</div>
+          </div>);};
+        return(<div className="wlg-dashboard-widgets" style={{width:"100%",maxWidth:440,display:"flex",gap:8,marginBottom:8}}>
+          <Card label="Reports Created" count={rT} prev={rL}/>
+          <Card label="Invoices Created" count={iT} prev={iL}/>
+          <Card label="Quotes Created" count={qT} prev={qL}/>
+        </div>);
+      })()}
+
+      {/* ── Monthly + Turnover ──────────────────────────────────────── */}
+      {(() => {
+        const yr=(yearlyReports||[]).find(r=>r.year===new Date().getFullYear())||(yearlyReports||[])[0];
+        const months=[...(accountReports||[])].sort((a,b)=>new Date(a.createdAt||0)-new Date(b.createdAt||0)).slice(-6);
+        const maxVal=months.reduce((m,r)=>Math.max(m,parseFloat(r.totalIncome||0),parseFloat(r.totalExpenses||0)),1);
+        const barH=70;
+        const ml=r=>{try{if(r.period){const p=r.period.split("/");if(p.length>=3){const d=new Date(parseInt(p[2].slice(0,4)),parseInt(p[1])-1,1);return d.toLocaleString("en-GB",{month:"short",year:"2-digit"});}}return new Date(r.createdAt).toLocaleString("en-GB",{month:"short"});}catch{return "";}};
+        return(<div className="wlg-dashboard-widgets" style={{width:"100%",maxWidth:440,display:"flex",gap:10,marginBottom:4,marginTop:4}}>
+          <div style={{flex:1.2,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 10px 8px",backdropFilter:"blur(4px)"}}>
+            <div style={{color:"rgba(255,255,255,0.6)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Monthly Overview</div>
+            {months.length===0
+              ?<div style={{color:"rgba(255,255,255,0.35)",fontSize:11,textAlign:"center",padding:"12px 4px",lineHeight:1.6}}>No reports yet.<br/>Import bank statements<br/>to see your chart.</div>
+              :(<div style={{display:"flex",alignItems:"flex-end",gap:4,height:barH+20}}>
+                {months.map((r,i)=>{const inc=parseFloat(r.totalIncome||0),exp=parseFloat(r.totalExpenses||0),iH=Math.round((inc/maxVal)*barH),eH=Math.round((exp/maxVal)*barH);return(
+                  <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+                    <div style={{display:"flex",alignItems:"flex-end",gap:1,height:barH}}>
+                      <div style={{width:7,height:iH||2,background:"#4ade80",borderRadius:"2px 2px 0 0"}}/>
+                      <div style={{width:7,height:eH||2,background:"#f87171",borderRadius:"2px 2px 0 0"}}/>
+                    </div>
+                    <div style={{fontSize:8,color:"rgba(255,255,255,0.5)",marginTop:2,textAlign:"center"}}>{ml(r)}</div>
+                  </div>);})}
+              </div>)}
+            <div style={{display:"flex",gap:8,marginTop:4}}>
+              <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,background:"#4ade80",borderRadius:2}}/><span style={{fontSize:9,color:"rgba(255,255,255,0.55)"}}>Income</span></div>
+              <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,background:"#f87171",borderRadius:2}}/><span style={{fontSize:9,color:"rgba(255,255,255,0.55)"}}>Expenses</span></div>
+            </div>
+          </div>
+          <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 12px",backdropFilter:"blur(4px)",display:"flex",flexDirection:"column"}}>
+            <div style={{color:"rgba(255,255,255,0.6)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Annual Turnover</div>
+            {!yr
+              ?<div style={{color:"rgba(255,255,255,0.35)",fontSize:11,textAlign:"center",flex:1,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1.6}}>No yearly report yet.<br/>Import bank statements<br/>to see your company turnover.</div>
+              :(()=>{const inc=parseFloat(yr.totalIncome||0),exp=parseFloat(yr.totalExpenses||0),bal=inc-exp;return(
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  <div><div style={{color:"rgba(255,255,255,0.5)",fontSize:9,textTransform:"uppercase",letterSpacing:0.3}}>Total Income</div><div style={{color:"#4ade80",fontWeight:800,fontSize:15}}>£{inc.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>
+                  <div><div style={{color:"rgba(255,255,255,0.5)",fontSize:9,textTransform:"uppercase",letterSpacing:0.3}}>Total Expenses</div><div style={{color:"#f87171",fontWeight:800,fontSize:15}}>£{exp.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>
+                  <div style={{borderTop:"1px solid rgba(255,255,255,0.15)",paddingTop:6}}><div style={{color:"rgba(255,255,255,0.5)",fontSize:9,textTransform:"uppercase",letterSpacing:0.3}}>Bank Balance</div><div style={{color:bal>=0?"#fff200":"#f87171",fontWeight:800,fontSize:15}}>£{bal.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>
+                </div>);})()} 
+          </div>
+        </div>);
+      })()}
 
       {/* Button list */}
       <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 88px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
@@ -3106,8 +3249,9 @@ function LeisureScreen({ engineerData, onBack, onHome, onSave, initialData }) {
     fileRef:     <LPGStepFileRef     data={data} onChange={setData} onBack={onBack}                     onHome={onHome} onNext={()=>setStep("details")} title="Leisure Industry Gas Safety Record"/>,
     details:     <LPGStepDetails     data={data} onChange={setData} onBack={()=>setStep("fileRef")}     onHome={onHome} onNext={()=>setStep("appliances")}/>,
     appliances:  <LPGStepAppliances  data={data} onChange={setData} onBack={()=>setStep("details")}    onHome={onHome} onNext={()=>setStep("faults")}/>,
-    faults:      <LPGStepFaults      data={data} onChange={setData} onBack={()=>setStep("appliances")} onHome={onHome} onNext={()=>setStep("declaration")}/>,
-    declaration: <LPGStepDeclaration data={data} onChange={setData} onBack={()=>setStep("faults")}     onHome={onHome} onNext={()=>setStep("customerSig")}/>,
+    faults:      <LPGStepFaults      data={data} onChange={setData} onBack={()=>setStep("appliances")} onHome={onHome} onNext={()=>setStep("attachments")}/>,
+    attachments: <AttachmentsStep     data={data} onChange={setData} onBack={()=>setStep("faults")}     onHome={onHome} onNext={()=>setStep("declaration")} accentColor={LPG_COLOR} nextLabel="Next: Declaration"/>,
+    declaration: <LPGStepDeclaration data={data} onChange={setData} onBack={()=>setStep("attachments")}     onHome={onHome} onNext={()=>setStep("customerSig")}/>,
     customerSig: <CustomerSigStep     data={data} onChange={setData} onBack={()=>setStep("declaration")} onHome={onHome} onNext={()=>setShowPDF(true)} accentColor={LPG_COLOR}/>,
   };
   return steps[step] || null;
@@ -3387,6 +3531,7 @@ function LPGPDF({ formData, engineerData, onClose, onSave }) {
       const pdfW=297;
       pdf.addImage(canvas.toDataURL("image/jpeg",0.95),"JPEG",0,0,pdfW,pdfW*canvas.height/canvas.width);
       const ref = (fd.certRef||fd.certNo||"LPG").replace(/[^a-zA-Z0-9]/g,"_");
+      await appendAttachmentPages(pdf, fd.attachments, "landscape");
       pdf.save("LPGSafetyRecord_"+ref+".pdf");
     } catch(e) { alert("PDF error: "+e.message); }
     setDownloading(false);
@@ -3671,8 +3816,9 @@ function LPGScreen({ engineerData, onBack, onHome, onSave, initialData }) {
     fileRef:     <LPGStepFileRef     data={data} onChange={setData} onBack={onBack}                     onHome={onHome} onNext={()=>setStep("details")} title="LPG Safety Record"/>,
     details:     <LPGStepDetails     data={data} onChange={setData} onBack={()=>setStep("fileRef")}     onHome={onHome} onNext={()=>setStep("appliances")}/>,
     appliances:  <LPGStepAppliances  data={data} onChange={setData} onBack={()=>setStep("details")}    onHome={onHome} onNext={()=>setStep("faults")}/>,
-    faults:      <LPGStepFaults      data={data} onChange={setData} onBack={()=>setStep("appliances")} onHome={onHome} onNext={()=>setStep("declaration")}/>,
-    declaration: <LPGStepDeclaration data={data} onChange={setData} onBack={()=>setStep("faults")}     onHome={onHome} onNext={()=>setStep("customerSig")}/>,
+    faults:      <LPGStepFaults      data={data} onChange={setData} onBack={()=>setStep("appliances")} onHome={onHome} onNext={()=>setStep("attachments")}/>,
+    attachments: <AttachmentsStep     data={data} onChange={setData} onBack={()=>setStep("faults")}     onHome={onHome} onNext={()=>setStep("declaration")} accentColor={LPG_COLOR} nextLabel="Next: Declaration"/>,
+    declaration: <LPGStepDeclaration data={data} onChange={setData} onBack={()=>setStep("attachments")}     onHome={onHome} onNext={()=>setStep("customerSig")}/>,
     customerSig: <CustomerSigStep     data={data} onChange={setData} onBack={()=>setStep("declaration")} onHome={onHome} onNext={()=>setShowPDF(true)} accentColor={LPG_COLOR}/>,
   };
   return steps[step] || null;
@@ -3815,6 +3961,7 @@ function CoolOffPDF({ formData, engineerData, onClose, onSave }) {
       const pdfW=210;
       pdf.addImage(canvas.toDataURL("image/jpeg",0.95),"JPEG",0,0,pdfW,pdfW*canvas.height/canvas.width);
       const ref = (fd.fileRef||fd.certNo||"COOL").replace(/[^a-zA-Z0-9]/g,"_");
+      await appendAttachmentPages(pdf, fd.attachments, "portrait");
       pdf.save("CoolingOff_"+ref+".pdf");
     } catch(e) { alert("PDF error: "+e.message); }
     setDownloading(false);
@@ -4035,8 +4182,10 @@ function CoolOffScreen({ engineerData, onBack, onHome, onSave, initialData }) {
   const steps = {
     fileRef:     <CoolOffStepFileRef     data={data} onChange={setData} onBack={onBack}                     onHome={onHome} onNext={()=>setStep("details")}/>,
     details:     <CoolOffStepDetails     data={data} onChange={setData} onBack={()=>setStep("fileRef")}     onHome={onHome} onNext={()=>setStep("engineering")}/>,
-    engineering: <CoolOffStepEngineering data={data} onChange={setData} onBack={()=>setStep("details")}     onHome={onHome} onNext={()=>setStep("customerSig")}/>,
-    customerSig: <CustomerSigStep        data={data} onChange={setData} onBack={()=>setStep("engineering")} onHome={onHome} onNext={()=>setShowPDF(true)} accentColor={COOL_COLOR}/>,
+    engineering: <CoolOffStepEngineering data={data} onChange={setData} onBack={()=>setStep("details")}     onHome={onHome} onNext={()=>setStep("attachments")}/>,
+    attachments: <AttachmentsStep         data={data} onChange={setData} onBack={()=>setStep("engineering")} onHome={onHome} onNext={()=>setStep("engineerSig")} accentColor={COOL_COLOR} nextLabel="Next: Signatures"/>,
+    engineerSig: <SharedSigStep          data={data} onChange={setData} onBack={()=>setStep("attachments")} onHome={onHome} onNext={()=>setStep("customerSig")} accentColor={COOL_COLOR} certTitle="7 Day Cooling Off Period Exemption"/>,
+    customerSig: <CustomerSigStep        data={data} onChange={setData} onBack={()=>setStep("engineerSig")} onHome={onHome} onNext={()=>setShowPDF(true)} accentColor={COOL_COLOR}/>,
   };
   return steps[step] || null;
 }
@@ -4380,6 +4529,7 @@ function BmkStepServices({ data, onChange, onNext, onBack, onHome }) {
 
 function BmkStepSignature({ data, onChange, onNext, onBack, onHome }) {
   const today = new Date().toISOString().slice(0,10);
+  const fmtDisplay = iso => { if (!iso) return ""; const d = new Date(iso+"T12:00:00"); if (isNaN(d)) return iso; return d.toLocaleDateString("en-GB", { weekday:"short", day:"2-digit", month:"short", year:"numeric" }); };
   useEffect(() => {
     const updates = {};
     if (!data.sigDate) updates.sigDate = today;
@@ -4453,6 +4603,7 @@ function BmkStepCompanyDetails({ data, onChange, onNext, onBack, onHome }) {
 
 function BenchmarkPDF({ formData, engineerData, onClose, onSave }) {
   const certRef = useRef(null);
+  const serviceRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -4506,6 +4657,7 @@ function BenchmarkPDF({ formData, engineerData, onClose, onSave }) {
       pdf.addPage();
       pdf.addImage(canvas2.toDataURL("image/jpeg",0.95),"JPEG",0,0,pdfW,pdfW*canvas2.height/canvas2.width);
       const ref = (fd.certNo||"BMK").replace(/[^a-zA-Z0-9]/g,"_");
+      await appendAttachmentPages(pdf, fd.attachments, "portrait");
       pdf.save("BenchmarkChecklist_"+ref+".pdf");
     } catch(e) { alert("PDF error: "+e.message); }
     setDownloading(false);
@@ -4961,8 +5113,9 @@ function BenchmarkScreen({ engineerData, onBack, onHome, onSave, initialData }) 
     allSystems:     <BmkStepAllSystems     data={data} onChange={setData} onBack={()=>setStep("controls")}        onHome={onHome} onNext={()=>setStep("measure")}/>,
     measure:        <BmkStepMeasure        data={data} onChange={setData} onBack={()=>setStep("allSystems")}      onHome={onHome} onNext={()=>setStep("finalChecks")}/>,
     finalChecks:    <BmkStepFinalChecks    data={data} onChange={setData} onBack={()=>setStep("measure")}         onHome={onHome} onNext={()=>setStep("services")}/>,
-    services:       <BmkStepServices       data={data} onChange={setData} onBack={()=>setStep("finalChecks")}     onHome={onHome} onNext={()=>setStep("signature")}/>,
-    signature:      <BmkStepSignature      data={data} onChange={setData} onBack={()=>setStep("services")}         onHome={onHome} onNext={()=>setStep("customerSig")}/>,
+    services:       <BmkStepServices       data={data} onChange={setData} onBack={()=>setStep("finalChecks")}     onHome={onHome} onNext={()=>setStep("attachments")}/>,
+    attachments:    <AttachmentsStep        data={data} onChange={setData} onBack={()=>setStep("services")}        onHome={onHome} onNext={()=>setStep("signature")} accentColor={BMK_COLOR} nextLabel="Next: Signatures"/>,
+    signature:      <BmkStepSignature      data={data} onChange={setData} onBack={()=>setStep("attachments")}         onHome={onHome} onNext={()=>setStep("customerSig")}/>,
     customerSig:    <CustomerSigStep        data={data} onChange={setData} onBack={()=>setStep("signature")}         onHome={onHome} onNext={()=>setStep("company")} accentColor={BMK_COLOR} nextLabel="Next"/>,
     company:        <BmkStepCompanyDetails data={data} onChange={setData} onBack={()=>setStep("signature")}       onHome={onHome} onNext={()=>setShowPDF(true)}/>,
   };
@@ -5233,6 +5386,7 @@ function CommercialGSCPDF({ formData, engineerData, onClose, onSave }) {
       const imgH = pdfW * canvas.height / canvas.width;
       pdf.addImage(canvas.toDataURL("image/jpeg",0.95),"JPEG",0,0,pdfW,imgH);
       const ref = (fd.certRef||fd.certNo||"CGSC").replace(/[^a-zA-Z0-9]/g,"_");
+      await appendAttachmentPages(pdf, fd.attachments, "landscape");
       pdf.save("CommercialGSC_"+ref+".pdf");
     } catch(e) { alert("PDF error: "+e.message); }
     setDownloading(false);
@@ -5525,8 +5679,9 @@ function CommercialGSCScreen({ engineerData, onBack, onHome, onSave, initialData
     fileRef:     <CGSCStepFileRef     data={data} onChange={setData} onBack={onBack}                     onHome={onHome} onNext={()=>setStep("details")}/>,
     details:     <CGSCStepDetails     data={data} onChange={setData} onBack={()=>setStep("fileRef")}     onHome={onHome} onNext={()=>setStep("appliances")}/>,
     appliances:  <CGSCStepAppliances  data={data} onChange={setData} onBack={()=>setStep("details")}    onHome={onHome} onNext={()=>setStep("faults")}/>,
-    faults:      <CGSCStepFaults      data={data} onChange={setData} onBack={()=>setStep("appliances")} onHome={onHome} onNext={()=>setStep("declaration")}/>,
-    declaration: <CGSCStepDeclaration data={data} onChange={setData} onBack={()=>setStep("faults")}     onHome={onHome} onNext={()=>setStep("customerSig")}/>,
+    faults:      <CGSCStepFaults      data={data} onChange={setData} onBack={()=>setStep("appliances")} onHome={onHome} onNext={()=>setStep("attachments")}/>,
+    attachments: <AttachmentsStep     data={data} onChange={setData} onBack={()=>setStep("faults")}     onHome={onHome} onNext={()=>setStep("declaration")} accentColor={CGSC_COLOR} nextLabel="Next: Declaration"/>,
+    declaration: <CGSCStepDeclaration data={data} onChange={setData} onBack={()=>setStep("attachments")}     onHome={onHome} onNext={()=>setStep("customerSig")}/>,
     customerSig: <CustomerSigStep data={data} onChange={setData} onBack={()=>setStep("declaration")} onHome={onHome} onNext={()=>setShowPDF(true)} accentColor={CGSC_COLOR}/>,
   };
   return steps[step] || null;
@@ -5800,6 +5955,7 @@ function GasInstallReportPDF({ formData, engineerData, onClose, onSave }) {
       const pdfW=210;
       pdf.addImage(canvas.toDataURL("image/jpeg",0.95),"JPEG",0,0,pdfW,pdfW*canvas.height/canvas.width);
       const ref = (fd.fileRef||fd.certNo||"GISR").replace(/[^a-zA-Z0-9]/g,"_");
+      await appendAttachmentPages(pdf, fd.attachments, "portrait");
       pdf.save("GasInstallReport_"+ref+".pdf");
     } catch(e) { alert("PDF error: "+e.message); }
     setDownloading(false);
@@ -6108,8 +6264,9 @@ function GasInstallReportScreen({ engineerData, onBack, onHome, onSave, initialD
     fileRef:     <GISRStepFileRef     data={data} onChange={setData} onBack={onBack}                     onHome={onHome} onNext={()=>setStep("details")}/>,
     details:     <GISRStepDetails     data={data} onChange={setData} onBack={()=>setStep("fileRef")}     onHome={onHome} onNext={()=>setStep("appliances")}/>,
     appliances:  <GISRStepAppliances  data={data} onChange={setData} onBack={()=>setStep("details")}    onHome={onHome} onNext={()=>setStep("checks")}/>,
-    checks:      <GISRStepChecks      data={data} onChange={setData} onBack={()=>setStep("appliances")} onHome={onHome} onNext={()=>setStep("declaration")}/>,
-    declaration: <GISRStepDeclaration data={data} onChange={setData} onBack={()=>setStep("checks")}     onHome={onHome} onNext={()=>setStep("customerSig")}/>,
+    checks:      <GISRStepChecks      data={data} onChange={setData} onBack={()=>setStep("appliances")} onHome={onHome} onNext={()=>setStep("attachments")}/>,
+    attachments: <AttachmentsStep     data={data} onChange={setData} onBack={()=>setStep("checks")}     onHome={onHome} onNext={()=>setStep("declaration")} accentColor={GISR_COLOR} nextLabel="Next: Declaration"/>,
+    declaration: <GISRStepDeclaration data={data} onChange={setData} onBack={()=>setStep("attachments")}     onHome={onHome} onNext={()=>setStep("customerSig")}/>,
     customerSig: <CustomerSigStep data={data} onChange={setData} onBack={()=>setStep("declaration")} onHome={onHome} onNext={()=>setShowPDF(true)} accentColor={GISR_COLOR}/>,
   };
   return steps[step] || null;
@@ -6352,7 +6509,7 @@ function CCIStepAppliances({ data, onChange, onNext, onBack, onHome }) {
       onChange={v=>updateAppliance(i,key,v)}
       placeholder={key==="make" ? "e.g. Worcester" : "e.g. Greenstar 30i"}
       id={"wlg-mm-"+key+"-"+i}
-      inputStyle={{ width:w||"100%", padding:"6px 8px", border:"1px solid #ddd", borderRadius:6, fontSize:12, boxSizing:"border-box" }}
+      inputStyle={{ width:"100%", padding:"6px 8px", border:"1px solid #ddd", borderRadius:6, fontSize:12, boxSizing:"border-box" }}
     />
   );
   const sel = (i, key, opts) => (
@@ -6433,6 +6590,7 @@ function CCIStepDeclaration({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Engineer printed name")}{inp("sigEngineer","Full name")}
 
           {lbl("Date")}{inp("sigDate","","date")}
+          {data.sigDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{(()=>{ const d=new Date(data.sigDate); if(isNaN(d)) return data.sigDate; const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return String(d.getDate()).padStart(2,"0")+"-"+m[d.getMonth()]+"-"+d.getFullYear(); })()}</div>}
         </div>
       </div>
       <BottomBar onHome={onHome} onNext={()=>onNext()} nextLabel="Next: Customer Signature"/>
@@ -6493,6 +6651,7 @@ function CateringInspectionPDF({ formData, engineerData, onClose, onSave }) {
       pdf.addImage(canvasB.toDataURL("image/jpeg",0.93),"JPEG",0,0,pdfW,pdfW*canvasB.height/canvasB.width);
 
       const ref = (fd.fileRef||fd.certNo||"CCI").replace(/[^a-zA-Z0-9]/g,"_");
+      await appendAttachmentPages(pdf, fd.attachments, "portrait");
       pdf.save("CommercialCatering_"+ref+".pdf");
     } catch(e) { alert("PDF error: "+e.message); }
     setDownloading(false);
@@ -6914,8 +7073,9 @@ function CateringInspectionScreen({ engineerData, onBack, onHome, onSave, initia
     business:     <CCIStepBusiness      data={data} onChange={setData} onBack={()=>setStep("fileRef")}        onHome={onHome} onNext={()=>setStep("gasInstall")}/>,
     gasInstall:   <CCIStepGasInstall    data={data} onChange={setData} onBack={()=>setStep("business")}       onHome={onHome} onNext={()=>setStep("ventilation")}/>,
     ventilation:  <CCIStepVentilation   data={data} onChange={setData} onBack={()=>setStep("gasInstall")}     onHome={onHome} onNext={()=>setStep("appliances")}/>,
-    appliances:   <CCIStepAppliances    data={data} onChange={setData} onBack={()=>setStep("ventilation")}    onHome={onHome} onNext={()=>setStep("declaration")}/>,
-    declaration:  <CCIStepDeclaration   data={data} onChange={setData} onBack={()=>setStep("appliances")}     onHome={onHome} onNext={()=>setStep("customerSig")}/>,
+    appliances:   <CCIStepAppliances    data={data} onChange={setData} onBack={()=>setStep("ventilation")}    onHome={onHome} onNext={()=>setStep("attachments")}/>,
+    attachments:  <AttachmentsStep      data={data} onChange={setData} onBack={()=>setStep("appliances")}     onHome={onHome} onNext={()=>setStep("declaration")} accentColor={CCI_COLOR} nextLabel="Next: Declaration"/>,
+    declaration:  <CCIStepDeclaration   data={data} onChange={setData} onBack={()=>setStep("attachments")}     onHome={onHome} onNext={()=>setStep("customerSig")}/>,
     customerSig: <CustomerSigStep data={data} onChange={setData} onBack={()=>setStep("declaration")} onHome={onHome} onNext={()=>setShowPDF(true)} accentColor={CCI_COLOR}/>,
   };
   return steps[step] || null;
@@ -7266,6 +7426,7 @@ function GasTestPurgePDF({ formData, engineerData, onClose, onSave }) {
       const imgH = pdfW * canvas.height / canvas.width;
       pdf.addImage(canvas.toDataURL("image/jpeg",0.95),"JPEG",0,0,pdfW,imgH);
       const ref = (fd.fileRef||fd.certNo||"GTP").replace(/[^a-zA-Z0-9]/g,"_");
+      await appendAttachmentPages(pdf, fd.attachments, "portrait");
       pdf.save("GasTestPurge_" + ref + ".pdf");
     } catch(e) { alert("PDF error: "+e.message); }
     setDownloading(false);
@@ -7594,8 +7755,9 @@ function GasTestPurgeScreen({ engineerData, onBack, onHome, onSave, initialData 
     details:    <GTPStepDetails    data={data} onChange={setData} onBack={()=>setStep("fileRef")}    onHome={onHome} onNext={()=>setStep("strength")}/>,
     strength:   <GTPStepStrength   data={data} onChange={setData} onBack={()=>setStep("details")}   onHome={onHome} onNext={()=>setStep("tightness")}/>,
     tightness:  <GTPStepTightness  data={data} onChange={setData} onBack={()=>setStep("strength")}  onHome={onHome} onNext={()=>setStep("purging")}/>,
-    purging:    <GTPStepPurging    data={data} onChange={setData} onBack={()=>setStep("tightness")} onHome={onHome} onNext={()=>setStep("signature")}/>,
-    signature:  <GTPStepSignature  data={data} onChange={setData} onBack={()=>setStep("purging")}   onHome={onHome} onNext={()=>setStep("customerSig")}/>,
+    purging:    <GTPStepPurging    data={data} onChange={setData} onBack={()=>setStep("tightness")} onHome={onHome} onNext={()=>setStep("attachments")}/>,
+    attachments:<AttachmentsStep   data={data} onChange={setData} onBack={()=>setStep("purging")}   onHome={onHome} onNext={()=>setStep("signature")} accentColor={GTP_COLOR} nextLabel="Next: Signatures"/>,
+    signature:  <GTPStepSignature  data={data} onChange={setData} onBack={()=>setStep("attachments")}   onHome={onHome} onNext={()=>setStep("customerSig")}/>,
     customerSig: <CustomerSigStep   data={data} onChange={setData} onBack={()=>setStep("signature")} onHome={onHome} onNext={()=>setShowPDF(true)} accentColor={"#0ea5e9"} imgKeyOverride="sigResponsibleImg" nameKeyOverride="sigResponsible" dateKeyOverride="sigDate"/>,
   };
   return steps[step] || null;
@@ -8112,6 +8274,191 @@ const GW_VISIT_2_TASKS = [
 ];
 
 
+// ─── ATTACHMENTS STEP (shared by all cert flows) ────────────────────────────
+
+function AttachmentsStep({ data, onChange, onNext, onBack, onHome, accentColor="#1d4a2e", nextLabel="Next: Signatures" }) {
+  const imgRef = useRef(null);
+  const pdfRef = useRef(null);
+  const attachments = data.attachments || [];
+
+  const addFile = (file, type) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { alert("File must be under 5MB"); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const updated = [...attachments, { name: file.name, type, dataUrl: ev.target.result }];
+      onChange({ ...data, attachments: updated });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeFile = (idx) => {
+    const updated = attachments.filter((_, i) => i !== idx);
+    onChange({ ...data, attachments: updated });
+  };
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title="Attach Evidence" onBack={onBack} onHome={onHome}/>
+      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
+        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+          <div style={{ fontSize:14, color:"#555", marginBottom:16, lineHeight:1.5 }}>
+            Attach photos from your camera or import PDF files from flue gas analysers, manometers, etc. These will be added as extra pages in the certificate PDF.
+          </div>
+          <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap" }}>
+            <button onClick={() => imgRef.current?.click()}
+              style={{ flex:1, minWidth:140, padding:"14px 12px", background:accentColor, color:"#fff", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+              📷 Take Photo / Choose Image
+            </button>
+            <button onClick={() => pdfRef.current?.click()}
+              style={{ flex:1, minWidth:140, padding:"14px 12px", background:"#374151", color:"#fff", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+              📄 Import PDF
+            </button>
+          </div>
+          <input ref={imgRef} type="file" accept="image/*" capture="environment" onChange={e => { addFile(e.target.files?.[0], "image"); e.target.value=""; }} style={{ display:"none" }}/>
+          <input ref={pdfRef} type="file" accept="application/pdf" onChange={e => { addFile(e.target.files?.[0], "pdf"); e.target.value=""; }} style={{ display:"none" }}/>
+
+          {attachments.length > 0 && (
+            <>
+              <div style={{ fontSize:13, fontWeight:600, color:"#333", marginBottom:10 }}>
+                {attachments.length} file{attachments.length !== 1 ? "s" : ""} attached
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(120px, 1fr))", gap:10 }}>
+                {attachments.map((att, i) => (
+                  <div key={i} style={{ position:"relative", background:"#f9f9f9", borderRadius:8, border:"1px solid #e5e7eb", overflow:"hidden" }}>
+                    {att.type === "image"
+                      ? <img src={att.dataUrl} alt={att.name} style={{ width:"100%", height:100, objectFit:"cover", display:"block" }}/>
+                      : <div style={{ width:"100%", height:100, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"#f0f0f0" }}>
+                          <span style={{ fontSize:28 }}>📄</span>
+                          <span style={{ fontSize:10, color:"#666", marginTop:4, padding:"0 6px", textAlign:"center", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:"100%" }}>{att.name}</span>
+                        </div>
+                    }
+                    <button onClick={() => removeFile(i)}
+                      style={{ position:"absolute", top:4, right:4, width:22, height:22, borderRadius:"50%", background:"rgba(0,0,0,0.6)", color:"#fff", border:"none", cursor:"pointer", fontSize:13, display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1 }}>×</button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {attachments.length === 0 && (
+            <div style={{ textAlign:"center", padding:"20px 0", color:"#aaa", fontSize:13 }}>
+              No files attached yet — this step is optional
+            </div>
+          )}
+        </div>
+      </div>
+      <BottomBar onHome={onHome} onNext={onNext} nextLabel={nextLabel}/>
+    </div>
+  );
+}
+
+// ─── APPEND ATTACHMENT PAGES TO PDF ─────────────────────────────────────
+
+async function appendAttachmentPages(pdf, attachments, orientation) {
+  if (!attachments || attachments.length === 0) return;
+  const isLandscape = orientation === "landscape";
+  const pdfW = isLandscape ? 297 : 210;
+  const pdfH = isLandscape ? 210 : 297;
+  const margin = 10;
+  const usableW = pdfW - margin * 2;
+  const usableH = pdfH - margin * 2;
+  const titleH = 8;
+
+  const images = attachments.filter(a => a.type === "image");
+  const pdfs = attachments.filter(a => a.type === "pdf");
+
+  // Add image pages (2 per page)
+  for (let i = 0; i < images.length; i += 2) {
+    pdf.addPage();
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, "bold");
+    pdf.text("Attached Evidence", margin, margin + 4);
+    const slotH = (usableH - titleH - 4) / 2;
+    for (let j = 0; j < 2 && (i + j) < images.length; j++) {
+      const att = images[i + j];
+      try {
+        const img = await new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => res(im);
+          im.onerror = rej;
+          im.src = att.dataUrl;
+        });
+        const ratio = img.width / img.height;
+        let drawW = usableW;
+        let drawH = drawW / ratio;
+        if (drawH > slotH - 6) { drawH = slotH - 6; drawW = drawH * ratio; }
+        const x = margin + (usableW - drawW) / 2;
+        const y = margin + titleH + 2 + j * slotH;
+        pdf.addImage(att.dataUrl, "JPEG", x, y, drawW, drawH);
+        pdf.setFontSize(7);
+        pdf.setFont(undefined, "normal");
+        pdf.text(att.name || "Photo", x, y + drawH + 4);
+      } catch(e) { /* skip broken image */ }
+    }
+  }
+
+  // Add PDF pages (render each page via pdf.js)
+  for (let i = 0; i < pdfs.length; i++) {
+    pdf.addPage();
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, "bold");
+    pdf.text("Attached Evidence — " + (pdfs[i].name || "Document"), margin, margin + 4);
+
+    try {
+      if (!window.pdfjsLib) {
+        await new Promise((res, rej) => {
+          const s = document.createElement("script");
+          s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+          s.onload = () => {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+            res();
+          };
+          s.onerror = rej;
+          document.head.appendChild(s);
+        });
+      }
+
+      const base64 = pdfs[i].dataUrl.split(",")[1];
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let b = 0; b < binary.length; b++) bytes[b] = binary.charCodeAt(b);
+
+      const pdfDoc = await window.pdfjsLib.getDocument({ data: bytes }).promise;
+      const numPages = pdfDoc.numPages;
+
+      for (let p = 1; p <= numPages; p++) {
+        if (p > 1) {
+          pdf.addPage();
+          pdf.setFontSize(10);
+          pdf.setFont(undefined, "bold");
+          pdf.text("Attached Evidence — " + (pdfs[i].name || "Document") + " (page " + p + ")", margin, margin + 4);
+        }
+        const page = await pdfDoc.getPage(p);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.92);
+        const ratio = canvas.width / canvas.height;
+        let drawW = usableW;
+        let drawH = drawW / ratio;
+        if (drawH > usableH - titleH - 4) { drawH = usableH - titleH - 4; drawW = drawH * ratio; }
+        const x = margin + (usableW - drawW) / 2;
+        const y = margin + titleH + 2;
+        pdf.addImage(imgData, "JPEG", x, y, drawW, drawH);
+      }
+    } catch(e) {
+      pdf.setFontSize(14);
+      pdf.setFont(undefined, "normal");
+      pdf.text("PDF file: " + (pdfs[i].name || "Unknown"), margin, margin + 20);
+      pdf.text("(Could not render preview)", margin, margin + 30);
+    }
+  }
+}
+
 // ─── SHARED SIGNATURE PAD & STEP (used by all new cert types) ────────────────
 
 function SigPad({ value, onChange, storageKey }) {
@@ -8295,7 +8642,6 @@ function SharedSigStep({ data, onChange, onNext, onBack, onHome, accentColor="#1
           {lbl("Date")}
           <input type="date" value={data.sigDate||today} onChange={e=>onChange({...data,sigDate:e.target.value})}
             style={{ width:"100%", boxSizing:"border-box", padding:"11px 13px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none" }}/>
-          {data.sigDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(data.sigDate)}</div>}
           {data.sigDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(data.sigDate)}</div>}
         </div>
 
@@ -8718,7 +9064,6 @@ function StepFileRef({ data, onChange, onNext, onBack, onHome }) {
 // ── Google Contacts Picker ────────────────────────────────────────────────────
 // Replace this with your own Google OAuth Client ID from console.cloud.google.com
 // v3 - Native phone contacts via Contact Picker API
-async 
 // ─── SHARED CONTACT PICKER MODAL ─────────────────────────────────────────────
 // Used by all client/installation detail screens to pick from in-app contacts
 
@@ -9300,57 +9645,74 @@ function StepFinalChecks({ data, onChange, onNext, onBack, onHome }) {
 
 // Step 8: Signature
 function StepSignature({ data, onChange, onNext, onBack, onHome }) {
-  const canvasRef = useRef(null);
-  const drawing = useRef(false);
+  const today = new Date().toISOString().slice(0,10);
   const [showPrivacy, setShowPrivacy] = useState(false);
-
-  const getPos = (e, canvas) => {
-    const rect = canvas.getBoundingClientRect();
-    const src = e.touches ? e.touches[0] : e;
-    return [src.clientX - rect.left, src.clientY - rect.top];
+  const fmtDisplay = iso => {
+    if (!iso) return "";
+    const d = new Date(iso+"T12:00:00"); if (isNaN(d)) return iso;
+    const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return String(d.getDate()).padStart(2,"0")+"-"+m[d.getMonth()]+"-"+d.getFullYear();
   };
-  const startDraw = e => { drawing.current=true; const [x,y]=getPos(e,canvasRef.current); const ctx=canvasRef.current.getContext("2d"); ctx.beginPath(); ctx.moveTo(x,y); };
-  const draw = e => { if(!drawing.current) return; e.preventDefault(); const [x,y]=getPos(e,canvasRef.current); const ctx=canvasRef.current.getContext("2d"); ctx.lineWidth=2; ctx.strokeStyle=BLUE; ctx.lineTo(x,y); ctx.stroke(); };
-  const endDraw = () => {
-    if (!drawing.current) return;
-    drawing.current=false;
-    // Use setTimeout to ensure canvas is fully rendered before capturing
-    setTimeout(() => {
-      if (canvasRef.current) {
-        const dataUrl = canvasRef.current.toDataURL("image/png");
-        onChange({...data, engineerSigImage: dataUrl});
-        try { localStorage.setItem(sk("gsc_engineer_sig"), dataUrl); } catch(e) {}
-      }
-    }, 50);
-  };
-  const clean = () => { const c=canvasRef.current; c.getContext("2d").clearRect(0,0,c.width,c.height); };
-
+  useEffect(() => {
+    const updates = {};
+    if (!data.sigDate) updates.sigDate = today;
+    if (!data.sigCustomerDate) updates.sigCustomerDate = today;
+    if (Object.keys(updates).length) onChange({...data,...updates});
+  }, []);
+  const lbl = t => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:6, marginTop:10 }}>{t}</div>;
+  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:BLUE, borderBottom:`2px solid ${BLUE}30`, paddingBottom:6, marginBottom:12, marginTop:16 }}>{t}</div>;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Signature" onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto" }}>
-        <div style={{ background:"#fff", margin:16, borderRadius:12, overflow:"hidden", boxShadow:"0 2px 8px rgba(0,0,0,0.08)" }}>
-          <canvas ref={canvasRef} width={360} height={180} style={{ display:"block", width:"100%", touchAction:"none", cursor:"crosshair" }}
-            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
-        </div>
-        <div style={{ padding:"0 16px" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
-            <input type="checkbox" id="dp" checked={data.dataProtection||false} onChange={e=>onChange({...data,dataProtection:e.target.checked})} style={{ width:18, height:18, cursor:"pointer" }}/>
-            <label htmlFor="dp" style={{ fontSize:15, color:"#333", cursor:"pointer" }}>Data Protection</label>
-            <button onClick={()=>setShowPrivacy(true)} style={{ marginLeft:"auto", background:"none", border:`2px solid ${BLUE}`, borderRadius:"50%", width:30, height:30, color:BLUE, fontWeight:700, cursor:"pointer", fontSize:14 }}>i</button>
+      <Header title="Signatures & Dates" onBack={onBack} onHome={onHome}/>
+      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
+        {/* Engineer signature */}
+        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+          {sec("Engineer Signature")}
+          <div style={{ fontSize:13, color:"#555", lineHeight:1.6, marginBottom:14, background:"#f9f9f9", borderRadius:8, padding:"10px 12px" }}>
+            I confirm that the gas installation described on this certificate has been inspected and is in the condition noted above.
           </div>
-          <p style={{ fontSize:14, color:"#666", marginBottom:6 }}>Customer Declaration:</p>
-          <input value={data.customerDeclaration||""} onChange={e=>onChange({...data,customerDeclaration:e.target.value})}
-            style={{ width:"100%", boxSizing:"border-box", padding:"10px 14px", border:"none", borderRadius:8, background:"#fff", fontSize:14, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", outline:"none", marginBottom:16 }}/>
-          <p style={{ fontSize:14, color:"#666", marginBottom:6 }}>Signature:</p>
-          <div style={{ background:"#f8f9fc", borderRadius:8, padding:8, minHeight:60, fontSize:13, color:"#aaa", fontStyle:"italic" }}>Draw signature above</div>
+          {lbl("Draw engineer signature below")}
+          <SigPad value={data.engineerSigImage} storageKey="gsc_engineer_sig" onChange={v=>onChange({...data,engineerSigImage:v})}/>
+          {lbl("Engineer printed name")}
+          <input value={data.engineerSigName||""} onChange={e=>onChange({...data,engineerSigName:e.target.value})} placeholder="Engineer full name"
+            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
+          {lbl("Date")}
+          <input type="date" value={data.sigDate||today} onChange={e=>onChange({...data,sigDate:e.target.value})}
+            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none" }}/>
+          {data.sigDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(data.sigDate)}</div>}
         </div>
-        <div style={{ display:"flex", justifyContent:"flex-end", padding:"8px 16px 24px" }}>
-          <button onClick={clean} style={{ padding:"10px 24px", background:BLUE, color:"#fff", border:"none", borderRadius:8, fontWeight:700, fontSize:14, cursor:"pointer" }}>CLEAN</button>
+        {/* Data protection */}
+        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+          {sec("Data Protection")}
+          <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+            <input type="checkbox" id="dp" checked={data.dataProtection||false} onChange={e=>onChange({...data,dataProtection:e.target.checked})} style={{ width:20, height:20, accentColor:BLUE, marginTop:2, flexShrink:0, cursor:"pointer" }}/>
+            <label htmlFor="dp" style={{ fontSize:13, color:"#444", cursor:"pointer", lineHeight:1.5 }}>
+              Customer agrees to allow storage of their personal data in line with GDPR data protection laws.{" "}
+              <span onClick={()=>setShowPrivacy(true)} style={{ color:BLUE, textDecoration:"underline", cursor:"pointer" }}>Read more</span>
+            </label>
+          </div>
+        </div>
+        {/* Customer signature */}
+        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+          {sec("Customer / Responsible Person")}
+          <div style={{ fontSize:13, color:"#555", lineHeight:1.6, marginBottom:14, background:"#f9f9f9", borderRadius:8, padding:"10px 12px" }}>
+            Please sign below to confirm satisfactory demonstration and receipt of documentation.
+          </div>
+          {lbl("Draw customer signature below")}
+          <SigPad value={data.customerSigImage} onChange={v=>onChange({...data,customerSigImage:v})}/>
+          {lbl("Customer printed name")}
+          <input value={data.customerSigName||""} onChange={e=>onChange({...data,customerSigName:e.target.value})} placeholder="Customer full name"
+            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
+          {lbl("Customer declaration")}
+          <input value={data.customerDeclaration||""} onChange={e=>onChange({...data,customerDeclaration:e.target.value})} placeholder="e.g. I have received a copy of this certificate"
+            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
+          {lbl("Date")}
+          <input type="date" value={data.sigCustomerDate||today} onChange={e=>onChange({...data,sigCustomerDate:e.target.value})}
+            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none" }}/>
+          {data.sigCustomerDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(data.sigCustomerDate)}</div>}
         </div>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
+      <BottomBar onHome={onHome} onNext={onNext} nextLabel="Next: Engineer Details"/>
       {showPrivacy && (
         <Modal title="Data Privacy Act" onClose={()=>setShowPrivacy(false)}>
           <p style={{ fontSize:14, lineHeight:1.7, color:"#333", textAlign:"center", fontFamily:"'Segoe UI',sans-serif", fontWeight:600 }}>
@@ -9417,7 +9779,7 @@ async function loadPDFLibs() {
   ]);
 }
 
-async function captureAndSavePDF(el, filename, orientation="portrait") {
+async function captureAndSavePDF(el, filename, orientation="portrait", attachments=null) {
   const RENDER_WIDTH = orientation === "landscape" ? 1240 : 900;
   const prev = [el.style.width, el.style.maxWidth, el.style.minWidth];
   el.style.width = RENDER_WIDTH+"px"; el.style.maxWidth = RENDER_WIDTH+"px"; el.style.minWidth = RENDER_WIDTH+"px";
@@ -9433,6 +9795,7 @@ async function captureAndSavePDF(el, filename, orientation="portrait") {
     if(imgAspect>pageAspect){drawW=pdfW;drawH=pdfW/imgAspect;drawX=0;drawY=(pdfH-drawH)/2;}
     else{drawH=pdfH;drawW=pdfH*imgAspect;drawX=(pdfW-drawW)/2;drawY=0;}
     pdf.addImage(canvas.toDataURL("image/jpeg",0.97),"JPEG",drawX,drawY,drawW,drawH);
+    await appendAttachmentPages(pdf, attachments, "landscape");
     pdf.save(filename);
   } else {
     const pdf = new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
@@ -9448,6 +9811,7 @@ async function captureAndSavePDF(el, filename, orientation="portrait") {
       pc.getContext("2d").drawImage(canvas,0,srcY,canvas.width,srcH,0,0,canvas.width,srcH);
       pdf.addImage(pc.toDataURL("image/jpeg",0.97),"JPEG",0,0,pdfW,srcH*mmPerPx);
     }
+    await appendAttachmentPages(pdf, attachments, "portrait");
     pdf.save(filename);
   }
 }
@@ -9479,8 +9843,8 @@ function BatchDownloader({ queue, onDone }) {
   const renderPreview = () => {
     const r = item.record;
     const key = `batch-${currentIdx}`;
-    if (item.type === "gsc") return <PDFPreview key={key} certData={r.certData} appliances={r.appliances} faults={r.faults} finalChecks={r.finalChecks} signatureData={r.signatureData} engineerData={r.engineerData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
-    if (item.type === "bs")  return <BSPDFPreview key={key} serviceData={r.serviceData} engineerData={r.bsEngData} signatureData={r.bsSigData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
+    if (item.type === "gsc") return <PDFPreview key={key} certData={r.certData} appliances={r.appliances} faults={r.faults} finalChecks={r.finalChecks} signatureData={r.signatureData} engineerData={r.engineerData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments}/>;
+    if (item.type === "bs")  return <BSPDFPreview key={key} serviceData={r.serviceData} engineerData={r.bsEngData} signatureData={r.bsSigData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments}/>;
     if (item.type === "gw")  return <GasWorksPDFPreview key={key} form={r.gwData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
     if (item.type === "gi")  return <GasIsolationPDFPreview key={key} form={r.giData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
     return null;
@@ -9509,7 +9873,7 @@ function BatchDownloader({ queue, onDone }) {
 }
 
 // PDF Preview
-function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, engineerData, onClose, autoDownload, onDownloadDone }) {
+function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, engineerData, onClose, autoDownload, onDownloadDone, attachments }) {
   const certRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const autoDownloadDoneRef = useRef(false);
@@ -9606,6 +9970,7 @@ function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, 
       // Filename: installation address + postcode only
       const instParts = [certData.instAddr1, certData.instPostcode].filter(Boolean).join(" ");
       const filename = (instParts || certData.clientName || "certificate").replace(/[^a-zA-Z0-9 ]/g, "").trim().replace(/\s+/g, "_") + ".pdf";
+      await appendAttachmentPages(pdf, attachments, "landscape");
       pdf.save(filename);
     } catch(e) {
       console.error(e);
@@ -11753,7 +12118,7 @@ function GasSafetyCertsScreen({ records, onBack, onHome, onDelete, onCreateInvoi
   }
   if (viewing !== null) {
     const r = viewRecords[viewing];
-    return <PDFPreview certData={r.certData} appliances={r.appliances} faults={r.faults} finalChecks={r.finalChecks} signatureData={r.signatureData} engineerData={r.engineerData} onClose={()=>setViewing(null)}/>;
+    return <PDFPreview certData={r.certData} appliances={r.appliances} faults={r.faults} finalChecks={r.finalChecks} signatureData={r.signatureData} engineerData={r.engineerData} onClose={()=>setViewing(null)} attachments={r.attachments}/>;
   }
 
   const toggleCheck = (i) => setCheckedItems(prev => prev.includes(i) ? prev.filter(x=>x!==i) : [...prev, i]);
@@ -12028,7 +12393,7 @@ function BoilerServiceRecordsScreen({ records, onBack, onHome, onDelete, onCreat
 
   if (viewing !== null) {
     const r = bsRecords[viewing];
-    return <BSPDFPreview serviceData={r.serviceData} engineerData={r.bsEngData} signatureData={r.bsSigData} onClose={()=>setViewing(null)}/>;
+    return <BSPDFPreview serviceData={r.serviceData} engineerData={r.bsEngData} signatureData={r.bsSigData} onClose={()=>setViewing(null)} attachments={r.attachments}/>;
   }
 
   const toggleCheck = (i) => setCheckedItems(prev => prev.includes(i) ? prev.filter(x=>x!==i) : [...prev, i]);
@@ -12124,7 +12489,7 @@ function WarningNoticeRecordsScreen({ records, onBack, onHome, onDelete, onCreat
 
   if (viewing !== null) {
     const r = wnRecords[viewing];
-    return <WNPDFPreview wnFormData={{...r.wnFormData, issueDate:r.wnEngData?.issueDate, issueTime:r.wnEngData?.issueTime}} wnEngData={r.wnEngData} wnSigData={r.wnSigData||{}} onClose={()=>setViewing(null)}/>;
+    return <WNPDFPreview wnFormData={{...r.wnFormData, issueDate:r.wnEngData?.issueDate, issueTime:r.wnEngData?.issueTime}} wnEngData={r.wnEngData} wnSigData={r.wnSigData||{}} onClose={()=>setViewing(null)} attachments={r.attachments}/>;
   }
 
   return (
@@ -12769,6 +13134,8 @@ function RecordsScreen({ records, onBack, onHome, onDelete, onImport, onEditGw, 
   if (GENERIC_CERT_TYPES_EXCL.includes(folder)) return <GenericCertRecordsScreen type={folder} records={records} onBack={()=>setFolder(null)} onHome={onHome} onDelete={onDelete} onCreateInvoice={onCreateInvoice} onUpdateRecord={onUpdateRecord} onRenew={onRenew}/>;
 
   const exportRecords = () => {
+    let exportedContacts = [];
+    try { exportedContacts = JSON.parse(localStorage.getItem(sk("client_contacts")) || "[]"); } catch {}
     const bundle = {
       version: 3,
       exportedAt: new Date().toISOString(),
@@ -12778,6 +13145,7 @@ function RecordsScreen({ records, onBack, onHome, onDelete, onImport, onEditGw, 
       accountReports: accountReports || [],
       yearlyReports: yearlyReports || [],
       gscFolders: gscFolders || [],
+      contacts: exportedContacts,
     };
     const json = JSON.stringify(bundle, null, 2);
     const blob = new Blob([json], { type:"application/json" });
@@ -12822,6 +13190,16 @@ function RecordsScreen({ records, onBack, onHome, onDelete, onImport, onEditGw, 
             if (Array.isArray(data.gscFolders) && data.gscFolders.length && onImportFolders) {
               onImportFolders(data.gscFolders);
               folderCount = data.gscFolders.length;
+            }
+            if (Array.isArray(data.contacts) && data.contacts.length) {
+              try {
+                const existing = JSON.parse(localStorage.getItem(sk("client_contacts")) || "[]");
+                const newOnes = data.contacts.filter(c => !existing.some(e =>
+                  (c.phone && e.phone && c.phone === e.phone) ||
+                  (c.email && e.email && c.email === e.email)
+                ));
+                localStorage.setItem(sk("client_contacts"), JSON.stringify([...existing, ...newOnes]));
+              } catch {}
             }
           }
           alert(`✅ Import complete!\n${certCount} certificate(s)\n${invCount} invoice(s)\n${quoteCount} quote(s)${reportCount ? `\n${reportCount} account report(s)` : ""}${folderCount ? `\n${folderCount} GSC folder(s)` : ""}`);
@@ -14043,49 +14421,79 @@ function BSStepNotes({ data, onChange, onNext, onBack, onHome }) {
 
 // Screen 3: Appliance Details
 function BSStepSignature({ data, onChange, onNext, onBack, onHome }) {
-  const canvasRef = useRef(null);
-  const drawing = useRef(false);
-  const [showDataInfo, setShowDataInfo] = useState(false);
-  const getPos = (e,c) => { const r=c.getBoundingClientRect(); const s=e.touches?e.touches[0]:e; return {x:s.clientX-r.left,y:s.clientY-r.top}; };
-  const startDraw = e => { drawing.current=true; const c=canvasRef.current; const ctx=c.getContext("2d"); const p=getPos(e,c); ctx.beginPath(); ctx.moveTo(p.x,p.y); e.preventDefault(); };
-  const draw = e => { if(!drawing.current) return; const c=canvasRef.current; const ctx=c.getContext("2d"); const p=getPos(e,c); ctx.lineWidth=2.5; ctx.lineCap="round"; ctx.strokeStyle="#222"; ctx.lineTo(p.x,p.y); ctx.stroke(); e.preventDefault(); };
-  const endDraw = () => { drawing.current=false; const c=canvasRef.current; onChange({...data,engineerSigImage:c.toDataURL()}); };
-  const clear = () => { const c=canvasRef.current; c.getContext("2d").clearRect(0,0,c.width,c.height); onChange({...data,engineerSigImage:""}); };
+  const today = new Date().toISOString().slice(0,10);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const fmtDisplay = iso => {
+    if (!iso) return "";
+    const d = new Date(iso+"T12:00:00"); if (isNaN(d)) return iso;
+    const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return String(d.getDate()).padStart(2,"0")+"-"+m[d.getMonth()]+"-"+d.getFullYear();
+  };
+  useEffect(() => {
+    const updates = {};
+    if (!data.sigDate) updates.sigDate = today;
+    if (!data.sigCustomerDate) updates.sigCustomerDate = today;
+    if (Object.keys(updates).length) onChange({...data,...updates});
+  }, []);
+  const lbl = t => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:6, marginTop:10, fontFamily:"'Segoe UI',sans-serif" }}>{t}</div>;
+  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:BLUE, borderBottom:`2px solid ${BLUE}30`, paddingBottom:6, marginBottom:12, marginTop:16, fontFamily:"'Segoe UI',sans-serif" }}>{t}</div>;
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG }}>
-      <Header title="Signature" onBack={onBack}/>
-      <div style={{ flex:1, display:"flex", flexDirection:"column", padding:16, gap:10 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <input type="checkbox" id="bsdp" checked={data.dataProtection||false} onChange={e=>onChange({...data,dataProtection:e.target.checked})} style={{width:18,height:18}}/>
-          <label htmlFor="bsdp" style={{ fontSize:15, fontFamily:"'Segoe UI',sans-serif", color:"#333" }}>Data Protection</label>
-          <button onClick={()=>setShowDataInfo(true)} style={{ marginLeft:"auto", background:"none", border:"none", cursor:"pointer", color:BLUE }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke={BLUE} strokeWidth="2"/><text x="12" y="16" textAnchor="middle" fill={BLUE} fontSize="13" fontWeight="bold">i</text></svg>
-          </button>
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title="Signatures & Dates" onBack={onBack} onHome={onHome}/>
+      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
+        {/* Engineer signature */}
+        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+          {sec("Engineer Signature")}
+          <div style={{ fontSize:13, color:"#555", lineHeight:1.6, marginBottom:14, background:"#f9f9f9", borderRadius:8, padding:"10px 12px" }}>
+            I confirm that the boiler service described on this record has been satisfactorily completed.
+          </div>
+          {lbl("Draw engineer signature below")}
+          <SigPad value={data.engineerSigImage} storageKey="gsc_engineer_sig" onChange={v=>onChange({...data,engineerSigImage:v})}/>
+          {lbl("Engineer printed name")}
+          <input value={data.engineerSigName||""} onChange={e=>onChange({...data,engineerSigName:e.target.value})} placeholder="Engineer full name"
+            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
+          {lbl("Date")}
+          <input type="date" value={data.sigDate||today} onChange={e=>onChange({...data,sigDate:e.target.value})}
+            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none" }}/>
+          {data.sigDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(data.sigDate)}</div>}
         </div>
-        <div>
-          <div style={{ fontSize:14, color:"#666", fontFamily:"'Segoe UI',sans-serif", marginBottom:4 }}>Customer Declaration:</div>
-          <input value={data.customerDeclaration||""} onChange={e=>onChange({...data,customerDeclaration:e.target.value})}
-            style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px", border:"1px solid #ddd", borderRadius:4, background:"#fff", fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none" }}/>
+        {/* Data protection */}
+        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+          {sec("Data Protection")}
+          <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+            <input type="checkbox" id="bsdp" checked={data.dataProtection||false} onChange={e=>onChange({...data,dataProtection:e.target.checked})} style={{ width:20, height:20, accentColor:BLUE, marginTop:2, flexShrink:0, cursor:"pointer" }}/>
+            <label htmlFor="bsdp" style={{ fontSize:13, color:"#444", cursor:"pointer", lineHeight:1.5 }}>
+              Customer agrees to allow storage of their personal data in line with GDPR data protection laws.{" "}
+              <span onClick={()=>setShowPrivacy(true)} style={{ color:BLUE, textDecoration:"underline", cursor:"pointer" }}>Read more</span>
+            </label>
+          </div>
         </div>
-        <div style={{ fontSize:14, color:"#666", fontFamily:"'Segoe UI',sans-serif" }}>Signature:</div>
-        <div style={{ flex:1, position:"relative", background:"#fff", border:"1px solid #ddd", borderRadius:4, minHeight:180 }}>
-          <canvas ref={canvasRef} width={340} height={200}
-            style={{ width:"100%", height:"100%", display:"block", touchAction:"none" }}
-            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
-        </div>
-        <div style={{ display:"flex", justifyContent:"flex-end" }}>
-          <button onClick={clear} style={{ background:BLUE, color:"#fff", border:"none", borderRadius:6, padding:"10px 28px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>CLEAN</button>
+        {/* Customer signature */}
+        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+          {sec("Customer / Responsible Person")}
+          <div style={{ fontSize:13, color:"#555", lineHeight:1.6, marginBottom:14, background:"#f9f9f9", borderRadius:8, padding:"10px 12px" }}>
+            Please sign below to confirm satisfactory receipt of the boiler service documentation.
+          </div>
+          {lbl("Draw customer signature below")}
+          <SigPad value={data.customerSigImage} onChange={v=>onChange({...data,customerSigImage:v})}/>
+          {lbl("Customer printed name")}
+          <input value={data.customerSigName||""} onChange={e=>onChange({...data,customerSigName:e.target.value})} placeholder="Customer full name"
+            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
+          {lbl("Customer declaration")}
+          <input value={data.customerDeclaration||""} onChange={e=>onChange({...data,customerDeclaration:e.target.value})} placeholder="e.g. I have received a copy of this service record"
+            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
+          {lbl("Date")}
+          <input type="date" value={data.sigCustomerDate||today} onChange={e=>onChange({...data,sigCustomerDate:e.target.value})}
+            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none" }}/>
+          {data.sigCustomerDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(data.sigCustomerDate)}</div>}
         </div>
       </div>
-      {showDataInfo && <Modal title="Data Protection" onClose={()=>setShowDataInfo(false)}>
-        <p style={{ fontFamily:"'Segoe UI',sans-serif", fontSize:14, color:"#333", lineHeight:1.5 }}>Your personal data is collected to provide gas safety services. It will be stored securely and not shared with third parties without your consent.</p>
-      </Modal>}
-      <BottomBar onHome={onHome} onNext={onNext}/>
-      {bsPickerTarget && <ContactPickerModal
-        title={bsPickerTarget==="client" ? "Choose Client" : "Choose Installation"}
-        onSelect={c=>pickContact(bsPickerTarget,c)}
-        onClose={()=>setBsPickerTarget(null)}/>}
+      <BottomBar onHome={onHome} onNext={onNext} nextLabel="Next: Engineer Details"/>
+      {showPrivacy && (
+        <Modal title="Data Privacy Act" onClose={()=>setShowPrivacy(false)}>
+          <p style={{ fontFamily:"'Segoe UI',sans-serif", fontSize:14, color:"#333", lineHeight:1.5 }}>Your personal data is collected to provide gas safety services. It will be stored securely and not shared with third parties without your consent. You can opt out at any time.</p>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -14365,7 +14773,7 @@ function WNOptionsMenu({ onPreview, onSave, onClose }) {
 }
 
 // WN PDF Preview (mirrors PDFPreview)
-function WNPDFPreview({ wnFormData, wnEngData, wnSigData, onClose, autoDownload, onDownloadDone }) {
+function WNPDFPreview({ wnFormData, wnEngData, wnSigData, onClose, autoDownload, onDownloadDone, attachments }) {
   const certRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
 
@@ -14387,7 +14795,7 @@ function WNPDFPreview({ wnFormData, wnEngData, wnSigData, onClose, autoDownload,
       await loadPDFLibs();
       const addrParts = [data.instAddr1, data.instAddr2, data.instAddr3, data.instPostcode].filter(Boolean).join(" ");
       const fname = ((addrParts || data.certRef || "Warning_Notice").replace(/[^a-zA-Z0-9 ]/g,"").trim().replace(/\s+/g,"_") + "_Warning").replace(/__+/g,"_") + ".pdf";
-      await captureAndSavePDF(certRef.current, fname, "landscape");
+      await captureAndSavePDF(certRef.current, fname, "landscape", attachments);
       if (onDownloadDone) onDownloadDone();
     } catch(e) { alert("Download failed: " + e.message); }
     setDownloading(false);
@@ -14575,7 +14983,7 @@ function WNPDFPreview({ wnFormData, wnEngData, wnSigData, onClose, autoDownload,
 }
 
 // BS PDF Preview — Gas Service/Breakdown Record
-function BSPDFPreview({ serviceData, engineerData, signatureData, onClose, autoDownload, onDownloadDone }) {
+function BSPDFPreview({ serviceData, engineerData, signatureData, onClose, autoDownload, onDownloadDone, attachments }) {
   const certRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const autoDownloadDoneRef = useRef(false);
@@ -14610,6 +15018,7 @@ function BSPDFPreview({ serviceData, engineerData, signatureData, onClose, autoD
       pdf.addImage(canvas.toDataURL("image/jpeg",0.97),"JPEG",drawX,drawY,drawW,drawH);
       const instParts=[serviceData.instAddr1,serviceData.instPostcode].filter(Boolean).join(" ");
       const filename=(instParts||serviceData.clientName||"service").replace(/[^a-zA-Z0-9 ]/g,"").trim().replace(/\s+/g,"_")+"_service.pdf";
+      await appendAttachmentPages(pdf, attachments, "landscape");
       pdf.save(filename);
     } catch(e){ console.error(e); alert("Could not generate PDF: "+e.message); }
     setDownloading(false);
@@ -14798,6 +15207,7 @@ function App({ onLogout }) {
   const [wnFormData, setWnFormData] = useState({ certRef:"", clientName:"", clientAddr1:"", clientAddr2:"", clientAddr3:"", clientPostcode:"", clientTel:"", clientEmail:"", instAddr1:"", instAddr2:"", instAddr3:"", instPostcode:"", make:"", model:"", type:"", serialNo:"", installationDetails:"", locationRoom:"", idGasEscape:"NO", idDisconnected:"NA", idRefused:"NO", gasEmergencyRef:"", arReason:"", arTurnedOff:"NO", arRefused:"NO", arTurningOffNoHelp:"NO", contactName:"", contactTel:"", riddor:"NO", remedialAction:"" });
   const [wnSigData, setWnSigData] = useState({});
   const [wnEngData, setWnEngData] = useState(() => profileDefaults());
+  const [wnAttachments, setWnAttachments] = useState([]);
   const [editIndex, setEditIndex] = useState(null);
   const [showOptions, setShowOptions] = useState(false);
   const [showPDF, setShowPDF] = useState(false);
@@ -15222,6 +15632,7 @@ function App({ onLogout }) {
   const [faults, setFaults] = useState([]);
   const [finalChecks, setFinalChecks] = useState({});
   const [signatureData, setSignatureData] = useState({});
+  const [gscAttachments, setGscAttachments] = useState([]);
 
   // Load user profile from localStorage — used to seed all company/engineer defaults
   const [userProfile, setUserProfile] = useState(() => {
@@ -15259,6 +15670,7 @@ function App({ onLogout }) {
   const [bsShowPDF, setBsShowPDF] = useState(false);
   const [serviceData, setServiceData] = useState({ certRef:"", clientName:"", clientAddr1:"", clientAddr2:"", clientAddr3:"", clientPostcode:"", clientTel:"", clientEmail:"", instName:"", instAddr1:"", instAddr2:"", instAddr3:"", instPostcode:"", instTel:"", typeOfWorkService:"N/A", typeOfWorkBreakdown:"N/A", boilerMake:"", boilerModel:"", boilerSerial:"", applianceMake:"", applianceModel:"", applianceSerial:"", coReading:"", co2Reading:"", flueType:"N/A", ventilationSize:"N/A", waterFuelSound:"N/A", electricallyFused:"N/A", correctValving:"N/A", isolationAvailable:"N/A", boilerPlantroom:"N/A", heatExchanger:"N/A", ignition:"N/A", gasValve:"N/A", fan:"N/A", safetyDevice:"N/A", controlBox:"N/A", burnersAndPilot:"N/A", fuelPressure:"N/A", burnerWashed:"N/A", pilotAssembly:"N/A", ignitionSystem:"N/A", burnerFan:"N/A", heatExchangerFlueways:"N/A", fuelElectrical:"N/A", additionalNotes:"", sparesRequired:"", coCo2Ratio:"", dataProtection:false, customerDeclaration:"" });
   const [bsSigData, setBsSigData] = useState({});
+  const [bsAttachments, setBsAttachments] = useState([]);
   const [bsEngData, setBsEngData] = useState(() => profileDefaults());
 
   // Gas Works state
@@ -15312,12 +15724,13 @@ function App({ onLogout }) {
       onBack={() => { setSubScreen("faultList"); setEditIndex(null); }}/>;
   }
 
-  if (showPDF) return <PDFPreview certData={certData} appliances={appliances} faults={faults} finalChecks={finalChecks} signatureData={signatureData} engineerData={engineerData} onClose={()=>setShowPDF(false)}/>;
+  if (showPDF) return <PDFPreview certData={certData} appliances={appliances} faults={faults} finalChecks={finalChecks} signatureData={signatureData} engineerData={engineerData} onClose={()=>setShowPDF(false)} attachments={gscAttachments}/>;
 
   if (screen === "login") return null; // handled by AppWithAuth wrapper
   if (screen === "records") return <RecordsScreen records={records} onBack={()=>setScreen("home")} onHome={goHome} onDelete={(i)=>setRecords(r=>r.filter((_,idx)=>idx!==i))} onImport={(imported)=>setRecords(prev=>{
       const merged=[...prev];
       for(const n of imported){ const idx=merged.findIndex(e=>e.savedAt===n.savedAt); if(idx>=0) merged[idx]={...merged[idx],...n}; else merged.push(n); }
+      try { localStorage.setItem(sk("gsc_records"), JSON.stringify(merged)); } catch {}
       return merged;
     })}
     onEditGw={(rec)=>{ setGwData(rec.gwData); setScreen("gasWorks"); setGwSubScreen("form"); }}
@@ -15329,14 +15742,15 @@ function App({ onLogout }) {
     quotes={quotes}
     onDeleteQuote={(i)=>setQuotes(prev=>prev.filter((_,idx)=>idx!==i))}
     onConvertQuoteToInvoice={(i)=>{ const q=quotes[i]; const invData={ ...q, invoiceNo:getNextInvoiceNumber(), createdAt:new Date().toISOString(), fullyPaid:false, paid:0, outstanding:q.total }; setInvoices(prev=>[...prev,invData]); alert("✅ Quote converted to Invoice and saved!"); }}
-    onImportInvoices={(imported)=>setInvoices(prev=>[...prev,...imported.filter(n=>!prev.some(e=>e.invoiceNo===n.invoiceNo))])}
-    onImportQuotes={(imported)=>setQuotes(prev=>[...prev,...imported.filter(n=>!prev.some(e=>e.quoteNo===n.quoteNo))])}
+    onImportInvoices={(imported)=>setInvoices(prev=>{ const merged=[...prev,...imported.filter(n=>!prev.some(e=>e.invoiceNo===n.invoiceNo))]; try { localStorage.setItem(sk("invoices"), JSON.stringify(merged)); } catch {} return merged; })}
+    onImportQuotes={(imported)=>setQuotes(prev=>{ const merged=[...prev,...imported.filter(n=>!prev.some(e=>e.quoteNo===n.quoteNo))]; try { localStorage.setItem(sk("quotes"), JSON.stringify(merged)); } catch {} return merged; })}
     onImportReports={(importedMonthly, importedYearly)=>{
       setAccountReports(prev=>{
         const merged = [...prev];
         for (const r of importedMonthly) {
           if (!merged.some(e=>e.id===r.id || (e.fileName===r.fileName && e.period===r.period))) merged.push(r);
         }
+        try { localStorage.setItem(sk("account_reports"), JSON.stringify(merged)); } catch {}
         return merged;
       });
       if (Array.isArray(importedYearly) && importedYearly.length) {
@@ -15346,6 +15760,7 @@ function App({ onLogout }) {
             const idx = merged.findIndex(e=>e.year===r.year);
             if (idx >= 0) merged[idx] = r; else merged.push(r);
           }
+          try { localStorage.setItem(sk("yearly_reports"), JSON.stringify(merged)); } catch {}
           return merged;
         });
       }
@@ -15356,6 +15771,7 @@ function App({ onLogout }) {
         for (const f of importedFolders) {
           if (!merged.some(e=>e.id===f.id)) merged.push(f);
         }
+        try { localStorage.setItem(sk("gsc_folders"), JSON.stringify(merged)); } catch {}
         return merged;
       });
     }}
@@ -15402,7 +15818,7 @@ function App({ onLogout }) {
       onPaymentSubmitted={()=>{ /* profile updated by markPaymentSubmitted, force re-render */ setScreen("home"); }}
     />;
   }
-  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onGscEmail={()=>setScreen("gscEmail")} onBsEmail={()=>setScreen("bsEmail")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")}/>;
+  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onGscEmail={()=>setScreen("gscEmail")} onBsEmail={()=>setScreen("bsEmail")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("✅ "+n+" demo records added!\n\nGo to Records → Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes}/>;
   if (screen === "contacts") return <ClientContactsScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
   if (screen === "emailImport") return <EmailImportScreen onBack={()=>setScreen("home")} onHome={goHome} defaultEngineerData={engineerData} onImportCerts={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
   if (screen === "giEmail") return <GasIsolationEmailScreen onBack={()=>setScreen("home")} onHome={goHome} onImport={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
@@ -15521,11 +15937,12 @@ function App({ onLogout }) {
 
   // Warning Notice flow
   if (screen === "warningNotice") {
-    if (wnShowPDF) return <WNPDFPreview wnFormData={{...wnFormData, issueDate:wnEngData.issueDate, issueTime:wnEngData.issueTime}} wnEngData={wnEngData} wnSigData={wnSigData} onClose={()=>setWnShowPDF(false)}/>;
+    if (wnShowPDF) return <WNPDFPreview wnFormData={{...wnFormData, issueDate:wnEngData.issueDate, issueTime:wnEngData.issueTime}} wnEngData={wnEngData} wnSigData={wnSigData} onClose={()=>setWnShowPDF(false)} attachments={wnAttachments}/>;
     if (wnSubScreen === "fileRef") return <WNStepFileRef data={wnFormData} onChange={setWnFormData} onBack={()=>setScreen("newJob")} onHome={goHome} onNext={()=>setWnSubScreen("clientDetails")}/>;
     if (wnSubScreen === "clientDetails") return <WNStepClientDetails data={wnFormData} onChange={setWnFormData} onBack={()=>setWnSubScreen("fileRef")} onHome={goHome} onNext={()=>setWnSubScreen("noticeDetails")}/>;
-    if (wnSubScreen === "noticeDetails") return <WNStepNoticeDetails data={wnFormData} onChange={setWnFormData} onBack={()=>setWnSubScreen("clientDetails")} onHome={goHome} onNext={()=>setWnSubScreen("signature")}/>;
-    if (wnSubScreen === "signature") return <WNStepSignature sigData={wnSigData} onChange={setWnSigData} onBack={()=>setWnSubScreen("noticeDetails")} onHome={goHome} onNext={()=>setWnSubScreen("engineerDetails")}/>;
+    if (wnSubScreen === "noticeDetails") return <WNStepNoticeDetails data={wnFormData} onChange={setWnFormData} onBack={()=>setWnSubScreen("clientDetails")} onHome={goHome} onNext={()=>setWnSubScreen("attachments")}/>;
+    if (wnSubScreen === "attachments") return <AttachmentsStep data={{attachments:wnAttachments}} onChange={d=>setWnAttachments(d.attachments||[])} onBack={()=>setWnSubScreen("noticeDetails")} onHome={goHome} onNext={()=>setWnSubScreen("signature")} nextLabel="Next: Signatures"/>;
+    if (wnSubScreen === "signature") return <WNStepSignature sigData={wnSigData} onChange={setWnSigData} onBack={()=>setWnSubScreen("attachments")} onHome={goHome} onNext={()=>setWnSubScreen("engineerDetails")}/>;
     if (wnSubScreen === "engineerDetails") return (
       <>
         <WNStepEngineerDetails data={wnEngData} onChange={setWnEngData} onBack={()=>setWnSubScreen("noticeDetails")} onHome={goHome}
@@ -15534,7 +15951,7 @@ function App({ onLogout }) {
           onPreview={()=>{ setWnShowOptions(false); setWnShowPDF(true); }}
           onSave={()=>{
             const savedAt = new Date().toISOString();
-            setRecords(r=>[...r,{type:"wn",wnFormData,wnEngData,wnSigData,savedAt}]);
+            setRecords(r=>[...r,{type:"wn",wnFormData,wnEngData,wnSigData,savedAt,attachments:wnAttachments}]);
             setWnShowOptions(false);
             alert("\u2705 Warning Notice saved to Records!");
             setScreen("home"); setWnSubScreen(null);
@@ -15556,8 +15973,9 @@ function App({ onLogout }) {
     );
     if (subScreen === "faultList") return <StepFaultList faults={faults} onAdd={()=>{setEditIndex(null);setSubScreen("faultForm");}} onEdit={i=>{setEditIndex(i);setSubScreen("faultForm");}}
       onDelete={()=>setFaults(faults.slice(0,-1))} onNext={()=>setSubScreen("finalChecks")} onBack={()=>setSubScreen("applianceList")} onHome={goHome}/>;
-    if (subScreen === "finalChecks") return <StepFinalChecks data={finalChecks} onChange={setFinalChecks} onNext={()=>setSubScreen("signature")} onBack={()=>setSubScreen("faultList")} onHome={goHome}/>;
-    if (subScreen === "signature") return <StepSignature data={signatureData} onChange={setSignatureData} onNext={()=>setSubScreen("engineerDetails")} onBack={()=>setSubScreen("finalChecks")} onHome={goHome}/>;
+    if (subScreen === "finalChecks") return <StepFinalChecks data={finalChecks} onChange={setFinalChecks} onNext={()=>setSubScreen("attachments")} onBack={()=>setSubScreen("faultList")} onHome={goHome}/>;
+    if (subScreen === "attachments") return <AttachmentsStep data={{attachments:gscAttachments}} onChange={d=>setGscAttachments(d.attachments||[])} onBack={()=>setSubScreen("finalChecks")} onHome={goHome} onNext={()=>setSubScreen("signature")} nextLabel="Next: Signatures"/>;
+    if (subScreen === "signature") return <StepSignature data={signatureData} onChange={setSignatureData} onNext={()=>setSubScreen("engineerDetails")} onBack={()=>setSubScreen("attachments")} onHome={goHome}/>;
     if (subScreen === "engineerDetails") return (
       <>
         <StepEngineerDetails data={engineerData} onChange={setEngineerData} onBack={()=>setSubScreen("signature")} onHome={goHome}
@@ -15566,7 +15984,7 @@ function App({ onLogout }) {
           onPreview={()=>{setShowOptions(false);setShowPDF(true);}}
           onSave={async ()=>{
             const savedAt = new Date().toISOString();
-            const _gscRec = {certData,appliances,faults,finalChecks,signatureData,engineerData,savedAt};
+            const _gscRec = {certData,appliances,faults,finalChecks,signatureData,engineerData,savedAt,attachments:gscAttachments};
             setRecords(r=>[...r,_gscRec]);
             setShowOptions(false);
             alert("\u2705 Certificate saved to Records!");
@@ -15588,13 +16006,14 @@ function App({ onLogout }) {
 
   // BS flow
   if (screen === "bs") {
-    if (bsShowPDF) return <BSPDFPreview serviceData={serviceData} engineerData={bsEngData} signatureData={bsSigData} onClose={()=>setBsShowPDF(false)}/>;
+    if (bsShowPDF) return <BSPDFPreview serviceData={serviceData} engineerData={bsEngData} signatureData={bsSigData} onClose={()=>setBsShowPDF(false)} attachments={bsAttachments}/>;
     if (bsSubScreen === "fileRef") return <BSStepFileRef data={serviceData} onChange={setServiceData} onBack={()=>setScreen("newJob")} onHome={goHome} onNext={()=>setBsSubScreen("clientDetails")}/>;
     if (bsSubScreen === "clientDetails") return <BSStepClientDetails data={serviceData} onChange={setServiceData} onBack={()=>setBsSubScreen("fileRef")} onHome={goHome} onNext={()=>setBsSubScreen("applianceDetails")}/>;
     if (bsSubScreen === "applianceDetails") return <BSStepApplianceDetails data={serviceData} onChange={setServiceData} onBack={()=>setBsSubScreen("clientDetails")} onHome={goHome} onNext={()=>setBsSubScreen("prelimChecks")}/>;
     if (bsSubScreen === "prelimChecks") return <BSStepPrelimChecks data={serviceData} onChange={setServiceData} onBack={()=>setBsSubScreen("applianceDetails")} onHome={goHome} onNext={()=>setBsSubScreen("notes")}/>;
-    if (bsSubScreen === "notes") return <BSStepNotes data={serviceData} onChange={setServiceData} onBack={()=>setBsSubScreen("prelimChecks")} onHome={goHome} onNext={()=>setBsSubScreen("signature")}/>;
-    if (bsSubScreen === "signature") return <BSStepSignature data={bsSigData} onChange={setBsSigData} onBack={()=>setBsSubScreen("notes")} onHome={goHome} onNext={()=>setBsSubScreen("engineerDetails")}/>;
+    if (bsSubScreen === "notes") return <BSStepNotes data={serviceData} onChange={setServiceData} onBack={()=>setBsSubScreen("prelimChecks")} onHome={goHome} onNext={()=>setBsSubScreen("attachments")}/>;
+    if (bsSubScreen === "attachments") return <AttachmentsStep data={{attachments:bsAttachments}} onChange={d=>setBsAttachments(d.attachments||[])} onBack={()=>setBsSubScreen("notes")} onHome={goHome} onNext={()=>setBsSubScreen("signature")} nextLabel="Next: Signatures"/>;
+    if (bsSubScreen === "signature") return <BSStepSignature data={bsSigData} onChange={setBsSigData} onBack={()=>setBsSubScreen("attachments")} onHome={goHome} onNext={()=>setBsSubScreen("engineerDetails")}/>;
     if (bsSubScreen === "engineerDetails") return (
       <>
         <BSStepEngineerDetails data={bsEngData} onChange={setBsEngData} onBack={()=>setBsSubScreen("signature")} onHome={goHome}
@@ -15603,7 +16022,7 @@ function App({ onLogout }) {
           onPreview={()=>{setBsShowOptions(false);setBsShowPDF(true);}}
           onSave={async ()=>{
             const savedAt = new Date().toISOString();
-            setRecords(r=>[...r,{type:"bs",serviceData,bsSigData,bsEngData,savedAt}]);
+            setRecords(r=>[...r,{type:"bs",serviceData,bsSigData,bsEngData,savedAt,attachments:bsAttachments}]);
             setBsShowOptions(false);
             alert("\u2705 Service record saved to Records!");
           }}
@@ -16317,6 +16736,10 @@ function AppWithAuth() {
   function handleLogin(user) {
     setCurrentUser(user);
     setAuthed(true);
+    // Request persistent storage so the browser won't evict localStorage data
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(() => {});
+    }
   }
 
   function handleLogout() {

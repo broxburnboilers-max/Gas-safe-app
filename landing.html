@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gas Safety Engineer App — Digital Toolkit for Gas Safe Registered Engineers</title>
+  <meta name="description" content="Create unlimited gas safety certificates, boiler service records, warning notices and more. Attach photographic evidence and flue gas analyser data. From £7.33/month."/>
+  <meta property="og:title" content="Gas Safety Engineer App"/>
+  <meta property="og:description" content="The complete digital toolkit for Gas Safe registered engineers. Create certificates, attach analyser evidence, manage jobs — all in one place."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-dark:  #03180d;
+      --green-mid:   #1d4a2e;
+      --green-light: #2d6642;
+      --yellow:      #fff200;
+      --yellow-soft: #ffe900;
+      --white:       #ffffff;
+      --off-white:   #f5f7f5;
+      --card-bg:     #ffffff;
+      --text-body:   #1a2e1f;
+      --text-muted:  #5a7060;
+      --text-faint:  #8fa895;
+      --border:      #dde8de;
+      --shadow-sm:   0 1px 3px rgba(3,24,13,0.08), 0 1px 2px rgba(3,24,13,0.04);
+      --shadow-md:   0 4px 16px rgba(3,24,13,0.10), 0 2px 6px rgba(3,24,13,0.06);
+      --shadow-lg:   0 12px 40px rgba(3,24,13,0.14), 0 4px 12px rgba(3,24,13,0.08);
+      --radius:      14px;
+      --radius-sm:   8px;
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      color: var(--text-body);
+      background: var(--off-white);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ───────────────────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--green-dark);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      height: 60px;
+      gap: 12px;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      flex: 1;
+    }
+    .nav-logo-icon {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+    }
+    .nav-logo-text {
+      color: var(--white);
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .nav-logo-sub {
+      color: rgba(255,255,255,0.5);
+      font-size: 11px;
+      font-weight: 400;
+    }
+    .nav-cta {
+      background: var(--yellow);
+      color: var(--green-dark);
+      font-weight: 700;
+      font-size: 13px;
+      padding: 8px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .nav-cta:hover { background: var(--yellow-soft); }
+
+    /* ── HERO ──────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(160deg, var(--green-dark) 0%, #1d4a2e 55%, #2e4a3a 100%);
+      min-height: 82vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: clamp(48px, 8vw, 100px) 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 50% -10%, rgba(255,242,0,0.06) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 80% 80%, rgba(45,102,66,0.4) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 20px;
+      padding: 5px 14px;
+      color: rgba(255,255,255,0.75);
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 28px;
+      letter-spacing: 0.02em;
+    }
+    .hero-badge span { color: var(--yellow); font-weight: 700; }
+    .hero-logo {
+      width: 72px;
+      height: 72px;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(32px, 5.5vw, 58px);
+      font-weight: 900;
+      color: var(--yellow);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      max-width: 680px;
+      margin-bottom: 18px;
+    }
+    .hero p {
+      color: rgba(255,255,255,0.72);
+      font-size: clamp(15px, 2vw, 17px);
+      line-height: 1.65;
+      max-width: 520px;
+      margin-bottom: 36px;
+    }
+    .hero-price-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 40px;
+      padding: 9px 22px;
+      color: rgba(255,255,255,0.85);
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 30px;
+    }
+    .hero-price-pill strong { color: var(--yellow); font-size: 18px; font-weight: 800; }
+    .hero-btns {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 360px;
+    }
+    .btn-primary {
+      width: 100%;
+      padding: 18px 24px;
+      background: var(--yellow);
+      color: var(--green-dark);
+      font-size: 16px;
+      font-weight: 800;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+      text-align: center;
+      transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(255,242,0,0.3);
+      background: var(--yellow-soft);
+    }
+    .btn-secondary {
+      width: 100%;
+      padding: 16px 24px;
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.85);
+      font-size: 15px;
+      font-weight: 600;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+      text-align: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.35);
+    }
+    .hero-scroll-hint {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.3);
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+    .hero-scroll-hint svg { animation: bounce 2s ease-in-out infinite; }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(4px); }
+    }
+
+    /* ── FEATURE PILLS ROW ─────────────────────────────────── */
+    .pills-row {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #f0f7f2;
+      border: 1px solid #cde4d2;
+      border-radius: 20px;
+      padding: 5px 13px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--green-mid);
+      white-space: nowrap;
+    }
+    .pill-new {
+      background: #fff8e0;
+      border-color: #f0d060;
+      color: #7a5c00;
+    }
+
+    /* ── SECTIONS ──────────────────────────────────────────── */
+    section { padding: clamp(48px, 7vw, 88px) 24px; }
+    .section-inner { max-width: 960px; margin: 0 auto; }
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--green-mid);
+      margin-bottom: 10px;
+    }
+    .section-title {
+      font-size: clamp(22px, 3.5vw, 34px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--green-dark);
+      margin-bottom: 14px;
+    }
+    .section-lead {
+      font-size: 16px;
+      line-height: 1.65;
+      color: var(--text-muted);
+      max-width: 560px;
+      margin-bottom: 44px;
+    }
+
+    /* ── NEW FEATURES HIGHLIGHT ────────────────────────────── */
+    .new-features {
+      background: var(--green-dark);
+      position: relative;
+      overflow: hidden;
+    }
+    .new-features::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 60% at 90% 50%, rgba(255,242,0,0.04) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .new-features .section-label { color: var(--yellow); }
+    .new-features .section-title { color: var(--white); }
+    .new-features .section-lead { color: rgba(255,255,255,0.55); }
+
+    .new-feature-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .new-feature-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 24px;
+      position: relative;
+    }
+    .new-feature-card.featured {
+      background: rgba(255,242,0,0.06);
+      border-color: rgba(255,242,0,0.25);
+      grid-column: span 2;
+    }
+    .nfc-badge {
+      display: inline-block;
+      background: var(--yellow);
+      color: var(--green-dark);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 4px;
+      margin-bottom: 14px;
+    }
+    .nfc-icon {
+      font-size: 28px;
+      margin-bottom: 12px;
+      display: block;
+    }
+    .nfc-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+    .nfc-desc {
+      font-size: 14px;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.55);
+    }
+    .nfc-list {
+      list-style: none;
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .nfc-list li {
+      font-size: 13px;
+      color: rgba(255,255,255,0.65);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .nfc-list li::before {
+      content: '✓';
+      color: var(--yellow);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── VALUE CALLOUT ─────────────────────────────────────── */
+    .value-callout {
+      background: #fffce8;
+      border: 1.5px solid #f0d060;
+      border-radius: var(--radius);
+      padding: 22px 26px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 48px;
+    }
+    .value-callout-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+    .value-callout p { font-size: 14px; line-height: 1.65; color: #5a4a00; }
+    .value-callout strong { color: #3a3000; }
+
+    /* ── 2-COL BENEFIT CARDS ───────────────────────────────── */
+    .benefit-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 48px;
+    }
+    .benefit-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      border-left: 3px solid var(--green-mid);
+      box-shadow: var(--shadow-sm);
+    }
+    .bc-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--green-dark);
+      margin-bottom: 6px;
+    }
+    .bc-desc {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+
+    /* ── FEATURE GRID ──────────────────────────────────────── */
+    .features { background: var(--white); }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .feature-card {
+      background: var(--off-white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .feature-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+    .fc-icon { font-size: 26px; margin-bottom: 12px; display: block; }
+    .fc-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--green-dark);
+      margin-bottom: 6px;
+    }
+    .fc-desc { font-size: 13px; line-height: 1.6; color: var(--text-muted); }
+    .fc-new {
+      display: inline-block;
+      background: #fff8e0;
+      color: #7a5c00;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    /* ── CERTS SECTION ─────────────────────────────────────── */
+    .certs { background: var(--off-white); }
+    .cert-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 32px;
+    }
+    .cert-tag {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--green-mid);
+      box-shadow: var(--shadow-sm);
+    }
+    .cert-tag.highlight {
+      background: var(--green-dark);
+      color: var(--yellow);
+      border-color: var(--green-dark);
+    }
+
+    /* ── PRICING ───────────────────────────────────────────── */
+    .pricing { background: var(--white); }
+    .pricing-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      background: var(--off-white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 4px;
+      width: fit-content;
+      margin: 0 auto 40px;
+    }
+    .ptoggle-btn {
+      padding: 8px 22px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      position: relative;
+    }
+    .ptoggle-btn.active {
+      background: var(--green-dark);
+      color: var(--yellow);
+      box-shadow: var(--shadow-sm);
+    }
+    .ptoggle-save {
+      font-size: 11px;
+      font-weight: 700;
+      color: #2e7d3c;
+      background: #e6f5e9;
+      border-radius: 4px;
+      padding: 2px 6px;
+      margin-left: 6px;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+    .pricing-card {
+      background: var(--off-white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px 24px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s;
+    }
+    .pricing-card:hover { box-shadow: var(--shadow-md); }
+    .pricing-card.popular {
+      background: var(--green-dark);
+      border-color: var(--green-mid);
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-4px);
+    }
+    .popular-badge {
+      background: var(--yellow);
+      color: var(--green-dark);
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 4px 12px;
+      border-radius: 4px;
+      align-self: flex-start;
+      margin-bottom: 16px;
+    }
+    .plan-name {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .pricing-card.popular .plan-name { color: rgba(255,255,255,0.55); }
+    .plan-price {
+      font-size: 42px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      color: var(--green-dark);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .pricing-card.popular .plan-price { color: var(--yellow); }
+    .plan-price sup { font-size: 22px; font-weight: 700; vertical-align: super; }
+    .plan-cadence {
+      font-size: 12px;
+      color: var(--text-faint);
+      margin-bottom: 20px;
+    }
+    .pricing-card.popular .plan-cadence { color: rgba(255,255,255,0.4); }
+    .plan-divider {
+      height: 1px;
+      background: var(--border);
+      margin-bottom: 18px;
+    }
+    .pricing-card.popular .plan-divider { background: rgba(255,255,255,0.12); }
+    .plan-features {
+      list-style: none;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin-bottom: 24px;
+    }
+    .plan-features li {
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+    }
+    .pricing-card.popular .plan-features li { color: rgba(255,255,255,0.65); }
+    .plan-features li .check {
+      color: var(--green-mid);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .pricing-card.popular .plan-features li .check { color: var(--yellow); }
+    .plan-features li.muted { color: var(--text-faint); }
+    .pricing-card.popular .plan-features li.muted { color: rgba(255,255,255,0.25); }
+    .plan-features li.muted .check { opacity: 0.35; }
+    .plan-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      display: block;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .plan-btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--green-mid);
+      color: var(--green-dark);
+    }
+    .plan-btn-outline:hover { background: var(--green-dark); color: var(--yellow); }
+    .plan-btn-fill {
+      background: var(--yellow);
+      color: var(--green-dark);
+    }
+    .plan-btn-fill:hover { background: var(--yellow-soft); box-shadow: 0 4px 14px rgba(255,242,0,0.35); }
+    .plan-note {
+      font-size: 11px;
+      color: var(--text-faint);
+      text-align: center;
+      margin-top: 8px;
+    }
+    .pricing-card.popular .plan-note { color: rgba(255,255,255,0.3); }
+
+    /* hidden pricing panels */
+    .pricing-panel { display: none; }
+    .pricing-panel.active { display: contents; }
+
+    /* ── FOOTER ────────────────────────────────────────────── */
+    footer {
+      background: var(--green-dark);
+      padding: 28px 24px;
+      text-align: center;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    footer p {
+      color: rgba(255,255,255,0.35);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+    footer a { color: rgba(255,255,255,0.5); text-decoration: none; }
+    footer a:hover { color: var(--yellow); }
+
+    /* ── RESPONSIVE ────────────────────────────────────────── */
+    @media (max-width: 700px) {
+      .benefit-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .pricing-card.popular { transform: none; }
+      .new-feature-card.featured { grid-column: span 1; }
+      .feature-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px) {
+      .new-feature-cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <a href="#" class="nav-logo">
+    <!-- Gas Safe style logo mark -->
+    <img src="gas-safe-logo.jpg" class="nav-logo-icon" alt="Gas Safe Register" style="border-radius:5px;"/>
+    <div>
+      <div class="nav-logo-text">Gas Safe</div>
+      <div class="nav-logo-sub">Engineer App</div>
+    </div>
+  </a>
+  <a href="/app" class="nav-cta">Sign In</a>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <!-- Gas Safe logo mark -->
+  <img src="gas-safe-logo.jpg" class="hero-logo" alt="Gas Safe Register" style="border-radius:10px;"/>
+
+  <div class="hero-badge">
+    <span>NEW</span> Photographic evidence &amp; analyser imports now live
+  </div>
+
+  <h1>Gas Safety Engineer App</h1>
+  <p>The complete digital toolkit for Gas Safe registered engineers. Create unlimited certificates, attach flue gas analyser data, manage jobs and track your finances — all in one place.</p>
+
+  <div class="hero-price-pill">
+    From <strong>&nbsp;£7.33&nbsp;</strong> / month &nbsp;·&nbsp; unlimited certificates
+  </div>
+
+  <div class="hero-btns">
+    <a href="/app" class="btn-primary">Start Free — Create Your Profile &rarr;</a>
+    <a href="/app" class="btn-secondary">Sign In to Existing Account</a>
+  </div>
+
+  <a href="#new" class="hero-scroll-hint">
+    What's new?
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 3v10M4 9l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+</section>
+
+<!-- ── PILLS ── -->
+<div class="pills-row">
+  <div class="pill">✔ Gas Safety Certificates</div>
+  <div class="pill">✔ Boiler Service Records</div>
+  <div class="pill">✔ Warning Notices</div>
+  <div class="pill">✔ Invoices &amp; Quotes</div>
+  <div class="pill pill-new">★ Photographic Evidence</div>
+  <div class="pill pill-new">★ Analyser Imports</div>
+  <div class="pill pill-new">★ Pre-saved Engineer Signature</div>
+</div>
+
+<!-- ── NEW FEATURES ── -->
+<section class="new-features" id="new">
+  <div class="section-inner">
+    <div class="section-label">What's New</div>
+    <h2 class="section-title">Built for engineers on the job</h2>
+    <p class="section-lead">The latest update brings digital evidence collection directly into your certificate workflow — no more separate photos or paper print-outs from your analyser.</p>
+
+    <div class="new-feature-cards">
+
+      <div class="new-feature-card featured">
+        <div class="nfc-badge">New</div>
+        <span class="nfc-icon">📸</span>
+        <div class="nfc-title">Photographic Evidence &amp; Analyser Imports</div>
+        <div class="nfc-desc">Attach photos and import PDF reports directly from your flue gas analyser or manometer during certificate creation. All files are automatically appended as additional pages in the final PDF — keeping everything in one professional document.</div>
+        <ul class="nfc-list">
+          <li>Take photos from your phone camera mid-certificate</li>
+          <li>Import flue gas analyser PDF reports</li>
+          <li>Import manometer test records as PDF</li>
+          <li>Photos appear 2-per-page; PDF pages rendered in full</li>
+          <li>Works on Gas Safety Certs, Service Records, Warning Notices &amp; all specialist certs</li>
+        </ul>
+      </div>
+
+      <div class="new-feature-card">
+        <div class="nfc-badge">New</div>
+        <span class="nfc-icon">✍️</span>
+        <div class="nfc-title">Pre-saved Engineer Signature</div>
+        <div class="nfc-desc">Draw your signature once in your profile and it auto-populates on every certificate — no more signing by hand on each job.</div>
+      </div>
+
+      <div class="new-feature-card">
+        <div class="nfc-badge">New</div>
+        <span class="nfc-icon">📋</span>
+        <div class="nfc-title">Standardised Certificate Screens</div>
+        <div class="nfc-desc">All 11 certificate types now share a consistent signature screen, dropdown style and step layout for a faster, more predictable workflow on every job.</div>
+      </div>
+
+      <div class="new-feature-card">
+        <div class="nfc-badge">New</div>
+        <span class="nfc-icon">💾</span>
+        <div class="nfc-title">Reliable Sync &amp; Import</div>
+        <div class="nfc-desc">Contacts and reports now import correctly on desktop browsers. Backup exports include all contacts. Data persists reliably across mobile and desktop.</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── BENEFITS ── -->
+<section style="background: var(--off-white);">
+  <div class="section-inner">
+    <div class="value-callout">
+      <div class="value-callout-icon">💡</div>
+      <p>At just <strong>£7.33/month</strong> the app pays for itself the moment you skip your first box of paper certificates. Add the saving on your annual accountant bill and it's a no-brainer.</p>
+    </div>
+
+    <div class="benefit-grid">
+      <div class="benefit-card">
+        <div class="bc-title">No paper certificates</div>
+        <div class="bc-desc">Generate and share professional PDFs instantly from your phone — no certificate pads to carry or reorder.</div>
+      </div>
+      <div class="benefit-card">
+        <div class="bc-title">File your own tax return</div>
+        <div class="bc-desc">The yearly financial report gives you everything needed for Self Assessment — saving hundreds on accountant fees.</div>
+      </div>
+      <div class="benefit-card">
+        <div class="bc-title">Complete job evidence</div>
+        <div class="bc-desc">Attach analyser readings, photos and manometer results directly to each certificate — no separate filing needed.</div>
+      </div>
+      <div class="benefit-card">
+        <div class="bc-title">Never miss a renewal</div>
+        <div class="bc-desc">Automatic annual inspection reminders for every customer ensure you're always the first call when service is due.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<section class="features" id="features">
+  <div class="section-inner">
+    <div class="section-label">Everything you need on the job</div>
+    <h2 class="section-title">One app. Every job.</h2>
+    <p class="section-lead">From domestic gas safety checks to commercial catering inspections — every certificate type, every workflow, in your pocket.</p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <span class="fc-icon">🛡️</span>
+        <div class="fc-title">Gas Safety Certificates</div>
+        <div class="fc-desc">Domestic &amp; commercial GSCs with full compliance details — photographic evidence and analyser data included.</div>
+      </div>
+      <div class="feature-card">
+        <span class="fc-icon">🔧</span>
+        <div class="fc-title">Boiler Service Records</div>
+        <div class="fc-desc">Record boiler services with appliance details, preliminary checks, notes and engineer sign-off. Attach photos mid-service.</div>
+      </div>
+      <div class="feature-card">
+        <span class="fc-icon">⚠️</span>
+        <div class="fc-title">Warning Notices</div>
+        <div class="fc-desc">Issue Gas Safe compliant warning notices. Attach photographic evidence of the fault directly to the notice.</div>
+      </div>
+      <div class="feature-card">
+        <span class="fc-icon">📄</span>
+        <div class="fc-title">Benchmark Commissioning</div>
+        <div class="fc-desc">Full boiler commissioning checklists including controls, measurements, final checks and service records.</div>
+      </div>
+      <div class="feature-card">
+        <span class="fc-icon">🏭</span>
+        <div class="fc-title">Commercial &amp; Specialist Certs</div>
+        <div class="fc-desc">LPG, Leisure Industry, GISR, Gas Test &amp; Purge, Commercial Catering, Cooling Off Period — all included.</div>
+      </div>
+      <div class="feature-card">
+        <span class="fc-icon">💼</span>
+        <div class="fc-title">Invoices &amp; Quotes</div>
+        <div class="fc-desc">Generate professional invoices and quotes linked to your jobs. Mark paid, convert quotes and export to CSV.</div>
+      </div>
+      <div class="feature-card">
+        <span class="fc-icon">📊</span>
+        <div class="fc-title">Financial Reports</div>
+        <div class="fc-desc">Monthly and yearly accounts generated from your jobs. Import bank statements for a complete tax picture.</div>
+      </div>
+      <div class="feature-card">
+        <span class="fc-icon">🔔</span>
+        <div class="fc-title">Reminders Due</div>
+        <div class="fc-desc">Built-in due-date tracking for annual inspections — never miss a service reminder for any customer.</div>
+      </div>
+      <div class="feature-card">
+        <span class="fc-icon">👥</span>
+        <div class="fc-title">Client Contacts</div>
+        <div class="fc-desc">Store and search your customer database. Auto-populate address and contact details into new certificates.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CERT TYPES ── -->
+<section class="certs">
+  <div class="section-inner">
+    <div class="section-label">Certificate Types</div>
+    <h2 class="section-title">11 certificate types — all with evidence attachments</h2>
+    <p class="section-lead">Every certificate type supports photographic evidence and PDF imports from analysers and manometers.</p>
+    <div class="cert-tags">
+      <div class="cert-tag highlight">Gas Safety Certificate (Domestic)</div>
+      <div class="cert-tag highlight">Boiler Service Record</div>
+      <div class="cert-tag highlight">Warning Notice</div>
+      <div class="cert-tag">Benchmark Commissioning Checklist</div>
+      <div class="cert-tag">Commercial Gas Safety Certificate</div>
+      <div class="cert-tag">Gas Installation Safety Report</div>
+      <div class="cert-tag">Leisure Industry Gas Safety Record</div>
+      <div class="cert-tag">LPG Safety Record</div>
+      <div class="cert-tag">Commercial Catering Inspection</div>
+      <div class="cert-tag">Gas Testing &amp; Purging Record</div>
+      <div class="cert-tag">7 Day Cooling Off Exemption</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING ── -->
+<section class="pricing" id="pricing">
+  <div class="section-inner">
+    <div class="section-label" style="text-align:center;">Pricing</div>
+    <h2 class="section-title" style="text-align:center;">Simple, transparent pricing</h2>
+    <p class="section-lead" style="text-align:center; margin-left:auto; margin-right:auto;">All plans include unlimited certificates, all 11 certificate types, and the new photographic evidence feature. No setup fees.</p>
+
+    <div class="pricing-toggle">
+      <button class="ptoggle-btn active" onclick="showPricing('monthly', this)">Monthly</button>
+      <button class="ptoggle-btn" onclick="showPricing('annual', this)">
+        Annual <span class="ptoggle-save">Save ~20%</span>
+      </button>
+    </div>
+
+    <div class="pricing-grid">
+
+      <!-- MONTHLY -->
+      <div class="pricing-panel active" id="monthly-lite">
+        <div class="pricing-card">
+          <div class="plan-name">Lite</div>
+          <div class="plan-price"><sup>£</sup>7.33</div>
+          <div class="plan-cadence">per month + VAT</div>
+          <div class="plan-divider"></div>
+          <ul class="plan-features">
+            <li><span class="check">✓</span> Gas Reports &amp; Certificates</li>
+            <li><span class="check">✓</span> Invoicing &amp; Quotes</li>
+            <li><span class="check">✓</span> Gas Rate Calculator</li>
+            <li><span class="check">✓</span> Job Sheets</li>
+            <li><span class="check">✓</span> iZettle Integration</li>
+            <li class="muted"><span class="check">–</span> Automated File Backup</li>
+            <li class="muted"><span class="check">–</span> Annual Reminders</li>
+            <li class="muted"><span class="check">–</span> Customer Database</li>
+            <li class="muted"><span class="check">–</span> Business Analytics</li>
+            <li class="muted"><span class="check">–</span> Email Marketing</li>
+          </ul>
+          <a href="/app" class="plan-btn plan-btn-outline">Get Started</a>
+          <div class="plan-note">Cancel anytime</div>
+        </div>
+      </div>
+
+      <div class="pricing-panel active" id="monthly-pro">
+        <div class="pricing-card popular">
+          <div class="popular-badge">Most Popular</div>
+          <div class="plan-name">Pro</div>
+          <div class="plan-price"><sup>£</sup>13.33</div>
+          <div class="plan-cadence">per month + VAT</div>
+          <div class="plan-divider"></div>
+          <ul class="plan-features">
+            <li><span class="check">✓</span> Everything in Lite</li>
+            <li><span class="check">✓</span> Automated File Backup</li>
+            <li><span class="check">✓</span> Annual Reminders</li>
+            <li><span class="check">✓</span> Customer Database</li>
+            <li><span class="check">✓</span> Business Analytics</li>
+            <li><span class="check">✓</span> Email Marketing</li>
+            <li><span class="check">✓</span> Job Scheduling</li>
+            <li class="muted"><span class="check">–</span> Sub Users</li>
+          </ul>
+          <a href="/app" class="plan-btn plan-btn-fill">Get Started</a>
+          <div class="plan-note">Cancel anytime</div>
+        </div>
+      </div>
+
+      <div class="pricing-panel active" id="monthly-proplus">
+        <div class="pricing-card">
+          <div class="plan-name">Pro+</div>
+          <div class="plan-price"><sup>£</sup>17.33</div>
+          <div class="plan-cadence">per month + VAT</div>
+          <div class="plan-divider"></div>
+          <ul class="plan-features">
+            <li><span class="check">✓</span> Everything in Pro</li>
+            <li><span class="check">✓</span> Job Scheduling</li>
+            <li><span class="check">✓</span> Sub Users</li>
+            <li><span class="check">✓</span> +£6.99/month per sub user</li>
+          </ul>
+          <a href="/app" class="plan-btn plan-btn-outline">Get Started</a>
+          <div class="plan-note">Cancel anytime</div>
+        </div>
+      </div>
+
+      <!-- ANNUAL -->
+      <div class="pricing-panel" id="annual-lite">
+        <div class="pricing-card">
+          <div class="plan-name">Lite</div>
+          <div class="plan-price"><sup>£</sup>72.99</div>
+          <div class="plan-cadence">per year + VAT &nbsp;(£6.08/mo)</div>
+          <div class="plan-divider"></div>
+          <ul class="plan-features">
+            <li><span class="check">✓</span> Gas Reports &amp; Certificates</li>
+            <li><span class="check">✓</span> Invoicing &amp; Quotes</li>
+            <li><span class="check">✓</span> Gas Rate Calculator</li>
+            <li><span class="check">✓</span> Job Sheets</li>
+            <li><span class="check">✓</span> iZettle Integration</li>
+            <li class="muted"><span class="check">–</span> Automated File Backup</li>
+            <li class="muted"><span class="check">–</span> Annual Reminders</li>
+            <li class="muted"><span class="check">–</span> Customer Database</li>
+            <li class="muted"><span class="check">–</span> Business Analytics</li>
+            <li class="muted"><span class="check">–</span> Email Marketing</li>
+          </ul>
+          <a href="/app" class="plan-btn plan-btn-outline">Get Started</a>
+          <div class="plan-note">Billed annually</div>
+        </div>
+      </div>
+
+      <div class="pricing-panel" id="annual-pro">
+        <div class="pricing-card popular">
+          <div class="popular-badge">Most Popular</div>
+          <div class="plan-name">Pro</div>
+          <div class="plan-price"><sup>£</sup>132.99</div>
+          <div class="plan-cadence">per year + VAT &nbsp;(£11.08/mo)</div>
+          <div class="plan-divider"></div>
+          <ul class="plan-features">
+            <li><span class="check">✓</span> Everything in Lite</li>
+            <li><span class="check">✓</span> Automated File Backup</li>
+            <li><span class="check">✓</span> Annual Reminders</li>
+            <li><span class="check">✓</span> Customer Database</li>
+            <li><span class="check">✓</span> Business Analytics</li>
+            <li><span class="check">✓</span> Email Marketing</li>
+            <li><span class="check">✓</span> Job Scheduling</li>
+            <li class="muted"><span class="check">–</span> Sub Users</li>
+          </ul>
+          <a href="/app" class="plan-btn plan-btn-fill">Get Started</a>
+          <div class="plan-note">Billed annually</div>
+        </div>
+      </div>
+
+      <div class="pricing-panel" id="annual-proplus">
+        <div class="pricing-card">
+          <div class="plan-name">Pro+</div>
+          <div class="plan-price"><sup>£</sup>172.99</div>
+          <div class="plan-cadence">per year + VAT &nbsp;(£14.42/mo)</div>
+          <div class="plan-divider"></div>
+          <ul class="plan-features">
+            <li><span class="check">✓</span> Everything in Pro</li>
+            <li><span class="check">✓</span> Job Scheduling</li>
+            <li><span class="check">✓</span> Sub Users</li>
+            <li><span class="check">✓</span> +£72.99/year per sub user</li>
+          </ul>
+          <a href="/app" class="plan-btn plan-btn-outline">Get Started</a>
+          <div class="plan-note">Billed annually</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <p>
+    For use by Gas Safe registered engineers only &nbsp;·&nbsp;
+    UK Gas Safety (Installation and Use) Regulations 1998<br/>
+    <a href="#">Terms &amp; Conditions</a> &nbsp;·&nbsp; <a href="#">Privacy Policy</a> &nbsp;·&nbsp; <a href="mailto:broxburnboilers@gmail.com">Contact</a>
+  </p>
+</footer>
+
+<script>
+  function showPricing(type, btn) {
+    // Toggle buttons
+    document.querySelectorAll('.ptoggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Toggle panels
+    const panels = document.querySelectorAll('.pricing-panel');
+    panels.forEach(p => p.classList.remove('active'));
+
+    if (type === 'monthly') {
+      ['monthly-lite','monthly-pro','monthly-proplus'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('active');
+      });
+    } else {
+      ['annual-lite','annual-pro','annual-proplus'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('active');
+      });
+    }
+  }
+</script>
+
+<script data-pplx-inline-edit>
+(function(){
+  if(window===window.top)return;
+  function inlineAll(orig,clone){
+    if(orig.nodeType!==1)return;
+    try{
+      var cs=getComputedStyle(orig);
+      var t='';
+      for(var i=0;i<cs.length;i++){t+=cs[i]+':'+cs.getPropertyValue(cs[i])+';';}
+      clone.style.cssText=t;
+    }catch(e){}
+    var oc=orig.children,cc=clone.children;
+    for(var j=0;j<oc.length&&j<cc.length;j++){inlineAll(oc[j],cc[j]);}
+  }
+  function stripExternal(clone){
+    var imgs=clone.querySelectorAll('img');
+    for(var i=0;i<imgs.length;i++){
+      var s=imgs[i].getAttribute('src');
+      if(s&&!s.startsWith('data:'))imgs[i].removeAttribute('src');
+    }
+    var all=clone.querySelectorAll('*');
+    for(var i=0;i<all.length;i++){
+      var st=all[i].style.cssText;
+      if(st&&st.indexOf('url(')>=0){
+        all[i].style.cssText=st.replace(/url\(["']?(?!data:)[^)"']*["']?\)/gi,'none');
+      }
+    }
+  }
+  window.addEventListener('message',function(e){
+    if(!e.data||e.data.type!=='INLINE_EDIT_CAPTURE_REQUEST')return;
+    var scrollX=window.scrollX||window.pageXOffset||0;
+    var scrollY=window.scrollY||window.pageYOffset||0;
+    var w=window.innerWidth,h=window.innerHeight;
+    try{
+      var clone=document.documentElement.cloneNode(true);
+      var rm=clone.querySelectorAll('script,link[rel="stylesheet"],style');
+      for(var i=0;i<rm.length;i++){rm[i].remove();}
+      inlineAll(document.documentElement,clone);
+      stripExternal(clone);
+      var html=new XMLSerializer().serializeToString(clone);
+      var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'
+        +'<foreignObject width="100%" height="100%">'
+        +'<div xmlns="http://www.w3.org/1999/xhtml" style="width:'+w+'px;height:'+h+'px;overflow:hidden">'
+        +'<div style="transform:translate(-'+scrollX+'px,-'+scrollY+'px);transform-origin:top left">'
+        +html+'</div></div></foreignObject></svg>';
+      var svgUrl='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+      var img=new Image();
+      img.onload=function(){
+        var c=document.createElement('canvas');c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0);
+        window.parent.postMessage({type:'INLINE_EDIT_SCREENSHOT_RESULT',dataUrl:c.toDataURL('image/png'),scrollX:scrollX,scrollY:scrollY},'*');
+      };
+      img.onerror=function(){
+        window.parent.postMessage({type:'INLINE_EDIT_SCREENSHOT_RESULT',dataUrl:null,scrollX:scrollX,scrollY:scrollY},'*');
+      };
+      img.src=svgUrl;
+    }catch(err){
+      window.parent.postMessage({type:'INLINE_EDIT_SCREENSHOT_RESULT',dataUrl:null,scrollX:scrollX,scrollY:scrollY},'*');
+    }
+  });
+})();
+</script></body>
+</html>
