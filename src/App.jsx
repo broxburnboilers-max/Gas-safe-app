@@ -2243,7 +2243,7 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
   const PLANS = {
     lite:    { name:"Lite",  monthly:7.50,   annual:75,    features:["All Certificate Types","Up to 20 Certificates / Month","Invoicing & Quotes","Gas Rate Calculator","Job Sheets","Photographic Evidence"], excluded:["Accounts Feature","Annual Reminders","Multiple Engineers"] },
     pro:     { name:"Pro",   monthly:14.50,  annual:135,   features:["Everything in Lite","Unlimited Certificates","Accounts Feature","Annual Reminders","Business Analytics","Customer Database"], excluded:["Multiple Engineers"] },
-    proplus: { name:"Pro+",  monthly:118.50, annual:175,   features:["Everything in Pro","Multiple Engineers","Unlimited Everything","Priority Support"], excluded:[] },
+    proplus: { name:"Pro+",  monthly:18.50, annual:175,   features:["Everything in Pro","Multiple Engineers","Unlimited Everything","Priority Support"], excluded:[] },
   };
   const plan = PLANS[selectedPlan];
   const price = billingCycle==="monthly" ? plan.monthly : plan.annual;
