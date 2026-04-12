@@ -3583,44 +3583,45 @@ function LPGStepFileRef({ data, onChange, onNext, onBack, onHome, title="Gas Saf
 }
 
 function LPGStepDetails({ data, onChange, onNext, onBack, onHome }) {
-  const inp = { width:"100%", boxSizing:"border-box", padding:"11px 13px", border:"1px solid #ddd", borderRadius:8, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", marginBottom:2 };
-  const lbl = (t,req) => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4, marginTop:10 }}>{t}{req&&<span style={{ color:"#d32f2f" }}> *</span>}</div>;
-  const sec = (t) => <div style={{ fontWeight:700, fontSize:14, color:LPG_COLOR, borderBottom:`2px solid ${LPG_COLOR}30`, paddingBottom:6, marginBottom:4, marginTop:14 }}>{t}</div>;
   const [_pickerLPGStepDetails, _setPickerLPGStepDetails] = useState(null); // "client"|"inst"|null
   const _handlePickLPGStepDetails = (target, c) => {
     const f = contactToFields(c);
-    if (target === "client") onChange({...data, tradingTitle: f.name||data.tradingTitle||'', clientAddr: f.addr1||data.clientAddr||'', clientPostcode: f.postcode||data.clientPostcode||'', clientTel: f.phone||data.clientTel||''});
-    else onChange({...data, instAddr: f.addr1||data.instAddr||'', instPostcode: f.postcode||data.instPostcode||'', instTel: f.phone||data.instTel||''});
+    if (target === "client") onChange({...data, clientName:f.name||data.clientName||'', clientAddr1:f.addr1||data.clientAddr1||'', clientAddr2:f.addr2||data.clientAddr2||'', clientAddr3:f.addr3||data.clientAddr3||'', clientPostcode:f.postcode||data.clientPostcode||'', clientTel:f.phone||data.clientTel||'', clientEmail:f.email||data.clientEmail||''});
+    else onChange({...data, instName:f.name||data.instName||'', instAddr1:f.addr1||data.instAddr1||'', instAddr2:f.addr2||data.instAddr2||'', instAddr3:f.addr3||data.instAddr3||'', instPostcode:f.postcode||data.instPostcode||'', instTel:f.phone||data.instTel||''});
     _setPickerLPGStepDetails(null);
   };
-    return (
+  const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerLPGStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1d4a2e",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1d4a2e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Engineers, Installation & Client" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Engineers Details")}
-          {lbl("Trading Title / Company Name",true)}<input value={data.tradingTitle} onChange={e=>onChange({...data,tradingTitle:e.target.value})} placeholder="Company name" style={inp}/>
-          {lbl("Address")}<input value={data.engAddr} onChange={e=>onChange({...data,engAddr:e.target.value})} placeholder="Street address" style={inp}/>
-          {lbl("Town / City")}<input value={data.engCity} onChange={e=>onChange({...data,engCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Post Code")}<input value={data.engPostcode} onChange={e=>onChange({...data,engPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Gas Safe No")}<input value={data.gasSafeNo} onChange={e=>onChange({...data,gasSafeNo:e.target.value})} placeholder="Gas Safe Registration No" style={inp}/>
-          {lbl("Telephone No")}<input value={data.engTel} onChange={e=>onChange({...data,engTel:e.target.value})} placeholder="Telephone" style={inp}/>
-          {lbl("Gas ID Number (Engineer ID)")}<input value={data.gasId} onChange={e=>onChange({...data,gasId:e.target.value})} placeholder="Engineer ID card number" style={inp}/>
-        </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Installation Details")}</div><button onClick={()=>_setPickerLPGStepDetails("inst")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
-          {lbl("Installation Address",true)}<input value={data.instAddr} onChange={e=>onChange({...data,instAddr:e.target.value})} placeholder="Street address" style={inp}/>
-          {lbl("Town / City")}<input value={data.instCity} onChange={e=>onChange({...data,instCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Post Code")}<input value={data.instPostcode} onChange={e=>onChange({...data,instPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Telephone No")}<input value={data.instTel} onChange={e=>onChange({...data,instTel:e.target.value})} placeholder="Telephone" style={inp}/>
-        </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerLPGStepDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
-          {lbl("Client Address",true)}<input value={data.clientAddr} onChange={e=>onChange({...data,clientAddr:e.target.value})} placeholder="Client name / address" style={inp}/>
-          {lbl("Town / City")}<input value={data.clientCity} onChange={e=>onChange({...data,clientCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Post Code")}<input value={data.clientPostcode} onChange={e=>onChange({...data,clientPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Telephone No")}<input value={data.clientTel} onChange={e=>onChange({...data,clientTel:e.target.value})} placeholder="Telephone" style={inp}/>
-        </div>
+      <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto" }}>
+        <SectionHeader title="Engineers Details"/>
+        <FormInput label="Trading Title / Company Name" placeholder="Company name" value={data.engCompany||""} onChange={v=>onChange({...data,engCompany:v})}/>
+        <FormInput label="Address" placeholder="Address" value={data.engAddr1||""} onChange={v=>onChange({...data,engAddr1:v})}/>
+        <FormInput label="Town / City" placeholder="Town or city" value={data.engAddr2||""} onChange={v=>onChange({...data,engAddr2:v})}/>
+        <FormInput label="Post Code" placeholder="Postcode" value={data.engPostcode||""} onChange={v=>onChange({...data,engPostcode:v})}/>
+        <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={data.gasSafeNo||""} onChange={v=>onChange({...data,gasSafeNo:v})}/>
+        <FormInput label="Telephone No" placeholder="Telephone" value={data.engTel||""} onChange={v=>onChange({...data,engTel:v})}/>
+        <FormInput label="Engineer Name" placeholder="Engineer name" value={data.engName||""} onChange={v=>onChange({...data,engName:v})}/>
+        <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={data.gasId||""} onChange={v=>onChange({...data,gasId:v})}/>
+        <SectionHeader title="Client Details" actions={[<ContactBtn key="cp" target="client"/>]}/>
+        <FormInput placeholder="Name" value={data.clientName||""} onChange={v=>onChange({...data,clientName:v})}/>
+        <FormInput placeholder="Address line 1" value={data.clientAddr1||""} onChange={v=>onChange({...data,clientAddr1:v})}/>
+        <FormInput placeholder="Address line 2" value={data.clientAddr2||""} onChange={v=>onChange({...data,clientAddr2:v})}/>
+        <FormInput placeholder="Address line 3" value={data.clientAddr3||""} onChange={v=>onChange({...data,clientAddr3:v})}/>
+        <FormInput placeholder="Postcode" value={data.clientPostcode||""} onChange={v=>onChange({...data,clientPostcode:v})}/>
+        <FormInput placeholder="Telephone" value={data.clientTel||""} onChange={v=>onChange({...data,clientTel:v})}/>
+        <FormInput placeholder="Email" value={data.clientEmail||""} onChange={v=>onChange({...data,clientEmail:v})}/>
+        <SectionHeader title="Installation Details" actions={[<CopyBtn key="copy"/>, <ContactBtn key="cp" target="inst"/>]}/>
+        <FormInput placeholder="Name" value={data.instName||""} onChange={v=>onChange({...data,instName:v})}/>
+        <FormInput placeholder="Address line 1" value={data.instAddr1||""} onChange={v=>onChange({...data,instAddr1:v})}/>
+        <FormInput placeholder="Address line 2" value={data.instAddr2||""} onChange={v=>onChange({...data,instAddr2:v})}/>
+        <FormInput placeholder="Address line 3" value={data.instAddr3||""} onChange={v=>onChange({...data,instAddr3:v})}/>
+        <FormInput placeholder="Postcode" value={data.instPostcode||""} onChange={v=>onChange({...data,instPostcode:v})}/>
+        <FormInput placeholder="Telephone" value={data.instTel||""} onChange={v=>onChange({...data,instTel:v})}/>
+        <div style={{ height:20 }}/>
       </div>
       <BottomBar onHome={onHome} onNext={onNext}/>
       {_pickerLPGStepDetails && <ContactPickerModal
@@ -4163,36 +4164,45 @@ function CoolOffStepFileRef({ data, onChange, onNext, onBack, onHome }) {
 }
 
 function CoolOffStepDetails({ data, onChange, onNext, onBack, onHome }) {
-  const inp = { width:"100%", boxSizing:"border-box", padding:"11px 13px", border:"1px solid #ddd", borderRadius:8, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", marginBottom:2 };
-  const lbl = (t, req) => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4, marginTop:10 }}>{t}{req&&<span style={{ color:"#d32f2f" }}> *</span>}</div>;
-  const sec = (t) => <div style={{ fontWeight:700, fontSize:14, color:COOL_COLOR, borderBottom:`2px solid ${COOL_COLOR}30`, paddingBottom:6, marginBottom:4, marginTop:14 }}>{t}</div>;
   const [_pickerCoolOffStepDetails, _setPickerCoolOffStepDetails] = useState(null); // "client"|"inst"|null
   const _handlePickCoolOffStepDetails = (target, c) => {
     const f = contactToFields(c);
-    if (target === "client") onChange({...data, clientName: f.name||data.clientName||'', clientAddr: f.addr1||data.clientAddr||'', clientAddr2: f.addr2||data.clientAddr2||'', clientPostcode: f.postcode||data.clientPostcode||'', clientTel: f.phone||data.clientTel||'', clientEmail: f.email||data.clientEmail||''});
-    else onChange({...data, instName: f.name||data.instName||'', instAddr: f.addr1||data.instAddr||'', instPostcode: f.postcode||data.instPostcode||'', instTel: f.phone||data.instTel||''});
+    if (target === "client") onChange({...data, clientName:f.name||data.clientName||'', clientAddr1:f.addr1||data.clientAddr1||'', clientAddr2:f.addr2||data.clientAddr2||'', clientAddr3:f.addr3||data.clientAddr3||'', clientPostcode:f.postcode||data.clientPostcode||'', clientTel:f.phone||data.clientTel||'', clientEmail:f.email||data.clientEmail||''});
+    else onChange({...data, instName:f.name||data.instName||'', instAddr1:f.addr1||data.instAddr1||'', instAddr2:f.addr2||data.instAddr2||'', instAddr3:f.addr3||data.instAddr3||'', instPostcode:f.postcode||data.instPostcode||'', instTel:f.phone||data.instTel||''});
     _setPickerCoolOffStepDetails(null);
   };
-    return (
+  const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCoolOffStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1d4a2e",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1d4a2e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Installation & Client Details" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Installation Details")}</div><button onClick={()=>_setPickerCoolOffStepDetails("inst")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
-          {lbl("Installation Name / Address", true)}<input value={data.instName} onChange={e=>onChange({...data,instName:e.target.value})} placeholder="Name / address line 1" style={inp}/>
-          {lbl("Address line 2")}<input value={data.instAddr2} onChange={e=>onChange({...data,instAddr2:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Email Address")}<input value={data.instEmail} onChange={e=>onChange({...data,instEmail:e.target.value})} placeholder="email@example.com" style={inp}/>
-          {lbl("Post Code")}<input value={data.instPostcode} onChange={e=>onChange({...data,instPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Telephone No")}<input value={data.instTel} onChange={e=>onChange({...data,instTel:e.target.value})} placeholder="Telephone" style={inp}/>
-        </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>onChange({...data, clientName:data.instName||"", clientAddr2:data.instAddr2||"", clientEmail:data.instEmail||"", clientPostcode:data.instPostcode||"", clientTel:data.instTel||""})} style={{ marginLeft:8, flexShrink:0, background:"#fff", border:`2px solid ${COOL_COLOR}`, borderRadius:8, padding:"5px 12px", color:COOL_COLOR, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Copy from Installation</button><button onClick={()=>_setPickerCoolOffStepDetails("client")} style={{ marginLeft:6, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
-          {lbl("Client Name / Address", true)}<input value={data.clientName} onChange={e=>onChange({...data,clientName:e.target.value})} placeholder="Name / address line 1" style={inp}/>
-          {lbl("Address line 2")}<input value={data.clientAddr2} onChange={e=>onChange({...data,clientAddr2:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Email Address")}<input value={data.clientEmail} onChange={e=>onChange({...data,clientEmail:e.target.value})} placeholder="email@example.com" style={inp}/>
-          {lbl("Post Code")}<input value={data.clientPostcode} onChange={e=>onChange({...data,clientPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Telephone No")}<input value={data.clientTel} onChange={e=>onChange({...data,clientTel:e.target.value})} placeholder="Telephone" style={inp}/>
-        </div>
+      <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto" }}>
+        <SectionHeader title="Engineers Details"/>
+        <FormInput label="Trading Title / Company Name" placeholder="Company name" value={data.engCompany||""} onChange={v=>onChange({...data,engCompany:v})}/>
+        <FormInput label="Address" placeholder="Address" value={data.engAddr1||""} onChange={v=>onChange({...data,engAddr1:v})}/>
+        <FormInput label="Town / City" placeholder="Town or city" value={data.engAddr2||""} onChange={v=>onChange({...data,engAddr2:v})}/>
+        <FormInput label="Post Code" placeholder="Postcode" value={data.engPostcode||""} onChange={v=>onChange({...data,engPostcode:v})}/>
+        <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={data.gasSafeNo||""} onChange={v=>onChange({...data,gasSafeNo:v})}/>
+        <FormInput label="Telephone No" placeholder="Telephone" value={data.engTel||""} onChange={v=>onChange({...data,engTel:v})}/>
+        <FormInput label="Engineer Name" placeholder="Engineer name" value={data.engName||""} onChange={v=>onChange({...data,engName:v})}/>
+        <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={data.gasId||""} onChange={v=>onChange({...data,gasId:v})}/>
+        <SectionHeader title="Client Details" actions={[<ContactBtn key="cp" target="client"/>]}/>
+        <FormInput placeholder="Name" value={data.clientName||""} onChange={v=>onChange({...data,clientName:v})}/>
+        <FormInput placeholder="Address line 1" value={data.clientAddr1||""} onChange={v=>onChange({...data,clientAddr1:v})}/>
+        <FormInput placeholder="Address line 2" value={data.clientAddr2||""} onChange={v=>onChange({...data,clientAddr2:v})}/>
+        <FormInput placeholder="Address line 3" value={data.clientAddr3||""} onChange={v=>onChange({...data,clientAddr3:v})}/>
+        <FormInput placeholder="Postcode" value={data.clientPostcode||""} onChange={v=>onChange({...data,clientPostcode:v})}/>
+        <FormInput placeholder="Telephone" value={data.clientTel||""} onChange={v=>onChange({...data,clientTel:v})}/>
+        <FormInput placeholder="Email" value={data.clientEmail||""} onChange={v=>onChange({...data,clientEmail:v})}/>
+        <SectionHeader title="Installation Details" actions={[<CopyBtn key="copy"/>, <ContactBtn key="cp" target="inst"/>]}/>
+        <FormInput placeholder="Name" value={data.instName||""} onChange={v=>onChange({...data,instName:v})}/>
+        <FormInput placeholder="Address line 1" value={data.instAddr1||""} onChange={v=>onChange({...data,instAddr1:v})}/>
+        <FormInput placeholder="Address line 2" value={data.instAddr2||""} onChange={v=>onChange({...data,instAddr2:v})}/>
+        <FormInput placeholder="Address line 3" value={data.instAddr3||""} onChange={v=>onChange({...data,instAddr3:v})}/>
+        <FormInput placeholder="Postcode" value={data.instPostcode||""} onChange={v=>onChange({...data,instPostcode:v})}/>
+        <FormInput placeholder="Telephone" value={data.instTel||""} onChange={v=>onChange({...data,instTel:v})}/>
+        <div style={{ height:20 }}/>
       </div>
       <BottomBar onHome={onHome} onNext={onNext}/>
       {_pickerCoolOffStepDetails && <ContactPickerModal
@@ -4524,50 +4534,66 @@ function CoolOffScreen({ engineerData, onBack, onHome, onSave, initialData }) {
 
 const BMK_COLOR = "#6d9b3a"; // Yellow-green from screenshots
 
+function BmkStepFileRef({ data, onChange, onNext, onBack, onHome }) {
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title="Gas Boiler Commissioning Checklist" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto", padding:24, paddingBottom:80 }}>
+        <p style={{ color:"#888", fontSize:15, marginBottom:20, textAlign:"center" }}>Please enter a file reference</p>
+        <input value={data.certNo||""} onChange={e=>onChange({...data,certNo:e.target.value})} placeholder="Certificate Reference"
+          style={{ width:"100%", boxSizing:"border-box", padding:"14px 16px", border:"none", borderRadius:8, background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", boxShadow:"0 2px 8px rgba(0,0,0,0.08)", outline:"none" }}/>
+      </div>
+      <BottomBar onHome={onHome} onNext={onNext}/>
+    </div>
+  );
+}
+
 function BmkStepClientDetails({ data, onChange, onNext, onBack, onHome }) {
-  const inp = (key, ph, type) => <input type={type||"text"} value={data[key]||""} onChange={e=>onChange({...data,[key]:e.target.value})} placeholder={ph}
-    style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:15, outline:"none", marginBottom:2 }}/>;
-  const lbl = t => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4, marginTop:10 }}>{t}</div>;
-  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:BMK_COLOR, borderBottom:`2px solid ${BMK_COLOR}30`, paddingBottom:6, marginBottom:4, marginTop:14 }}>{t}</div>;
-  const [_pickerBmkStepClientDetails, _setPickerBmkStepClientDetails] = useState(null); // "client"|"inst"|null
+  const copy = () => onChange({...data, instName:data.clientName, instAddr1:data.clientAddr1, instAddr2:data.clientAddr2, instAddr3:data.clientAddr3, instPostcode:data.clientPostcode, instTel:data.clientTel});
+  const [_pickerBmkStepClientDetails, _setPickerBmkStepClientDetails] = useState(null);
   const _handlePickBmkStepClientDetails = (target, c) => {
     const f = contactToFields(c);
-    if (target === "client") onChange({...data, clientName: f.name||data.clientName||'', clientAddr1: f.addr1||data.clientAddr1||'', clientAddr2: f.addr2||data.clientAddr2||'', clientAddr3: f.addr3||data.clientAddr3||'', clientPostcode: f.postcode||data.clientPostcode||'', clientTel: f.phone||data.clientTel||'', clientEmail: f.email||data.clientEmail||''});
-    else onChange({...data, instAddr1: f.addr1||data.instAddr1||'', instAddr2: f.addr2||data.instAddr2||'', instAddr3: f.addr3||data.instAddr3||'', instPostcode: f.postcode||data.instPostcode||''});
+    if (target === "client") onChange({...data, clientName: f.name||'', clientAddr1: f.addr1||'', clientAddr2: f.addr2||'', clientAddr3: f.addr3||'', clientPostcode: f.postcode||'', clientTel: f.phone||'', clientEmail: f.email||''});
+    else onChange({...data, instName: f.name||'', instAddr1: f.addr1||'', instAddr2: f.addr2||'', instAddr3: f.addr3||'', instPostcode: f.postcode||'', instTel: f.phone||''});
     _setPickerBmkStepClientDetails(null);
   };
-    return (
+  const ContactBtn = ({ target }) => (
+    <button onClick={() => _setPickerBmkStepClientDetails(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+      👥 Add a Contact
+    </button>
+  );
+  const CopyBtn = () => (
+    <button onClick={copy} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
+  );
+  return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Gas Boiler Commissioning Checklist" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Certificate Details")}
-          {lbl("Certificate / Job Number")}{inp("certNo","e.g. 3")}
-          {lbl("Notification Number")}{inp("notificationNo","Building Regs notification number")}
-          {lbl("Boiler Serial Number")}{inp("boilerSerial","Boiler serial number")}
-        </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerBmkStepClientDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
-          {lbl("Customer Name")}{inp("clientName","Full name")}
-          {lbl("Telephone No")}{inp("clientTel","Phone","tel")}
-          {lbl("Address Line 1")}{inp("clientAddr1","Address line 1")}
-          {lbl("Address Line 2")}{inp("clientAddr2","Address line 2")}
-          {lbl("Address Line 3")}{inp("clientAddr3","Town / City")}
-          {lbl("Postcode")}{inp("clientPostcode","Postcode")}
-          {lbl("Email")}{inp("clientEmail","Email address","email")}
-        </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Installation Address")}
-          <div style={{ fontSize:12, color:"#888", marginBottom:8 }}>Leave blank if same as client address</div>
-          {lbl("Address Line 1")}{inp("instAddr1","Address line 1")}
-          {lbl("Address Line 2")}{inp("instAddr2","Address line 2")}
-          {lbl("Address Line 3")}{inp("instAddr3","Town / City")}
-          {lbl("Postcode")}{inp("instPostcode","Postcode")}
-        </div>
+      <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto" }}>
+        <SectionHeader title="Engineers Details"/>
+        <FormInput label="Trading Title / Company Name" placeholder="Company name" value={data.companyName||""} onChange={v=>onChange({...data,companyName:v})}/>
+        <FormInput label="Address" placeholder="Address" value={data.companyAddr||""} onChange={v=>onChange({...data,companyAddr:v})}/>
+        <FormInput label="Town / City" placeholder="Town or city" value={data.companyTown||""} onChange={v=>onChange({...data,companyTown:v})}/>
+        <FormInput label="Post Code" placeholder="Postcode" value={data.companyPostcode||""} onChange={v=>onChange({...data,companyPostcode:v})}/>
+        <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={data.gasSafeNo||""} onChange={v=>onChange({...data,gasSafeNo:v})}/>
+        <FormInput label="Telephone No" placeholder="Telephone" value={data.companyTel||""} onChange={v=>onChange({...data,companyTel:v})}/>
+        <FormInput label="Engineer Name" placeholder="Engineer name" value={data.engineerName||""} onChange={v=>onChange({...data,engineerName:v})}/>
+        <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={data.engineerId||""} onChange={v=>onChange({...data,engineerId:v})}/>
+        <SectionHeader title="Client Details" actions={[<ContactBtn key="cp" target="client"/>]}/>
+        {[["clientName","Name"],["clientAddr1","Address line 1"],["clientAddr2","Address line 2"],["clientAddr3","Address line 3"],["clientPostcode","Postcode"],["clientTel","Telephone"],["clientEmail","Email"]].map(([k,p])=>(
+          <FormInput key={k} placeholder={p} value={data[k]||""} onChange={v=>onChange({...data,[k]:v})}/>
+        ))}
+        <SectionHeader title="Installation Details" actions={[
+          <CopyBtn key="copy"/>,
+          <ContactBtn key="cp" target="inst"/>
+        ]}/>
+        {[["instName","Name"],["instAddr1","Address line 1"],["instAddr2","Address line 2"],["instAddr3","Address line 3"],["instPostcode","Postcode"],["instTel","Telephone"]].map(([k,p])=>(
+          <FormInput key={k} placeholder={p} value={data[k]||""} onChange={v=>onChange({...data,[k]:v})}/>
+        ))}
+        <div style={{ height:20 }}/>
       </div>
       <BottomBar onHome={onHome} onNext={onNext}/>
       {_pickerBmkStepClientDetails && <ContactPickerModal
-        title={_pickerBmkStepClientDetails==="client" ? "Choose Client" : _pickerBmkStepClientDetails==="inst" ? "Choose Installation" : "Choose Contact"}
+        title={_pickerBmkStepClientDetails==="client" ? "Choose Client" : "Choose Installation"}
         onSelect={c=>_handlePickBmkStepClientDetails(_pickerBmkStepClientDetails,c)}
         onClose={()=>_setPickerBmkStepClientDetails(null)}/>}
     </div>
@@ -5398,7 +5424,7 @@ function BenchmarkPDF({ formData, engineerData, onClose, onSave, autoDownload, o
 // ─── ORCHESTRATOR ─────────────────────────────────────────────────────────────
 
 function BenchmarkScreen({ engineerData, onBack, onHome, onSave, initialData }) {
-  const [step, setStep] = useState("clientDetails");
+  const [step, setStep] = useState("fileRef");
   const [showPDF, setShowPDF] = useState(false);
   const today = new Date().toISOString().slice(0,10);
   const eng = engineerData || {};
@@ -5449,7 +5475,8 @@ function BenchmarkScreen({ engineerData, onBack, onHome, onSave, initialData }) 
     onSave={()=>{ onSave({ type:"benchmark", certLabel:"Benchmark Commissioning Checklist", form:data, engineerData, savedAt:new Date().toISOString() }); alert("Certificate saved to Records!"); }}/>;
 
   const steps = {
-    clientDetails:  <BmkStepClientDetails  data={data} onChange={setData} onBack={onBack}                         onHome={onHome} onNext={()=>setStep("appliance")}/>,
+    fileRef:        <BmkStepFileRef        data={data} onChange={setData} onBack={onBack}                         onHome={onHome} onNext={()=>setStep("clientDetails")}/>,
+    clientDetails:  <BmkStepClientDetails  data={data} onChange={setData} onBack={()=>setStep("fileRef")}          onHome={onHome} onNext={()=>setStep("appliance")}/>,
     appliance:      <BmkStepAppliance      data={data} onChange={setData} onBack={()=>setStep("clientDetails")}   onHome={onHome} onNext={()=>setStep("controls")}/>,
     controls:       <BmkStepControls       data={data} onChange={setData} onBack={()=>setStep("appliance")}       onHome={onHome} onNext={()=>setStep("allSystems")}/>,
     allSystems:     <BmkStepAllSystems     data={data} onChange={setData} onBack={()=>setStep("controls")}        onHome={onHome} onNext={()=>setStep("measure")}/>,
@@ -5485,44 +5512,45 @@ function CGSCStepFileRef({ data, onChange, onNext, onBack, onHome }) {
 }
 
 function CGSCStepDetails({ data, onChange, onNext, onBack, onHome }) {
-  const inp = { width:"100%", boxSizing:"border-box", padding:"11px 13px", border:"1px solid #ddd", borderRadius:8, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", marginBottom:2 };
-  const lbl = (t,req) => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4, marginTop:10 }}>{t}{req&&<span style={{ color:"#d32f2f" }}> *</span>}</div>;
-  const sec = (t) => <div style={{ fontWeight:700, fontSize:14, color:CGSC_COLOR, borderBottom:`2px solid ${CGSC_COLOR}30`, paddingBottom:6, marginBottom:4, marginTop:14 }}>{t}</div>;
   const [_pickerCGSCStepDetails, _setPickerCGSCStepDetails] = useState(null); // "client"|"inst"|null
   const _handlePickCGSCStepDetails = (target, c) => {
     const f = contactToFields(c);
-    if (target === "client") onChange({...data, tradingTitle: f.name||data.tradingTitle||'', clientAddr: f.addr1||data.clientAddr||'', clientPostcode: f.postcode||data.clientPostcode||'', clientTel: f.phone||data.clientTel||''});
-    else onChange({...data, instAddr: f.addr1||data.instAddr||'', instPostcode: f.postcode||data.instPostcode||'', instTel: f.phone||data.instTel||''});
+    if (target === "client") onChange({...data, clientName:f.name||data.clientName||'', clientAddr1:f.addr1||data.clientAddr1||'', clientAddr2:f.addr2||data.clientAddr2||'', clientAddr3:f.addr3||data.clientAddr3||'', clientPostcode:f.postcode||data.clientPostcode||'', clientTel:f.phone||data.clientTel||'', clientEmail:f.email||data.clientEmail||''});
+    else onChange({...data, instName:f.name||data.instName||'', instAddr1:f.addr1||data.instAddr1||'', instAddr2:f.addr2||data.instAddr2||'', instAddr3:f.addr3||data.instAddr3||'', instPostcode:f.postcode||data.instPostcode||'', instTel:f.phone||data.instTel||''});
     _setPickerCGSCStepDetails(null);
   };
-    return (
+  const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCGSCStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1d4a2e",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1d4a2e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Engineers, Installation & Client" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Engineers Details")}
-          {lbl("Trading Title / Company Name",true)}<input value={data.tradingTitle} onChange={e=>onChange({...data,tradingTitle:e.target.value})} placeholder="Company name" style={inp}/>
-          {lbl("Address")}<input value={data.engAddr} onChange={e=>onChange({...data,engAddr:e.target.value})} placeholder="Street address" style={inp}/>
-          {lbl("Town / City")}<input value={data.engCity} onChange={e=>onChange({...data,engCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Post Code")}<input value={data.engPostcode} onChange={e=>onChange({...data,engPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Gas Safe No")}<input value={data.gasSafeNo} onChange={e=>onChange({...data,gasSafeNo:e.target.value})} placeholder="Gas Safe Registration No" style={inp}/>
-          {lbl("Telephone No")}<input value={data.engTel} onChange={e=>onChange({...data,engTel:e.target.value})} placeholder="Telephone" style={inp}/>
-          {lbl("Gas ID Number (Engineer ID)")}<input value={data.gasId} onChange={e=>onChange({...data,gasId:e.target.value})} placeholder="Engineer ID card number" style={inp}/>
-        </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Installation Details")}</div><button onClick={()=>_setPickerCGSCStepDetails("inst")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
-          {lbl("Installation Address",true)}<input value={data.instAddr} onChange={e=>onChange({...data,instAddr:e.target.value})} placeholder="Street address" style={inp}/>
-          {lbl("Town / City")}<input value={data.instCity} onChange={e=>onChange({...data,instCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Post Code")}<input value={data.instPostcode} onChange={e=>onChange({...data,instPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Telephone No")}<input value={data.instTel} onChange={e=>onChange({...data,instTel:e.target.value})} placeholder="Telephone" style={inp}/>
-        </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerCGSCStepDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
-          {lbl("Client Name / Address",true)}<input value={data.clientAddr} onChange={e=>onChange({...data,clientAddr:e.target.value})} placeholder="Client name / address" style={inp}/>
-          {lbl("Town / City")}<input value={data.clientCity} onChange={e=>onChange({...data,clientCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Post Code")}<input value={data.clientPostcode} onChange={e=>onChange({...data,clientPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Telephone No")}<input value={data.clientTel} onChange={e=>onChange({...data,clientTel:e.target.value})} placeholder="Telephone" style={inp}/>
-        </div>
+      <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto" }}>
+        <SectionHeader title="Engineers Details"/>
+        <FormInput label="Trading Title / Company Name" placeholder="Company name" value={data.engCompany||""} onChange={v=>onChange({...data,engCompany:v})}/>
+        <FormInput label="Address" placeholder="Address" value={data.engAddr1||""} onChange={v=>onChange({...data,engAddr1:v})}/>
+        <FormInput label="Town / City" placeholder="Town or city" value={data.engAddr2||""} onChange={v=>onChange({...data,engAddr2:v})}/>
+        <FormInput label="Post Code" placeholder="Postcode" value={data.engPostcode||""} onChange={v=>onChange({...data,engPostcode:v})}/>
+        <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={data.gasSafeNo||""} onChange={v=>onChange({...data,gasSafeNo:v})}/>
+        <FormInput label="Telephone No" placeholder="Telephone" value={data.engTel||""} onChange={v=>onChange({...data,engTel:v})}/>
+        <FormInput label="Engineer Name" placeholder="Engineer name" value={data.engName||""} onChange={v=>onChange({...data,engName:v})}/>
+        <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={data.gasId||""} onChange={v=>onChange({...data,gasId:v})}/>
+        <SectionHeader title="Client Details" actions={[<ContactBtn key="cp" target="client"/>]}/>
+        <FormInput placeholder="Name" value={data.clientName||""} onChange={v=>onChange({...data,clientName:v})}/>
+        <FormInput placeholder="Address line 1" value={data.clientAddr1||""} onChange={v=>onChange({...data,clientAddr1:v})}/>
+        <FormInput placeholder="Address line 2" value={data.clientAddr2||""} onChange={v=>onChange({...data,clientAddr2:v})}/>
+        <FormInput placeholder="Address line 3" value={data.clientAddr3||""} onChange={v=>onChange({...data,clientAddr3:v})}/>
+        <FormInput placeholder="Postcode" value={data.clientPostcode||""} onChange={v=>onChange({...data,clientPostcode:v})}/>
+        <FormInput placeholder="Telephone" value={data.clientTel||""} onChange={v=>onChange({...data,clientTel:v})}/>
+        <FormInput placeholder="Email" value={data.clientEmail||""} onChange={v=>onChange({...data,clientEmail:v})}/>
+        <SectionHeader title="Installation Details" actions={[<CopyBtn key="copy"/>, <ContactBtn key="cp" target="inst"/>]}/>
+        <FormInput placeholder="Name" value={data.instName||""} onChange={v=>onChange({...data,instName:v})}/>
+        <FormInput placeholder="Address line 1" value={data.instAddr1||""} onChange={v=>onChange({...data,instAddr1:v})}/>
+        <FormInput placeholder="Address line 2" value={data.instAddr2||""} onChange={v=>onChange({...data,instAddr2:v})}/>
+        <FormInput placeholder="Address line 3" value={data.instAddr3||""} onChange={v=>onChange({...data,instAddr3:v})}/>
+        <FormInput placeholder="Postcode" value={data.instPostcode||""} onChange={v=>onChange({...data,instPostcode:v})}/>
+        <FormInput placeholder="Telephone" value={data.instTel||""} onChange={v=>onChange({...data,instTel:v})}/>
+        <div style={{ height:20 }}/>
       </div>
       <BottomBar onHome={onHome} onNext={onNext}/>
       {_pickerCGSCStepDetails && <ContactPickerModal
@@ -6062,49 +6090,45 @@ function GISRStepFileRef({ data, onChange, onNext, onBack, onHome }) {
 }
 
 function GISRStepDetails({ data, onChange, onNext, onBack, onHome }) {
-  const inp = { width:"100%", boxSizing:"border-box", padding:"11px 13px", border:"1px solid #ddd", borderRadius:8, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", marginBottom:2 };
-  const lbl = (t,req) => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4, marginTop:10 }}>{t}{req&&<span style={{ color:"#d32f2f" }}> *</span>}</div>;
-  const sec = (t) => <div style={{ fontWeight:700, fontSize:14, color:GISR_COLOR, borderBottom:`2px solid ${GISR_COLOR}30`, paddingBottom:6, marginBottom:4, marginTop:14 }}>{t}</div>;
   const [_pickerGISRStepDetails, _setPickerGISRStepDetails] = useState(null); // "client"|"inst"|null
   const _handlePickGISRStepDetails = (target, c) => {
     const f = contactToFields(c);
-    if (target === "client") onChange({...data, clientName: f.name||data.clientName||'', clientAddr: f.addr1||data.clientAddr||'', clientPostcode: f.postcode||data.clientPostcode||'', clientTel: f.phone||data.clientTel||''});
-    else onChange({...data, instName: f.name||data.instName||'', instAddr: f.addr1||data.instAddr||'', instPostcode: f.postcode||data.instPostcode||'', instTel: f.phone||data.instTel||''});
+    if (target === "client") onChange({...data, clientName:f.name||data.clientName||'', clientAddr1:f.addr1||data.clientAddr1||'', clientAddr2:f.addr2||data.clientAddr2||'', clientAddr3:f.addr3||data.clientAddr3||'', clientPostcode:f.postcode||data.clientPostcode||'', clientTel:f.phone||data.clientTel||'', clientEmail:f.email||data.clientEmail||''});
+    else onChange({...data, instName:f.name||data.instName||'', instAddr1:f.addr1||data.instAddr1||'', instAddr2:f.addr2||data.instAddr2||'', instAddr3:f.addr3||data.instAddr3||'', instPostcode:f.postcode||data.instPostcode||'', instTel:f.phone||data.instTel||''});
     _setPickerGISRStepDetails(null);
   };
-    return (
+  const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerGISRStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1d4a2e",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1d4a2e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Business, Client & Installation Details" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Business Details")}
-          {lbl("Business Name",true)}<input value={data.bizName} onChange={e=>onChange({...data,bizName:e.target.value})} placeholder="e.g. West Lothian Gas Ltd" style={inp}/>
-          {lbl("Address")}<input value={data.bizAddr} onChange={e=>onChange({...data,bizAddr:e.target.value})} placeholder="Street address" style={inp}/>
-          {lbl("Town / City")}<input value={data.bizCity} onChange={e=>onChange({...data,bizCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Postcode")}<input value={data.bizPostcode} onChange={e=>onChange({...data,bizPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Tel No")}<input value={data.bizTel} onChange={e=>onChange({...data,bizTel:e.target.value})} placeholder="Telephone" style={inp}/>
-          {lbl("Gas Safe Registration No")}<input value={data.gasSafeNo} onChange={e=>onChange({...data,gasSafeNo:e.target.value})} placeholder="Gas Safe Reg No" style={inp}/>
-          {lbl("Gas Safe ID Card Serial No")}<input value={data.gasId} onChange={e=>onChange({...data,gasId:e.target.value})} placeholder="ID card serial number" style={inp}/>
-          {lbl("Issued by (Signature name)")}<input value={data.issuedBy} onChange={e=>onChange({...data,issuedBy:e.target.value})} placeholder="Engineer name" style={inp}/>
-          {lbl("Print Name")}<input value={data.printName} onChange={e=>onChange({...data,printName:e.target.value})} placeholder="Printed name" style={inp}/>
-        </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerGISRStepDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
-          {lbl("Client Name",true)}<input value={data.clientName} onChange={e=>onChange({...data,clientName:e.target.value})} placeholder="Client / customer name" style={inp}/>
-          {lbl("Address")}<input value={data.clientAddr} onChange={e=>onChange({...data,clientAddr:e.target.value})} placeholder="Street address" style={inp}/>
-          {lbl("Town / City")}<input value={data.clientCity} onChange={e=>onChange({...data,clientCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Postcode")}<input value={data.clientPostcode} onChange={e=>onChange({...data,clientPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Tel No")}<input value={data.clientTel} onChange={e=>onChange({...data,clientTel:e.target.value})} placeholder="Telephone" style={inp}/>
-          {lbl("Received by (Signature name)")}<input value={data.receivedBy} onChange={e=>onChange({...data,receivedBy:e.target.value})} placeholder="Customer signature name" style={inp}/>
-        </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Installation Details")}</div><button onClick={()=>_setPickerGISRStepDetails("inst")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
-          {lbl("Name")}<input value={data.instName} onChange={e=>onChange({...data,instName:e.target.value})} placeholder="Name" style={inp}/>
-          {lbl("Address")}<input value={data.instAddr} onChange={e=>onChange({...data,instAddr:e.target.value})} placeholder="Street address" style={inp}/>
-          {lbl("Town / City")}<input value={data.instCity} onChange={e=>onChange({...data,instCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Postcode")}<input value={data.instPostcode} onChange={e=>onChange({...data,instPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Tel No")}<input value={data.instTel} onChange={e=>onChange({...data,instTel:e.target.value})} placeholder="Telephone" style={inp}/>
-        </div>
+      <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto" }}>
+        <SectionHeader title="Engineers Details"/>
+        <FormInput label="Trading Title / Company Name" placeholder="Company name" value={data.engCompany||""} onChange={v=>onChange({...data,engCompany:v})}/>
+        <FormInput label="Address" placeholder="Address" value={data.engAddr1||""} onChange={v=>onChange({...data,engAddr1:v})}/>
+        <FormInput label="Town / City" placeholder="Town or city" value={data.engAddr2||""} onChange={v=>onChange({...data,engAddr2:v})}/>
+        <FormInput label="Post Code" placeholder="Postcode" value={data.engPostcode||""} onChange={v=>onChange({...data,engPostcode:v})}/>
+        <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={data.gasSafeNo||""} onChange={v=>onChange({...data,gasSafeNo:v})}/>
+        <FormInput label="Telephone No" placeholder="Telephone" value={data.engTel||""} onChange={v=>onChange({...data,engTel:v})}/>
+        <FormInput label="Engineer Name" placeholder="Engineer name" value={data.engName||""} onChange={v=>onChange({...data,engName:v})}/>
+        <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={data.gasId||""} onChange={v=>onChange({...data,gasId:v})}/>
+        <SectionHeader title="Client Details" actions={[<ContactBtn key="cp" target="client"/>]}/>
+        <FormInput placeholder="Name" value={data.clientName||""} onChange={v=>onChange({...data,clientName:v})}/>
+        <FormInput placeholder="Address line 1" value={data.clientAddr1||""} onChange={v=>onChange({...data,clientAddr1:v})}/>
+        <FormInput placeholder="Address line 2" value={data.clientAddr2||""} onChange={v=>onChange({...data,clientAddr2:v})}/>
+        <FormInput placeholder="Address line 3" value={data.clientAddr3||""} onChange={v=>onChange({...data,clientAddr3:v})}/>
+        <FormInput placeholder="Postcode" value={data.clientPostcode||""} onChange={v=>onChange({...data,clientPostcode:v})}/>
+        <FormInput placeholder="Telephone" value={data.clientTel||""} onChange={v=>onChange({...data,clientTel:v})}/>
+        <FormInput placeholder="Email" value={data.clientEmail||""} onChange={v=>onChange({...data,clientEmail:v})}/>
+        <SectionHeader title="Installation Details" actions={[<CopyBtn key="copy"/>, <ContactBtn key="cp" target="inst"/>]}/>
+        <FormInput placeholder="Name" value={data.instName||""} onChange={v=>onChange({...data,instName:v})}/>
+        <FormInput placeholder="Address line 1" value={data.instAddr1||""} onChange={v=>onChange({...data,instAddr1:v})}/>
+        <FormInput placeholder="Address line 2" value={data.instAddr2||""} onChange={v=>onChange({...data,instAddr2:v})}/>
+        <FormInput placeholder="Address line 3" value={data.instAddr3||""} onChange={v=>onChange({...data,instAddr3:v})}/>
+        <FormInput placeholder="Postcode" value={data.instPostcode||""} onChange={v=>onChange({...data,instPostcode:v})}/>
+        <FormInput placeholder="Telephone" value={data.instTel||""} onChange={v=>onChange({...data,instTel:v})}/>
+        <div style={{ height:20 }}/>
       </div>
       <BottomBar onHome={onHome} onNext={onNext}/>
       {_pickerGISRStepDetails && <ContactPickerModal
@@ -6660,57 +6684,52 @@ function CCIStepFileRef({ data, onChange, onNext, onBack, onHome }) {
   );
 }
 
-function CCIStepBusiness({ data, onChange, onNext, onBack, onHome }) {
-  const inp = { width:"100%", boxSizing:"border-box", padding:"11px 13px", border:"1px solid #ddd", borderRadius:8, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", marginBottom:2 };
-  const lbl = (t,req) => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4, marginTop:10 }}>{t}{req&&<span style={{ color:"#d32f2f" }}> *</span>}</div>;
-  const sec = (t) => <div style={{ fontWeight:700, fontSize:14, color:CCI_COLOR, borderBottom:`2px solid ${CCI_COLOR}30`, paddingBottom:6, marginBottom:4, marginTop:14 }}>{t}</div>;
-  const [_pickerCCIStepBusiness, _setPickerCCIStepBusiness] = useState(null); // "client"|"inst"|null
-  const _handlePickCCIStepBusiness = (target, c) => {
+function CCIStepDetails({ data, onChange, onNext, onBack, onHome }) {
+  const [_pickerCCIStepDetails, _setPickerCCIStepDetails] = useState(null); // "client"|"inst"|null
+  const _handlePickCCIStepDetails = (target, c) => {
     const f = contactToFields(c);
-    if (target === "client") onChange({...data, clientName: f.name||data.clientName||'', clientAddr: f.addr1||data.clientAddr||'', clientPostcode: f.postcode||data.clientPostcode||'', clientTel: f.phone||data.clientTel||'', clientEmail: f.email||data.clientEmail||''});
-    else onChange({...data, bizName: f.name||data.bizName||'', bizAddr: f.addr1||data.bizAddr||'', bizPostcode: f.postcode||data.bizPostcode||''});
-    _setPickerCCIStepBusiness(null);
+    if (target === "client") onChange({...data, clientName:f.name||data.clientName||'', clientAddr1:f.addr1||data.clientAddr1||'', clientAddr2:f.addr2||data.clientAddr2||'', clientAddr3:f.addr3||data.clientAddr3||'', clientPostcode:f.postcode||data.clientPostcode||'', clientTel:f.phone||data.clientTel||'', clientEmail:f.email||data.clientEmail||''});
+    else onChange({...data, instName:f.name||data.instName||'', instAddr1:f.addr1||data.instAddr1||'', instAddr2:f.addr2||data.instAddr2||'', instAddr3:f.addr3||data.instAddr3||'', instPostcode:f.postcode||data.instPostcode||'', instTel:f.phone||data.instTel||''});
+    _setPickerCCIStepDetails(null);
   };
-    return (
+  const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCCIStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1d4a2e",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1d4a2e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Business & Installation Details" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Registered Business Details")}
-          {lbl("Gas Safe Register No")}<input value={data.gasSafeNo} onChange={e=>onChange({...data,gasSafeNo:e.target.value})} placeholder="Gas Safe Reg No" style={inp}/>
-          {lbl("Registered Engineer's Name",true)}<input value={data.engineerName} onChange={e=>onChange({...data,engineerName:e.target.value})} placeholder="Full name" style={inp}/>
-          {lbl("Gas Safe Register Licence Number")}<input value={data.licenceNo} onChange={e=>onChange({...data,licenceNo:e.target.value})} placeholder="Licence / ID number" style={inp}/>
-          {lbl("Business Name",true)}<input value={data.bizName} onChange={e=>onChange({...data,bizName:e.target.value})} placeholder="Business name" style={inp}/>
-          {lbl("Address")}<input value={data.bizAddr} onChange={e=>onChange({...data,bizAddr:e.target.value})} placeholder="Street address" style={inp}/>
-          {lbl("Town / City")}<input value={data.bizCity} onChange={e=>onChange({...data,bizCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Postcode")}<input value={data.bizPostcode} onChange={e=>onChange({...data,bizPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Contact No")}<input value={data.bizTel} onChange={e=>onChange({...data,bizTel:e.target.value})} placeholder="Telephone" style={inp}/>
-          {lbl("Email Address")}<input value={data.bizEmail} onChange={e=>onChange({...data,bizEmail:e.target.value})} placeholder="Email" style={inp}/>
-        </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Installation Details")}</div><button onClick={()=>_setPickerCCIStepBusiness("inst")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
-          {lbl("Name")}<input value={data.instName} onChange={e=>onChange({...data,instName:e.target.value})} placeholder="Name" style={inp}/>
-          {lbl("Address")}<input value={data.instAddr} onChange={e=>onChange({...data,instAddr:e.target.value})} placeholder="Street address" style={inp}/>
-          {lbl("Town / City")}<input value={data.instCity} onChange={e=>onChange({...data,instCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Postcode")}<input value={data.instPostcode} onChange={e=>onChange({...data,instPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Contact No")}<input value={data.instTel} onChange={e=>onChange({...data,instTel:e.target.value})} placeholder="Telephone" style={inp}/>
-          {lbl("Email address")}<input value={data.instEmail} onChange={e=>onChange({...data,instEmail:e.target.value})} placeholder="Email" style={inp}/>
-        </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerCCIStepBusiness("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
-          {lbl("Client Name",true)}<input value={data.clientName} onChange={e=>onChange({...data,clientName:e.target.value})} placeholder="Client name" style={inp}/>
-          {lbl("Address")}<input value={data.clientAddr} onChange={e=>onChange({...data,clientAddr:e.target.value})} placeholder="Street address" style={inp}/>
-          {lbl("Town / City")}<input value={data.clientCity} onChange={e=>onChange({...data,clientCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Postcode")}<input value={data.clientPostcode} onChange={e=>onChange({...data,clientPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Contact No")}<input value={data.clientTel} onChange={e=>onChange({...data,clientTel:e.target.value})} placeholder="Telephone" style={inp}/>
-          {lbl("Email address")}<input value={data.clientEmail} onChange={e=>onChange({...data,clientEmail:e.target.value})} placeholder="Email" style={inp}/>
-        </div>
+      <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto" }}>
+        <SectionHeader title="Engineers Details"/>
+        <FormInput label="Trading Title / Company Name" placeholder="Company name" value={data.engCompany||""} onChange={v=>onChange({...data,engCompany:v})}/>
+        <FormInput label="Address" placeholder="Address" value={data.engAddr1||""} onChange={v=>onChange({...data,engAddr1:v})}/>
+        <FormInput label="Town / City" placeholder="Town or city" value={data.engAddr2||""} onChange={v=>onChange({...data,engAddr2:v})}/>
+        <FormInput label="Post Code" placeholder="Postcode" value={data.engPostcode||""} onChange={v=>onChange({...data,engPostcode:v})}/>
+        <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={data.gasSafeNo||""} onChange={v=>onChange({...data,gasSafeNo:v})}/>
+        <FormInput label="Telephone No" placeholder="Telephone" value={data.engTel||""} onChange={v=>onChange({...data,engTel:v})}/>
+        <FormInput label="Engineer Name" placeholder="Engineer name" value={data.engName||""} onChange={v=>onChange({...data,engName:v})}/>
+        <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={data.gasId||""} onChange={v=>onChange({...data,gasId:v})}/>
+        <SectionHeader title="Client Details" actions={[<ContactBtn key="cp" target="client"/>]}/>
+        <FormInput placeholder="Name" value={data.clientName||""} onChange={v=>onChange({...data,clientName:v})}/>
+        <FormInput placeholder="Address line 1" value={data.clientAddr1||""} onChange={v=>onChange({...data,clientAddr1:v})}/>
+        <FormInput placeholder="Address line 2" value={data.clientAddr2||""} onChange={v=>onChange({...data,clientAddr2:v})}/>
+        <FormInput placeholder="Address line 3" value={data.clientAddr3||""} onChange={v=>onChange({...data,clientAddr3:v})}/>
+        <FormInput placeholder="Postcode" value={data.clientPostcode||""} onChange={v=>onChange({...data,clientPostcode:v})}/>
+        <FormInput placeholder="Telephone" value={data.clientTel||""} onChange={v=>onChange({...data,clientTel:v})}/>
+        <FormInput placeholder="Email" value={data.clientEmail||""} onChange={v=>onChange({...data,clientEmail:v})}/>
+        <SectionHeader title="Installation Details" actions={[<CopyBtn key="copy"/>, <ContactBtn key="cp" target="inst"/>]}/>
+        <FormInput placeholder="Name" value={data.instName||""} onChange={v=>onChange({...data,instName:v})}/>
+        <FormInput placeholder="Address line 1" value={data.instAddr1||""} onChange={v=>onChange({...data,instAddr1:v})}/>
+        <FormInput placeholder="Address line 2" value={data.instAddr2||""} onChange={v=>onChange({...data,instAddr2:v})}/>
+        <FormInput placeholder="Address line 3" value={data.instAddr3||""} onChange={v=>onChange({...data,instAddr3:v})}/>
+        <FormInput placeholder="Postcode" value={data.instPostcode||""} onChange={v=>onChange({...data,instPostcode:v})}/>
+        <FormInput placeholder="Telephone" value={data.instTel||""} onChange={v=>onChange({...data,instTel:v})}/>
+        <div style={{ height:20 }}/>
       </div>
       <BottomBar onHome={onHome} onNext={onNext}/>
-      {_pickerCCIStepBusiness && <ContactPickerModal
-        title={_pickerCCIStepBusiness==="client" ? "Choose Client" : _pickerCCIStepBusiness==="inst" ? "Choose Installation" : "Choose Contact"}
-        onSelect={c=>_handlePickCCIStepBusiness(_pickerCCIStepBusiness,c)}
-        onClose={()=>_setPickerCCIStepBusiness(null)}/>}
+      {_pickerCCIStepDetails && <ContactPickerModal
+        title={_pickerCCIStepDetails==="client" ? "Choose Client" : _pickerCCIStepDetails==="inst" ? "Choose Installation" : "Choose Contact"}
+        onSelect={c=>_handlePickCCIStepDetails(_pickerCCIStepDetails,c)}
+        onClose={()=>_setPickerCCIStepDetails(null)}/>}
     </div>
   );
 }
@@ -7447,9 +7466,9 @@ function CateringInspectionScreen({ engineerData, onBack, onHome, onSave, initia
     onSave={()=>{ onSave({ type:"catering_inspection", certLabel:"Commercial Catering Inspection Record", form:data, engineerData, savedAt:new Date().toISOString() }); alert("Certificate saved to Records!"); }}/>;
 
   const steps = {
-    fileRef:      <CCIStepFileRef       data={data} onChange={setData} onBack={onBack}                        onHome={onHome} onNext={()=>setStep("business")}/>,
-    business:     <CCIStepBusiness      data={data} onChange={setData} onBack={()=>setStep("fileRef")}        onHome={onHome} onNext={()=>setStep("gasInstall")}/>,
-    gasInstall:   <CCIStepGasInstall    data={data} onChange={setData} onBack={()=>setStep("business")}       onHome={onHome} onNext={()=>setStep("ventilation")}/>,
+    fileRef:      <CCIStepFileRef       data={data} onChange={setData} onBack={onBack}                        onHome={onHome} onNext={()=>setStep("details")}/>,
+    details:      <CCIStepDetails      data={data} onChange={setData} onBack={()=>setStep("fileRef")}        onHome={onHome} onNext={()=>setStep("gasInstall")}/>,
+    gasInstall:   <CCIStepGasInstall    data={data} onChange={setData} onBack={()=>setStep("details")}       onHome={onHome} onNext={()=>setStep("ventilation")}/>,
     ventilation:  <CCIStepVentilation   data={data} onChange={setData} onBack={()=>setStep("gasInstall")}     onHome={onHome} onNext={()=>setStep("appliances")}/>,
     appliances:   <CCIStepAppliances    data={data} onChange={setData} onBack={()=>setStep("ventilation")}    onHome={onHome} onNext={()=>setStep("attachments")}/>,
     attachments:  <AttachmentsStep      data={data} onChange={setData} onBack={()=>setStep("appliances")}     onHome={onHome} onNext={()=>setStep("declaration")} accentColor={CCI_COLOR} nextLabel="Next: Declaration"/>,
@@ -7484,47 +7503,45 @@ function GTPStepFileRef({ data, onChange, onNext, onBack, onHome }) {
 }
 
 function GTPStepDetails({ data, onChange, onNext, onBack, onHome }) {
-  const inp = { width:"100%", boxSizing:"border-box", padding:"11px 13px", border:"1px solid #ddd", borderRadius:8, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", marginBottom:2 };
-  const lbl = (t, req) => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4, marginTop:10 }}>{t}{req && <span style={{ color:"#d32f2f" }}> *</span>}</div>;
-  const sec = (t) => <div style={{ fontWeight:700, fontSize:14, color:GTP_COLOR, borderBottom:`2px solid ${GTP_COLOR}30`, paddingBottom:6, marginBottom:8, marginTop:16 }}>{t}</div>;
   const [_pickerGTPStepDetails, _setPickerGTPStepDetails] = useState(null); // "client"|"inst"|null
   const _handlePickGTPStepDetails = (target, c) => {
     const f = contactToFields(c);
-    if (target === "client") onChange({...data, clientName: f.name||data.clientName||'', clientAddr: f.addr1||data.clientAddr||'', clientPostcode: f.postcode||data.clientPostcode||'', clientTel: f.phone||data.clientTel||''});
-    else onChange({...data, bizName: f.name||data.bizName||'', bizAddr: f.addr1||data.bizAddr||'', bizPostcode: f.postcode||data.bizPostcode||''});
+    if (target === "client") onChange({...data, clientName:f.name||data.clientName||'', clientAddr1:f.addr1||data.clientAddr1||'', clientAddr2:f.addr2||data.clientAddr2||'', clientAddr3:f.addr3||data.clientAddr3||'', clientPostcode:f.postcode||data.clientPostcode||'', clientTel:f.phone||data.clientTel||'', clientEmail:f.email||data.clientEmail||''});
+    else onChange({...data, instName:f.name||data.instName||'', instAddr1:f.addr1||data.instAddr1||'', instAddr2:f.addr2||data.instAddr2||'', instAddr3:f.addr3||data.instAddr3||'', instPostcode:f.postcode||data.instPostcode||'', instTel:f.phone||data.instTel||''});
     _setPickerGTPStepDetails(null);
   };
-    return (
+  const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerGTPStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1d4a2e",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1d4a2e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Business & Client Details" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Business Details")}
-          {lbl("Business Name", true)}<input value={data.bizName} onChange={e=>onChange({...data,bizName:e.target.value})} placeholder="e.g. West Lothian Gas Ltd" style={inp}/>
-          {lbl("Address")}<input value={data.bizAddr} onChange={e=>onChange({...data,bizAddr:e.target.value})} placeholder="Street address" style={inp}/>
-          {lbl("Town / City")}<input value={data.bizCity} onChange={e=>onChange({...data,bizCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Postcode")}<input value={data.bizPostcode} onChange={e=>onChange({...data,bizPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Tel No")}<input value={data.bizTel} onChange={e=>onChange({...data,bizTel:e.target.value})} placeholder="Telephone number" style={inp}/>
-          {lbl("Gas Safe Reg No")}<input value={data.gasSafeNo} onChange={e=>onChange({...data,gasSafeNo:e.target.value})} placeholder="Gas Safe Registration No." style={inp}/>
-          {lbl("Gas Safe ID Card Serial No")}<input value={data.gasId} onChange={e=>onChange({...data,gasId:e.target.value})} placeholder="ID card serial number" style={inp}/>
-          {lbl("Issued by")}<input value={data.issuedBy} onChange={e=>onChange({...data,issuedBy:e.target.value})} placeholder="Engineer name" style={inp}/>
-        </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerGTPStepDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
-          {lbl("Client Name", true)}<input value={data.clientName} onChange={e=>onChange({...data,clientName:e.target.value})} placeholder="Client / customer name" style={inp}/>
-          {lbl("Address")}<input value={data.clientAddr} onChange={e=>onChange({...data,clientAddr:e.target.value})} placeholder="Street address" style={inp}/>
-          {lbl("Town / City")}<input value={data.clientCity} onChange={e=>onChange({...data,clientCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Postcode")}<input value={data.clientPostcode} onChange={e=>onChange({...data,clientPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Tel No")}<input value={data.clientTel} onChange={e=>onChange({...data,clientTel:e.target.value})} placeholder="Telephone number" style={inp}/>
-        </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Installation Details")}</div><button onClick={()=>_setPickerGTPStepDetails("inst")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
-          {lbl("Installation Name")}<input value={data.instName} onChange={e=>onChange({...data,instName:e.target.value})} placeholder="Name" style={inp}/>
-          {lbl("Address")}<input value={data.instAddr} onChange={e=>onChange({...data,instAddr:e.target.value})} placeholder="Street address" style={inp}/>
-          {lbl("Town / City")}<input value={data.instCity} onChange={e=>onChange({...data,instCity:e.target.value})} placeholder="Town or city" style={inp}/>
-          {lbl("Postcode")}<input value={data.instPostcode} onChange={e=>onChange({...data,instPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
-          {lbl("Tel No")}<input value={data.instTel} onChange={e=>onChange({...data,instTel:e.target.value})} placeholder="Telephone number" style={inp}/>
-        </div>
+      <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto" }}>
+        <SectionHeader title="Engineers Details"/>
+        <FormInput label="Trading Title / Company Name" placeholder="Company name" value={data.engCompany||""} onChange={v=>onChange({...data,engCompany:v})}/>
+        <FormInput label="Address" placeholder="Address" value={data.engAddr1||""} onChange={v=>onChange({...data,engAddr1:v})}/>
+        <FormInput label="Town / City" placeholder="Town or city" value={data.engAddr2||""} onChange={v=>onChange({...data,engAddr2:v})}/>
+        <FormInput label="Post Code" placeholder="Postcode" value={data.engPostcode||""} onChange={v=>onChange({...data,engPostcode:v})}/>
+        <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={data.gasSafeNo||""} onChange={v=>onChange({...data,gasSafeNo:v})}/>
+        <FormInput label="Telephone No" placeholder="Telephone" value={data.engTel||""} onChange={v=>onChange({...data,engTel:v})}/>
+        <FormInput label="Engineer Name" placeholder="Engineer name" value={data.engName||""} onChange={v=>onChange({...data,engName:v})}/>
+        <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={data.gasId||""} onChange={v=>onChange({...data,gasId:v})}/>
+        <SectionHeader title="Client Details" actions={[<ContactBtn key="cp" target="client"/>]}/>
+        <FormInput placeholder="Name" value={data.clientName||""} onChange={v=>onChange({...data,clientName:v})}/>
+        <FormInput placeholder="Address line 1" value={data.clientAddr1||""} onChange={v=>onChange({...data,clientAddr1:v})}/>
+        <FormInput placeholder="Address line 2" value={data.clientAddr2||""} onChange={v=>onChange({...data,clientAddr2:v})}/>
+        <FormInput placeholder="Address line 3" value={data.clientAddr3||""} onChange={v=>onChange({...data,clientAddr3:v})}/>
+        <FormInput placeholder="Postcode" value={data.clientPostcode||""} onChange={v=>onChange({...data,clientPostcode:v})}/>
+        <FormInput placeholder="Telephone" value={data.clientTel||""} onChange={v=>onChange({...data,clientTel:v})}/>
+        <FormInput placeholder="Email" value={data.clientEmail||""} onChange={v=>onChange({...data,clientEmail:v})}/>
+        <SectionHeader title="Installation Details" actions={[<CopyBtn key="copy"/>, <ContactBtn key="cp" target="inst"/>]}/>
+        <FormInput placeholder="Name" value={data.instName||""} onChange={v=>onChange({...data,instName:v})}/>
+        <FormInput placeholder="Address line 1" value={data.instAddr1||""} onChange={v=>onChange({...data,instAddr1:v})}/>
+        <FormInput placeholder="Address line 2" value={data.instAddr2||""} onChange={v=>onChange({...data,instAddr2:v})}/>
+        <FormInput placeholder="Address line 3" value={data.instAddr3||""} onChange={v=>onChange({...data,instAddr3:v})}/>
+        <FormInput placeholder="Postcode" value={data.instPostcode||""} onChange={v=>onChange({...data,instPostcode:v})}/>
+        <FormInput placeholder="Telephone" value={data.instTel||""} onChange={v=>onChange({...data,instTel:v})}/>
+        <div style={{ height:20 }}/>
       </div>
       <BottomBar onHome={onHome} onNext={onNext}/>
       {_pickerGTPStepDetails && <ContactPickerModal
@@ -9642,7 +9659,7 @@ async function openPhoneContacts(onSelect) {
 
 
 // Step 2: Client + Installation Details
-function StepClientDetails({ data, onChange, onNext, onBack, onHome }) {
+function StepClientDetails({ data, onChange, onNext, onBack, onHome, engData, onEngChange }) {
   const [errorMsg, setErrorMsg] = useState("");
 
   const copy = () => onChange({...data, instName:data.clientName, instAddr1:data.clientAddr1, instAddr2:data.clientAddr2, instAddr3:data.clientAddr3, instPostcode:data.clientPostcode, instTel:data.clientTel});
@@ -9665,21 +9682,36 @@ function StepClientDetails({ data, onChange, onNext, onBack, onHome }) {
     </button>
   );
 
+  const CopyBtn = () => (
+    <button onClick={copy} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
+  );
+
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Client & Installation Details" onBack={onBack}/>
+      <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
       <div style={{ flex:1, overflowY:"auto" }}>
         {errorMsg && (
           <div style={{ background:"#fff3cd", color:"#856404", padding:"10px 16px", fontSize:13, borderBottom:"1px solid #ffc107" }}>
             ⚠️ {errorMsg}
           </div>
         )}
+        {engData && onEngChange && <>
+          <SectionHeader title="Engineers Details"/>
+          <FormInput label="Trading Title / Company Name" placeholder="Company name" value={engData.companyName||""} onChange={v=>onEngChange({...engData,companyName:v})}/>
+          <FormInput label="Address" placeholder="Address" value={engData.companyAddr||""} onChange={v=>onEngChange({...engData,companyAddr:v})}/>
+          <FormInput label="Town / City" placeholder="Town or city" value={engData.companyTown||""} onChange={v=>onEngChange({...engData,companyTown:v})}/>
+          <FormInput label="Post Code" placeholder="Postcode" value={engData.companyPostcode||""} onChange={v=>onEngChange({...engData,companyPostcode:v})}/>
+          <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={engData.gasSafeNo||""} onChange={v=>onEngChange({...engData,gasSafeNo:v})}/>
+          <FormInput label="Telephone No" placeholder="Telephone" value={engData.companyTel||""} onChange={v=>onEngChange({...engData,companyTel:v})}/>
+          <FormInput label="Engineer Name" placeholder="Engineer name" value={engData.engineerName||""} onChange={v=>onEngChange({...engData,engineerName:v})}/>
+          <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={engData.gasId||""} onChange={v=>onEngChange({...engData,gasId:v})}/>
+        </>}
         <SectionHeader title="Client Details" actions={[<ContactBtn key="cp" target="client"/>]}/>
         {[["clientName","Name"],["clientAddr1","Address line 1"],["clientAddr2","Address line 2"],["clientAddr3","Address line 3"],["clientPostcode","Postcode"],["clientTel","Telephone"],["clientEmail","Email"]].map(([k,p])=>(
           <FormInput key={k} placeholder={p} value={data[k]||""} onChange={v=>onChange({...data,[k]:v})}/>
         ))}
         <SectionHeader title="Installation Details" actions={[
-          <button key="copy" onClick={copy} style={{ background:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:13, fontWeight:600, color:BLUE, cursor:"pointer" }}>Copy</button>,
+          <CopyBtn key="copy"/>,
           <ContactBtn key="cp" target="inst"/>
         ]}/>
         {[["instName","Name"],["instAddr1","Address line 1"],["instAddr2","Address line 2"],["instAddr3","Address line 3"],["instPostcode","Postcode"],["instTel","Telephone"]].map(([k,p])=>(
@@ -13142,57 +13174,65 @@ function InvoiceWizard({ sourceRecord, onSave, onClose, invoiceRecords, profile 
     );
   }
 
-  // Step 0: Client + Installation Details
+  // Step 0: Invoice Reference
   if (step === 0) return (
-    <div style={{ position: "fixed", inset: 0, background: "#f0f0f0", zIndex: 3000, display: "flex", flexDirection: "column", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div style={headerStyle}>
-        <button onClick={onClose} style={{ background: "none", border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>← Back</button>
-        <span style={{ fontWeight: 700, fontSize: 16 }}>Gas Checker</span>
-        <button onClick={() => setStep(1)} style={{ background: "none", border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Next →</button>
-      </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px" }}>
-        <div style={{ background: "#fff", borderRadius: 8, padding: "10px 14px", marginBottom: 10, textAlign: "center", border: "1px solid #ddd" }}>
-          <span style={{ fontSize: 12, color: "#888" }}>Invoice No: </span>
-          <span style={{ fontWeight: 700, fontSize: 15 }}>{invoiceNo.current}</span>
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title="Invoice" onBack={onClose}/>
+      <div style={{ flex:1, overflowY:"auto", padding:24, paddingBottom:80 }}>
+        <p style={{ color:"#888", fontSize:15, marginBottom:20, textAlign:"center" }}>Please enter a file reference</p>
+        <div style={{ background:"#fff", borderRadius:8, padding:"10px 14px", marginBottom:10, textAlign:"center", border:"1px solid #ddd" }}>
+          <span style={{ fontSize:12, color:"#888" }}>Invoice No: </span>
+          <span style={{ fontWeight:700, fontSize:15 }}>{invoiceNo.current}</span>
         </div>
-        {sectionHeader("Engineer Details")}
-        <input style={inputStyle} placeholder="Company Name" value={companyName} onChange={e=>setCompanyName(e.target.value)}/>
-        <input style={inputStyle} placeholder="Address" value={companyAddr} onChange={e=>setCompanyAddr(e.target.value)}/>
-        <input style={inputStyle} placeholder="Postcode" value={companyPostcode2} onChange={e=>setCompanyPostcode2(e.target.value)}/>
-        <input style={inputStyle} placeholder="Telephone" value={companyTel2} onChange={e=>setCompanyTel2(e.target.value)}/>
-        <input style={inputStyle} placeholder="Gas Safe Registration No" value={gasSafeNo2} onChange={e=>setGasSafeNo2(e.target.value)}/>
-        <input style={inputStyle} placeholder="Engineer Name" value={issuedBy} onChange={e=>setIssuedBy(e.target.value)}/>
-        <input style={inputStyle} placeholder="Engineer ID Card No" value={engineerId} onChange={e=>setEngineerId(e.target.value)}/>
-        {invContactError && <div style={{ background:"#fee", color:"#c00", padding:"8px 12px", borderRadius:8, fontSize:13, marginBottom:8 }}>{invContactError}</div>}
-        {sectionHeader("Client Details", <InvContactBtn target="client"/>)}
-        <input style={inputStyle} placeholder="Client Name" value={clientName} onChange={e => setClientName(e.target.value)} />
-        <input style={inputStyle} placeholder="Address Line 1" value={clientAddr1} onChange={e => setClientAddr1(e.target.value)} />
-        <input style={inputStyle} placeholder="Address Line 2" value={clientAddr2} onChange={e => setClientAddr2(e.target.value)} />
-        <input style={inputStyle} placeholder="Address Line 3" value={clientAddr3} onChange={e => setClientAddr3(e.target.value)} />
-        <input style={inputStyle} placeholder="Postcode" value={clientPostcode} onChange={e => setClientPostcode(e.target.value)} />
-        <input style={inputStyle} placeholder="Phone" value={clientTel} onChange={e => setClientTel(e.target.value)} />
-        <input style={inputStyle} placeholder="Email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} />
-        {sectionHeader("Installation Details",
-          <div style={{ display:"flex", gap:6 }}>
-            <button onClick={copyClientToInst} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
-            <InvContactBtn target="inst"/>
-          </div>
-        )}
-        <input style={inputStyle} placeholder="Installation Name" value={instName} onChange={e => setInstName(e.target.value)} />
-        <input style={inputStyle} placeholder="Address Line 1" value={instAddr1} onChange={e => setInstAddr1(e.target.value)} />
-        <input style={inputStyle} placeholder="Address Line 2" value={instAddr2} onChange={e => setInstAddr2(e.target.value)} />
-        <input style={inputStyle} placeholder="Address Line 3" value={instAddr3} onChange={e => setInstAddr3(e.target.value)} />
-        <input style={inputStyle} placeholder="Postcode" value={instPostcode} onChange={e => setInstPostcode(e.target.value)} />
-        <input style={inputStyle} placeholder="Phone" value={instTel} onChange={e => setInstTel(e.target.value)} />
       </div>
-      <div style={{ padding: "12px 16px", background: "#fff", borderTop: "1px solid #ddd", display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
-        <button onClick={() => setStep(1)} style={{ background: INV_GREEN, color: "#fff", border: "none", borderRadius: 8, padding: "12px 28px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Next →</button>
-      </div>
+      <BottomBar onHome={onClose} onNext={()=>setStep(1)}/>
     </div>
   );
 
-  // Step 1: Invoice Description List
-  if (step === 1) {
+  // Step 1: Engineers, Client & Installation Details
+  if (step === 1) return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title="Engineers, Client & Installation Details" onBack={()=>setStep(0)}/>
+      <div style={{ flex:1, overflowY:"auto" }}>
+        <SectionHeader title="Engineers Details"/>
+        <FormInput label="Trading Title / Company Name" placeholder="Company name" value={companyName} onChange={v=>setCompanyName(v)}/>
+        <FormInput label="Address" placeholder="Address" value={companyAddr} onChange={v=>setCompanyAddr(v)}/>
+        <FormInput label="Post Code" placeholder="Postcode" value={companyPostcode2} onChange={v=>setCompanyPostcode2(v)}/>
+        <FormInput label="Telephone No" placeholder="Telephone" value={companyTel2} onChange={v=>setCompanyTel2(v)}/>
+        <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={gasSafeNo2} onChange={v=>setGasSafeNo2(v)}/>
+        <FormInput label="Engineer Name" placeholder="Engineer name" value={issuedBy} onChange={v=>setIssuedBy(v)}/>
+        <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={engineerId} onChange={v=>setEngineerId(v)}/>
+        {invContactError && <div style={{ background:"#fee", color:"#c00", padding:"8px 12px", fontSize:13, marginBottom:8 }}>{invContactError}</div>}
+        <SectionHeader title="Client Details" actions={[<InvContactBtn key="cp" target="client"/>]}/>
+        <FormInput placeholder="Name" value={clientName} onChange={v=>setClientName(v)}/>
+        <FormInput placeholder="Address line 1" value={clientAddr1} onChange={v=>setClientAddr1(v)}/>
+        <FormInput placeholder="Address line 2" value={clientAddr2} onChange={v=>setClientAddr2(v)}/>
+        <FormInput placeholder="Address line 3" value={clientAddr3} onChange={v=>setClientAddr3(v)}/>
+        <FormInput placeholder="Postcode" value={clientPostcode} onChange={v=>setClientPostcode(v)}/>
+        <FormInput placeholder="Telephone" value={clientTel} onChange={v=>setClientTel(v)}/>
+        <FormInput placeholder="Email" value={clientEmail} onChange={v=>setClientEmail(v)}/>
+        <SectionHeader title="Installation Details" actions={[
+          <button key="copy" onClick={copyClientToInst} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>,
+          <InvContactBtn key="cp" target="inst"/>
+        ]}/>
+        <FormInput placeholder="Name" value={instName} onChange={v=>setInstName(v)}/>
+        <FormInput placeholder="Address line 1" value={instAddr1} onChange={v=>setInstAddr1(v)}/>
+        <FormInput placeholder="Address line 2" value={instAddr2} onChange={v=>setInstAddr2(v)}/>
+        <FormInput placeholder="Address line 3" value={instAddr3} onChange={v=>setInstAddr3(v)}/>
+        <FormInput placeholder="Postcode" value={instPostcode} onChange={v=>setInstPostcode(v)}/>
+        <FormInput placeholder="Telephone" value={instTel} onChange={v=>setInstTel(v)}/>
+        <div style={{ height:20 }}/>
+      </div>
+      <BottomBar onHome={onClose} onNext={()=>setStep(2)}/>
+      {_invPicker && <ContactPickerModal
+        title={_invPicker==="client" ? "Choose Client" : "Choose Installation"}
+        onSelect={c=>_handleInvPickContact(_invPicker,c)}
+        onClose={()=>_setInvPicker(null)}/>}
+    </div>
+  );
+
+  // Step 2: Invoice Description List
+  if (step === 2) {
     // Editing a line item — render as proper component
     if (editingItem !== null) {
       const blankItem = { description: "", qty: "1", unitPrice: "", discount: "0", taxRate: "0", amount: "" };
@@ -13214,7 +13254,7 @@ function InvoiceWizard({ sourceRecord, onSave, onClose, invoiceRecords, profile 
     return (
       <div style={{ position: "fixed", inset: 0, background: LIGHT_BG, zIndex: 3000, display: "flex", flexDirection: "column", fontFamily: "'Segoe UI',sans-serif" }}>
         <div style={headerStyle}>
-          <button onClick={() => setStep(0)} style={{ background: "none", border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>BACK</button>
+          <button onClick={() => setStep(1)} style={{ background: "none", border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>BACK</button>
           <span style={{ fontWeight: 700 }}>Invoice Items</span>
           <div style={{ display: "flex", gap: 10 }}>
             {lineItems.length > 0 && <button onClick={() => setLineItems([])} style={{ background: "none", border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>DELETE</button>}
@@ -13236,18 +13276,18 @@ function InvoiceWizard({ sourceRecord, onSave, onClose, invoiceRecords, profile 
           ))}
         </div>
         <div style={{ padding: "12px 16px", background: "#fff", borderTop: "1px solid #ddd", display: "flex", gap: 10, flexShrink: 0 }}>
-          <button onClick={() => setStep(0)} style={{ flex: 1, background: "#f0f0f0", color: "#555", border: "none", borderRadius: 8, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>← Back</button>
-          <button onClick={() => setStep(2)} style={{ flex: 2, background: BLUE, color: "#fff", border: "none", borderRadius: 8, padding: "12px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Next →</button>
+          <button onClick={() => setStep(1)} style={{ flex: 1, background: "#f0f0f0", color: "#555", border: "none", borderRadius: 8, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>← Back</button>
+          <button onClick={() => setStep(3)} style={{ flex: 2, background: BLUE, color: "#fff", border: "none", borderRadius: 8, padding: "12px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Next →</button>
         </div>
       </div>
     );
   }
 
-  // Step 2: Payment
-  if (step === 2) return (
+  // Step 3: Payment
+  if (step === 3) return (
     <div style={{ position: "fixed", inset: 0, background: "#f0f0f0", zIndex: 3000, display: "flex", flexDirection: "column", fontFamily: "'Segoe UI',sans-serif" }}>
       <div style={headerStyle}>
-        <button onClick={() => setStep(1)} style={{ background: "none", border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>BACK</button>
+        <button onClick={() => setStep(2)} style={{ background: "none", border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>BACK</button>
         <span style={{ fontWeight: 700, fontSize: 16 }}>PAYMENT</span>
         <div style={{ width: 50 }} />
       </div>
@@ -13316,17 +13356,17 @@ function InvoiceWizard({ sourceRecord, onSave, onClose, invoiceRecords, profile 
         ))}
       </div>
       <div style={{ padding: "12px 16px", background: "#fff", borderTop: "1px solid #ddd", display: "flex", gap: 10, flexShrink: 0 }}>
-        <button onClick={() => setStep(1)} style={{ flex: 1, background: "#f0f0f0", color: "#555", border: "none", borderRadius: 8, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>← Back</button>
-        <button onClick={() => setStep(3)} style={{ flex: 2, background: INV_GREEN, color: "#fff", border: "none", borderRadius: 8, padding: "12px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Next →</button>
+        <button onClick={() => setStep(2)} style={{ flex: 1, background: "#f0f0f0", color: "#555", border: "none", borderRadius: 8, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>← Back</button>
+        <button onClick={() => setStep(4)} style={{ flex: 2, background: INV_GREEN, color: "#fff", border: "none", borderRadius: 8, padding: "12px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Next →</button>
       </div>
     </div>
   );
 
-  // Step 3: Notes
-  if (step === 3) return (
+  // Step 4: Notes
+  if (step === 4) return (
     <div style={{ position: "fixed", inset: 0, background: "#f0f0f0", zIndex: 3000, display: "flex", flexDirection: "column", fontFamily: "'Segoe UI',sans-serif" }}>
       <div style={headerStyle}>
-        <button onClick={() => setStep(2)} style={{ background: "none", border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>BACK</button>
+        <button onClick={() => setStep(3)} style={{ background: "none", border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>BACK</button>
         <span style={{ fontWeight: 700, fontSize: 16 }}>Notes</span>
         <div style={{ width: 50 }} />
       </div>
@@ -13339,13 +13379,13 @@ function InvoiceWizard({ sourceRecord, onSave, onClose, invoiceRecords, profile 
         />
       </div>
       <div style={{ padding: "12px 16px", background: "#fff", borderTop: "1px solid #ddd", display: "flex", gap: 10, flexShrink: 0 }}>
-        <button onClick={() => setStep(2)} style={{ flex: 1, background: "#f0f0f0", color: "#555", border: "none", borderRadius: 8, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>← Back</button>
-        <button onClick={() => setStep(4)} style={{ flex: 2, background: INV_GREEN, color: "#fff", border: "none", borderRadius: 8, padding: "12px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Next →</button>
+        <button onClick={() => setStep(3)} style={{ flex: 1, background: "#f0f0f0", color: "#555", border: "none", borderRadius: 8, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>← Back</button>
+        <button onClick={() => setStep(5)} style={{ flex: 2, background: INV_GREEN, color: "#fff", border: "none", borderRadius: 8, padding: "12px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Next →</button>
       </div>
     </div>
   );
 
-  // Step 4: Company Details + Options
+  // Step 5: Company Details + Options
   const now = new Date();
   const dayNames = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
   const monthNames = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
@@ -13355,7 +13395,7 @@ function InvoiceWizard({ sourceRecord, onSave, onClose, invoiceRecords, profile 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#f0f0f0", zIndex: 3000, display: "flex", flexDirection: "column", fontFamily: "'Segoe UI',sans-serif" }}>
       <div style={{ ...headerStyle, background: `linear-gradient(135deg,${DARK_BLUE},${BLUE})` }}>
-        <button onClick={() => setStep(3)} style={{ background: "none", border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>BACK</button>
+        <button onClick={() => setStep(4)} style={{ background: "none", border: "none", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>BACK</button>
         <span style={{ fontWeight: 700 }}></span>
         <div style={{ width: 50 }} />
       </div>
@@ -13378,7 +13418,7 @@ function InvoiceWizard({ sourceRecord, onSave, onClose, invoiceRecords, profile 
           style={{ width: "100%", background: INV_GREEN, color: "#fff", border: "none", borderRadius: 8, padding: "14px", fontWeight: 700, fontSize: 16, cursor: "pointer", marginBottom: 8 }}>
           📄 Preview &amp; Save Invoice
         </button>
-        <button onClick={() => setStep(3)} style={{ width: "100%", background: "#f0f0f0", color: "#555", border: "none", borderRadius: 8, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>← Back</button>
+        <button onClick={() => setStep(4)} style={{ width: "100%", background: "#f0f0f0", color: "#555", border: "none", borderRadius: 8, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>← Back</button>
       </div>
     </div>
   );
@@ -13665,54 +13705,64 @@ function QuoteWizard({ sourceRecord, onSave, onClose, profile }) {
     return <QuotePDFPreview quoteData={quoteData} onClose={() => setShowPDFPreview(false)} onSave={() => { const finalNo = getNextQuoteNumber(); quoteNo.current = finalNo; onSave({ ...quoteData, quoteNo: finalNo }); }} />;
   }
 
+  // Step 0: Quote Reference
   if (step === 0) return (
-    <div style={{ position:"fixed", inset:0, background:LIGHT_BG, zIndex:3000, display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={headerStyle}>
-        <button onClick={onClose} style={{ background:"none", border:"none", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>← Back</button>
-        <span style={{ fontWeight:700, fontSize:16 }}>New Quote</span>
-        <button onClick={() => setStep(1)} style={{ background:"none", border:"none", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>Next →</button>
-      </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 80px" }}>
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title="New Quote" onBack={onClose}/>
+      <div style={{ flex:1, overflowY:"auto", padding:24, paddingBottom:80 }}>
+        <p style={{ color:"#888", fontSize:15, marginBottom:20, textAlign:"center" }}>Please enter a file reference</p>
         <div style={{ background:"#fff", borderRadius:8, padding:"10px 14px", marginBottom:10, textAlign:"center", border:"1px solid #ddd" }}>
           <span style={{ fontSize:12, color:"#888" }}>Quote No: </span><span style={{ fontWeight:700, fontSize:15 }}>{quoteNo.current}</span>
         </div>
-        {sectionHeader("Engineer Details")}
-        <input style={inputStyle} placeholder="Company Name" value={companyName} onChange={e=>setCompanyName(e.target.value)}/>
-        <input style={inputStyle} placeholder="Address" value={companyAddr} onChange={e=>setCompanyAddr(e.target.value)}/>
-        <input style={inputStyle} placeholder="Postcode" value={companyPostcode2} onChange={e=>setCompanyPostcode2(e.target.value)}/>
-        <input style={inputStyle} placeholder="Telephone" value={companyTel2} onChange={e=>setCompanyTel2(e.target.value)}/>
-        <input style={inputStyle} placeholder="Gas Safe Registration No" value={gasSafeNo2} onChange={e=>setGasSafeNo2(e.target.value)}/>
-        <input style={inputStyle} placeholder="Engineer Name" value={issuedBy} onChange={e=>setIssuedBy(e.target.value)}/>
-        <input style={inputStyle} placeholder="Engineer ID Card No" value={engineerId} onChange={e=>setEngineerId(e.target.value)}/>
-        {contactError && <div style={{ background:"#fee", color:"#c00", padding:"8px 12px", borderRadius:8, fontSize:13, marginBottom:8 }}>{contactError}</div>}
-        {sectionHeader("Client Details", <ContactBtn target="client"/>)}
-        <input style={inputStyle} placeholder="Client Name" value={clientName} onChange={e=>setClientName(e.target.value)}/>
-        <input style={inputStyle} placeholder="Address Line 1" value={clientAddr1} onChange={e=>setClientAddr1(e.target.value)}/>
-        <input style={inputStyle} placeholder="Address Line 2" value={clientAddr2} onChange={e=>setClientAddr2(e.target.value)}/>
-        <input style={inputStyle} placeholder="Address Line 3" value={clientAddr3} onChange={e=>setClientAddr3(e.target.value)}/>
-        <input style={inputStyle} placeholder="Postcode" value={clientPostcode} onChange={e=>setClientPostcode(e.target.value)}/>
-        <input style={inputStyle} placeholder="Phone" value={clientTel} onChange={e=>setClientTel(e.target.value)}/>
-        <input style={inputStyle} placeholder="Email" value={clientEmail} onChange={e=>setClientEmail(e.target.value)}/>
-        {sectionHeader("Installation Details",
-          <div style={{ display:"flex", gap:6 }}>
-            <button onClick={()=>{setInstName(clientName);setInstAddr1(clientAddr1);setInstAddr2(clientAddr2);setInstAddr3(clientAddr3);setInstPostcode(clientPostcode);setInstTel(clientTel);}} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
-            <ContactBtn target="inst"/>
-          </div>
-        )}
-        <input style={inputStyle} placeholder="Installation Name" value={instName} onChange={e=>setInstName(e.target.value)}/>
-        <input style={inputStyle} placeholder="Address Line 1" value={instAddr1} onChange={e=>setInstAddr1(e.target.value)}/>
-        <input style={inputStyle} placeholder="Address Line 2" value={instAddr2} onChange={e=>setInstAddr2(e.target.value)}/>
-        <input style={inputStyle} placeholder="Address Line 3" value={instAddr3} onChange={e=>setInstAddr3(e.target.value)}/>
-        <input style={inputStyle} placeholder="Postcode" value={instPostcode} onChange={e=>setInstPostcode(e.target.value)}/>
-        <input style={inputStyle} placeholder="Phone" value={instTel} onChange={e=>setInstTel(e.target.value)}/>
       </div>
-      <div style={{ padding:"12px 16px", background:"#fff", borderTop:"1px solid #ddd", display:"flex", justifyContent:"flex-end", flexShrink:0 }}>
-        <button onClick={()=>setStep(1)} style={{ background:BLUE, color:"#fff", border:"none", borderRadius:8, padding:"12px 28px", fontWeight:700, fontSize:15, cursor:"pointer" }}>Next →</button>
-      </div>
+      <BottomBar onHome={onClose} onNext={()=>setStep(1)}/>
     </div>
   );
 
-  if (step === 1) {
+  // Step 1: Engineers, Client & Installation Details
+  if (step === 1) return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title="Engineers, Client & Installation Details" onBack={()=>setStep(0)}/>
+      <div style={{ flex:1, overflowY:"auto" }}>
+        <SectionHeader title="Engineers Details"/>
+        <FormInput label="Trading Title / Company Name" placeholder="Company name" value={companyName} onChange={v=>setCompanyName(v)}/>
+        <FormInput label="Address" placeholder="Address" value={companyAddr} onChange={v=>setCompanyAddr(v)}/>
+        <FormInput label="Post Code" placeholder="Postcode" value={companyPostcode2} onChange={v=>setCompanyPostcode2(v)}/>
+        <FormInput label="Telephone No" placeholder="Telephone" value={companyTel2} onChange={v=>setCompanyTel2(v)}/>
+        <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={gasSafeNo2} onChange={v=>setGasSafeNo2(v)}/>
+        <FormInput label="Engineer Name" placeholder="Engineer name" value={issuedBy} onChange={v=>setIssuedBy(v)}/>
+        <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={engineerId} onChange={v=>setEngineerId(v)}/>
+        {contactError && <div style={{ background:"#fee", color:"#c00", padding:"8px 12px", fontSize:13, marginBottom:8 }}>{contactError}</div>}
+        <SectionHeader title="Client Details" actions={[<ContactBtn key="cp" target="client"/>]}/>
+        <FormInput placeholder="Name" value={clientName} onChange={v=>setClientName(v)}/>
+        <FormInput placeholder="Address line 1" value={clientAddr1} onChange={v=>setClientAddr1(v)}/>
+        <FormInput placeholder="Address line 2" value={clientAddr2} onChange={v=>setClientAddr2(v)}/>
+        <FormInput placeholder="Address line 3" value={clientAddr3} onChange={v=>setClientAddr3(v)}/>
+        <FormInput placeholder="Postcode" value={clientPostcode} onChange={v=>setClientPostcode(v)}/>
+        <FormInput placeholder="Telephone" value={clientTel} onChange={v=>setClientTel(v)}/>
+        <FormInput placeholder="Email" value={clientEmail} onChange={v=>setClientEmail(v)}/>
+        <SectionHeader title="Installation Details" actions={[
+          <button key="copy" onClick={()=>{setInstName(clientName);setInstAddr1(clientAddr1);setInstAddr2(clientAddr2);setInstAddr3(clientAddr3);setInstPostcode(clientPostcode);setInstTel(clientTel);}} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>,
+          <ContactBtn key="cp" target="inst"/>
+        ]}/>
+        <FormInput placeholder="Name" value={instName} onChange={v=>setInstName(v)}/>
+        <FormInput placeholder="Address line 1" value={instAddr1} onChange={v=>setInstAddr1(v)}/>
+        <FormInput placeholder="Address line 2" value={instAddr2} onChange={v=>setInstAddr2(v)}/>
+        <FormInput placeholder="Address line 3" value={instAddr3} onChange={v=>setInstAddr3(v)}/>
+        <FormInput placeholder="Postcode" value={instPostcode} onChange={v=>setInstPostcode(v)}/>
+        <FormInput placeholder="Telephone" value={instTel} onChange={v=>setInstTel(v)}/>
+        <div style={{ height:20 }}/>
+      </div>
+      <BottomBar onHome={onClose} onNext={()=>setStep(2)}/>
+      {_qtPicker && <ContactPickerModal
+        title={_qtPicker==="client" ? "Choose Client" : "Choose Installation"}
+        onSelect={c=>_handleQtPickContact(_qtPicker,c)}
+        onClose={()=>_setQtPicker(null)}/>}
+    </div>
+  );
+
+  // Step 2: Quote Items
+  if (step === 2) {
     if (editingItem !== null) {
       const blankItem = { description:"", qty:"1", unitPrice:"", discount:"0", taxRate:"0", amount:"" };
       const existing = editingItem === "new" ? blankItem : { ...lineItems[editingItem] };
@@ -13721,7 +13771,7 @@ function QuoteWizard({ sourceRecord, onSave, onClose, profile }) {
     return (
       <div style={{ position:"fixed", inset:0, background:LIGHT_BG, zIndex:3000, display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
         <div style={headerStyle}>
-          <button onClick={()=>setStep(0)} style={{ background:"none", border:"none", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>BACK</button>
+          <button onClick={()=>setStep(1)} style={{ background:"none", border:"none", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>BACK</button>
           <span style={{ fontWeight:700 }}>Quote Items</span>
           <div style={{ display:"flex", gap:10 }}>
             {lineItems.length>0 && <button onClick={()=>setLineItems([])} style={{ background:"none", border:"none", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>DELETE</button>}
@@ -13742,17 +13792,17 @@ function QuoteWizard({ sourceRecord, onSave, onClose, profile }) {
           ))}
         </div>
         <div style={{ padding:"12px 16px", background:"#fff", borderTop:"1px solid #ddd", display:"flex", gap:10, flexShrink:0 }}>
-          <button onClick={()=>setStep(0)} style={{ flex:1, background:"#f0f0f0", color:"#555", border:"none", borderRadius:8, padding:"12px", fontWeight:700, fontSize:14, cursor:"pointer" }}>← Back</button>
-          <button onClick={()=>setStep(2)} style={{ flex:2, background:BLUE, color:"#fff", border:"none", borderRadius:8, padding:"12px", fontWeight:700, fontSize:15, cursor:"pointer" }}>Next →</button>
+          <button onClick={()=>setStep(1)} style={{ flex:1, background:"#f0f0f0", color:"#555", border:"none", borderRadius:8, padding:"12px", fontWeight:700, fontSize:14, cursor:"pointer" }}>← Back</button>
+          <button onClick={()=>setStep(3)} style={{ flex:2, background:BLUE, color:"#fff", border:"none", borderRadius:8, padding:"12px", fontWeight:700, fontSize:15, cursor:"pointer" }}>Next →</button>
         </div>
       </div>
     );
   }
 
-  if (step === 2) return (
+  if (step === 3) return (
     <div style={{ position:"fixed", inset:0, background:LIGHT_BG, zIndex:3000, display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
       <div style={headerStyle}>
-        <button onClick={()=>setStep(1)} style={{ background:"none", border:"none", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>BACK</button>
+        <button onClick={()=>setStep(2)} style={{ background:"none", border:"none", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>BACK</button>
         <span style={{ fontWeight:700, fontSize:16 }}>PAYMENT</span>
         <div style={{ width:50 }}/>
       </div>
@@ -13817,16 +13867,16 @@ function QuoteWizard({ sourceRecord, onSave, onClose, profile }) {
         ))}
       </div>
       <div style={{ padding:"12px 16px", background:"#fff", borderTop:"1px solid #ddd", display:"flex", gap:10, flexShrink:0 }}>
-        <button onClick={()=>setStep(1)} style={{ flex:1, background:"#f0f0f0", color:"#555", border:"none", borderRadius:8, padding:"12px", fontWeight:700, fontSize:14, cursor:"pointer" }}>← Back</button>
-        <button onClick={()=>setStep(3)} style={{ flex:2, background:BLUE, color:"#fff", border:"none", borderRadius:8, padding:"12px", fontWeight:700, fontSize:15, cursor:"pointer" }}>Next →</button>
+        <button onClick={()=>setStep(2)} style={{ flex:1, background:"#f0f0f0", color:"#555", border:"none", borderRadius:8, padding:"12px", fontWeight:700, fontSize:14, cursor:"pointer" }}>← Back</button>
+        <button onClick={()=>setStep(4)} style={{ flex:2, background:BLUE, color:"#fff", border:"none", borderRadius:8, padding:"12px", fontWeight:700, fontSize:15, cursor:"pointer" }}>Next →</button>
       </div>
     </div>
   );
 
-  if (step === 3) return (
+  if (step === 4) return (
     <div style={{ position:"fixed", inset:0, background:LIGHT_BG, zIndex:3000, display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
       <div style={headerStyle}>
-        <button onClick={()=>setStep(2)} style={{ background:"none", border:"none", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>BACK</button>
+        <button onClick={()=>setStep(3)} style={{ background:"none", border:"none", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>BACK</button>
         <span style={{ fontWeight:700, fontSize:16 }}>Notes</span>
         <div style={{ width:50 }}/>
       </div>
@@ -13834,8 +13884,8 @@ function QuoteWizard({ sourceRecord, onSave, onClose, profile }) {
         <textarea style={{ width:"100%", height:220, padding:14, border:"1px solid #ddd", borderRadius:8, fontSize:14, resize:"none", boxSizing:"border-box", background:"#fff" }} value={notes} onChange={e=>setNotes(e.target.value)}/>
       </div>
       <div style={{ padding:"12px 16px", background:"#fff", borderTop:"1px solid #ddd", display:"flex", gap:10, flexShrink:0 }}>
-        <button onClick={()=>setStep(2)} style={{ flex:1, background:"#f0f0f0", color:"#555", border:"none", borderRadius:8, padding:"12px", fontWeight:700, fontSize:14, cursor:"pointer" }}>← Back</button>
-        <button onClick={()=>setStep(4)} style={{ flex:2, background:BLUE, color:"#fff", border:"none", borderRadius:8, padding:"12px", fontWeight:700, fontSize:15, cursor:"pointer" }}>Next →</button>
+        <button onClick={()=>setStep(3)} style={{ flex:1, background:"#f0f0f0", color:"#555", border:"none", borderRadius:8, padding:"12px", fontWeight:700, fontSize:14, cursor:"pointer" }}>← Back</button>
+        <button onClick={()=>setStep(5)} style={{ flex:2, background:BLUE, color:"#fff", border:"none", borderRadius:8, padding:"12px", fontWeight:700, fontSize:15, cursor:"pointer" }}>Next →</button>
       </div>
     </div>
   );
@@ -13848,7 +13898,7 @@ function QuoteWizard({ sourceRecord, onSave, onClose, profile }) {
   return (
     <div style={{ position:"fixed", inset:0, background:LIGHT_BG, zIndex:3000, display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
       <div style={{ ...headerStyle, background:`linear-gradient(135deg,${DARK_BLUE},${BLUE})` }}>
-        <button onClick={()=>setStep(3)} style={{ background:"none", border:"none", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>BACK</button>
+        <button onClick={()=>setStep(4)} style={{ background:"none", border:"none", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>BACK</button>
         <span style={{ fontWeight:700 }}></span>
         <div style={{ width:50 }}/>
       </div>
@@ -13870,7 +13920,7 @@ function QuoteWizard({ sourceRecord, onSave, onClose, profile }) {
         <button onClick={()=>setShowPDFPreview(true)} style={{ width:"100%", background:BLUE, color:"#fff", border:"none", borderRadius:8, padding:"14px", fontWeight:700, fontSize:16, cursor:"pointer", marginBottom:8 }}>
           📄 Preview &amp; Save Quote
         </button>
-        <button onClick={()=>setStep(3)} style={{ width:"100%", background:"#f0f0f0", color:"#555", border:"none", borderRadius:8, padding:"12px", fontWeight:700, fontSize:14, cursor:"pointer" }}>← Back</button>
+        <button onClick={()=>setStep(4)} style={{ width:"100%", background:"#f0f0f0", color:"#555", border:"none", borderRadius:8, padding:"12px", fontWeight:700, fontSize:14, cursor:"pointer" }}>← Back</button>
       </div>
     </div>
   );
@@ -16851,7 +16901,7 @@ function BSStepFileRef({ data, onChange, onNext, onBack, onHome }) {
   );
 }
 
-function BSStepClientDetails({ data, onChange, onNext, onBack, onHome }) {
+function BSStepClientDetails({ data, onChange, onNext, onBack, onHome, engData, onEngChange }) {
   const copyClientToInst = () => {
     onChange({...data, instName:data.clientName, instAddr1:data.clientAddr1, instAddr2:data.clientAddr2, instAddr3:data.clientAddr3, instPostcode:data.clientPostcode, instTel:data.clientTel });
   };
@@ -16868,29 +16918,40 @@ function BSStepClientDetails({ data, onChange, onNext, onBack, onHome }) {
     </button>
   );
   const copyBtn = (
-    <button onClick={copyClientToInst} style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.18)", border:"1.5px solid rgba(255,255,255,0.6)", borderRadius:20, padding:"5px 14px", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
-      Copy
+    <button onClick={copyClientToInst} style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+      ✓ Copy
     </button>
   );
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG }}>
-      <Header title="Client Details" onBack={onBack}/>
+      <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
       <div style={{ flex:1, overflowY:"auto" }}>
+        {engData && onEngChange && <>
+          <SectionHeader title="Engineers Details"/>
+          <FormInput label="Trading Title / Company Name" placeholder="Company name" value={engData.companyName||""} onChange={v=>onEngChange({...engData,companyName:v})}/>
+          <FormInput label="Address" placeholder="Address" value={engData.companyAddr||""} onChange={v=>onEngChange({...engData,companyAddr:v})}/>
+          <FormInput label="Town / City" placeholder="Town or city" value={engData.companyTown||""} onChange={v=>onEngChange({...engData,companyTown:v})}/>
+          <FormInput label="Post Code" placeholder="Postcode" value={engData.companyPostcode||""} onChange={v=>onEngChange({...engData,companyPostcode:v})}/>
+          <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={engData.gasSafeNo||""} onChange={v=>onEngChange({...engData,gasSafeNo:v})}/>
+          <FormInput label="Telephone No" placeholder="Telephone" value={engData.companyTel||""} onChange={v=>onEngChange({...engData,companyTel:v})}/>
+          <FormInput label="Engineer Name" placeholder="Engineer name" value={engData.engineerName||""} onChange={v=>onEngChange({...engData,engineerName:v})}/>
+          <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={engData.gasId||""} onChange={v=>onEngChange({...engData,gasId:v})}/>
+        </>}
         <SectionHeader title="Client Details" actions={[contactBtn(()=>setBsPickerTarget("client"))]}/>
-        <FormInput label="" placeholder="Name" value={data.clientName} onChange={v=>onChange({...data,clientName:v})}/>
-        <FormInput label="" placeholder="Address line 1" value={data.clientAddr1} onChange={v=>onChange({...data,clientAddr1:v})}/>
-        <FormInput label="" placeholder="Address line 2" value={data.clientAddr2} onChange={v=>onChange({...data,clientAddr2:v})}/>
-        <FormInput label="" placeholder="Address line 3" value={data.clientAddr3} onChange={v=>onChange({...data,clientAddr3:v})}/>
-        <FormInput label="" placeholder="Postcode" value={data.clientPostcode} onChange={v=>onChange({...data,clientPostcode:v})}/>
-        <FormInput label="" placeholder="Telephone" value={data.clientTel} onChange={v=>onChange({...data,clientTel:v})}/>
-        <FormInput label="" placeholder="Email" value={data.clientEmail} onChange={v=>onChange({...data,clientEmail:v})}/>
+        <FormInput placeholder="Name" value={data.clientName} onChange={v=>onChange({...data,clientName:v})}/>
+        <FormInput placeholder="Address line 1" value={data.clientAddr1} onChange={v=>onChange({...data,clientAddr1:v})}/>
+        <FormInput placeholder="Address line 2" value={data.clientAddr2} onChange={v=>onChange({...data,clientAddr2:v})}/>
+        <FormInput placeholder="Address line 3" value={data.clientAddr3} onChange={v=>onChange({...data,clientAddr3:v})}/>
+        <FormInput placeholder="Postcode" value={data.clientPostcode} onChange={v=>onChange({...data,clientPostcode:v})}/>
+        <FormInput placeholder="Telephone" value={data.clientTel} onChange={v=>onChange({...data,clientTel:v})}/>
+        <FormInput placeholder="Email" value={data.clientEmail} onChange={v=>onChange({...data,clientEmail:v})}/>
         <SectionHeader title="Installation Details" actions={[copyBtn, contactBtn(()=>setBsPickerTarget("inst"))]}/>
-        <FormInput label="" placeholder="Name" value={data.instName} onChange={v=>onChange({...data,instName:v})}/>
-        <FormInput label="" placeholder="Address line 1" value={data.instAddr1} onChange={v=>onChange({...data,instAddr1:v})}/>
-        <FormInput label="" placeholder="Address line 2" value={data.instAddr2} onChange={v=>onChange({...data,instAddr2:v})}/>
-        <FormInput label="" placeholder="Address line 3" value={data.instAddr3} onChange={v=>onChange({...data,instAddr3:v})}/>
-        <FormInput label="" placeholder="Postcode" value={data.instPostcode} onChange={v=>onChange({...data,instPostcode:v})}/>
-        <FormInput label="" placeholder="Telephone" value={data.instTel} onChange={v=>onChange({...data,instTel:v})}/>
+        <FormInput placeholder="Name" value={data.instName} onChange={v=>onChange({...data,instName:v})}/>
+        <FormInput placeholder="Address line 1" value={data.instAddr1} onChange={v=>onChange({...data,instAddr1:v})}/>
+        <FormInput placeholder="Address line 2" value={data.instAddr2} onChange={v=>onChange({...data,instAddr2:v})}/>
+        <FormInput placeholder="Address line 3" value={data.instAddr3} onChange={v=>onChange({...data,instAddr3:v})}/>
+        <FormInput placeholder="Postcode" value={data.instPostcode} onChange={v=>onChange({...data,instPostcode:v})}/>
+        <FormInput placeholder="Telephone" value={data.instTel} onChange={v=>onChange({...data,instTel:v})}/>
         <div style={{height:16}}/>
       </div>
       <BottomBar onHome={onHome} onNext={onNext}/>
@@ -17163,15 +17224,15 @@ function WNStepFileRef({ data, onChange, onNext, onBack, onHome }) {
 }
 
 // WN Step 2: Client & Installation Details (mirrors StepClientDetails)
-function WNStepClientDetails({ data, onChange, onNext, onBack, onHome }) {
+function WNStepClientDetails({ data, onChange, onNext, onBack, onHome, engData, onEngChange }) {
   const [errorMsg, setErrorMsg] = useState("");
-  const copy = () => onChange({...data, instAddr1:data.clientAddr1, instAddr2:data.clientAddr2, instAddr3:data.clientAddr3, instPostcode:data.clientPostcode});
+  const copy = () => onChange({...data, instName:data.clientName, instAddr1:data.clientAddr1, instAddr2:data.clientAddr2, instAddr3:data.clientAddr3, instPostcode:data.clientPostcode, instTel:data.clientTel});
 
   const [wnPickerTarget, setWnPickerTarget] = useState(null);
   const handlePickWN = (target, c) => {
     const f = contactToFields(c);
     if (target === "client") onChange({...data, clientName:f.name, clientAddr1:f.addr1, clientAddr2:f.addr2, clientAddr3:f.addr3, clientPostcode:f.postcode, clientTel:f.phone, clientEmail:f.email});
-    else onChange({...data, instAddr1:f.addr1, instAddr2:f.addr2, instAddr3:f.addr3, instPostcode:f.postcode});
+    else onChange({...data, instName:f.name, instAddr1:f.addr1, instAddr2:f.addr2, instAddr3:f.addr3, instPostcode:f.postcode, instTel:f.phone});
     setWnPickerTarget(null);
   };
 
@@ -17181,20 +17242,35 @@ function WNStepClientDetails({ data, onChange, onNext, onBack, onHome }) {
     </button>
   );
 
+  const CopyBtn = () => (
+    <button onClick={copy} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
+  );
+
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Client & Installation Details" onBack={onBack}/>
+      <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
       <div style={{ flex:1, overflowY:"auto" }}>
         {errorMsg && <div style={{ background:"#fff3cd", color:"#856404", padding:"10px 16px", fontSize:13, borderBottom:"1px solid #ffc107" }}>⚠️ {errorMsg}</div>}
+        {engData && onEngChange && <>
+          <SectionHeader title="Engineers Details"/>
+          <FormInput label="Trading Title / Company Name" placeholder="Company name" value={engData.companyName||""} onChange={v=>onEngChange({...engData,companyName:v})}/>
+          <FormInput label="Address" placeholder="Address" value={engData.companyAddr||""} onChange={v=>onEngChange({...engData,companyAddr:v})}/>
+          <FormInput label="Town / City" placeholder="Town or city" value={engData.companyTown||""} onChange={v=>onEngChange({...engData,companyTown:v})}/>
+          <FormInput label="Post Code" placeholder="Postcode" value={engData.companyPostcode||""} onChange={v=>onEngChange({...engData,companyPostcode:v})}/>
+          <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={engData.gasSafeNo||""} onChange={v=>onEngChange({...engData,gasSafeNo:v})}/>
+          <FormInput label="Telephone No" placeholder="Telephone" value={engData.companyTel||""} onChange={v=>onEngChange({...engData,companyTel:v})}/>
+          <FormInput label="Engineer Name" placeholder="Engineer name" value={engData.engineerName||""} onChange={v=>onEngChange({...engData,engineerName:v})}/>
+          <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={engData.gasId||""} onChange={v=>onEngChange({...engData,gasId:v})}/>
+        </>}
         <SectionHeader title="Client Details" actions={[<ContactBtn key="cp" target="client"/>]}/>
         {[["clientName","Name"],["clientAddr1","Address line 1"],["clientAddr2","Address line 2"],["clientAddr3","Address line 3"],["clientPostcode","Postcode"],["clientTel","Telephone"],["clientEmail","Email"]].map(([k,p])=>(
           <FormInput key={k} placeholder={p} value={data[k]||""} onChange={v=>onChange({...data,[k]:v})}/>
         ))}
-        <SectionHeader title="Installation Address" actions={[
-          <button key="copy" onClick={copy} style={{ background:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:13, fontWeight:600, color:BLUE, cursor:"pointer" }}>Copy</button>,
+        <SectionHeader title="Installation Details" actions={[
+          <CopyBtn key="copy"/>,
           <ContactBtn key="cp" target="inst"/>
         ]}/>
-        {[["instAddr1","Address line 1"],["instAddr2","Address line 2"],["instAddr3","Address line 3"],["instPostcode","Postcode"]].map(([k,p])=>(
+        {[["instName","Name"],["instAddr1","Address line 1"],["instAddr2","Address line 2"],["instAddr3","Address line 3"],["instPostcode","Postcode"],["instTel","Telephone"]].map(([k,p])=>(
           <FormInput key={k} placeholder={p} value={data[k]||""} onChange={v=>onChange({...data,[k]:v})}/>
         ))}
         <div style={{ height:20 }}/>
@@ -19063,7 +19139,7 @@ function App({ onLogout }) {
   if (screen === "warningNotice") {
     if (wnShowPDF) return <WNPDFPreview wnFormData={{...wnFormData, issueDate:wnEngData.issueDate, issueTime:wnEngData.issueTime}} wnEngData={wnEngData} wnSigData={wnSigData} onClose={()=>setWnShowPDF(false)} attachments={wnAttachments}/>;
     if (wnSubScreen === "fileRef") return <WNStepFileRef data={wnFormData} onChange={setWnFormData} onBack={()=>setScreen("newJob")} onHome={goHome} onNext={()=>setWnSubScreen("clientDetails")}/>;
-    if (wnSubScreen === "clientDetails") return <WNStepClientDetails data={wnFormData} onChange={setWnFormData} onBack={()=>setWnSubScreen("fileRef")} onHome={goHome} onNext={()=>setWnSubScreen("noticeDetails")}/>;
+    if (wnSubScreen === "clientDetails") return <WNStepClientDetails data={wnFormData} onChange={setWnFormData} engData={wnEngData} onEngChange={setWnEngData} onBack={()=>setWnSubScreen("fileRef")} onHome={goHome} onNext={()=>setWnSubScreen("noticeDetails")}/>;
     if (wnSubScreen === "noticeDetails") return <WNStepNoticeDetails data={wnFormData} onChange={setWnFormData} onBack={()=>setWnSubScreen("clientDetails")} onHome={goHome} onNext={()=>setWnSubScreen("attachments")}/>;
     if (wnSubScreen === "attachments") return <AttachmentsStep data={{attachments:wnAttachments}} onChange={d=>setWnAttachments(d.attachments||[])} onBack={()=>setWnSubScreen("noticeDetails")} onHome={goHome} onNext={()=>setWnSubScreen("signature")} nextLabel="Next: Signatures"/>;
     if (wnSubScreen === "signature") return <WNStepSignature sigData={wnSigData} onChange={setWnSigData} onBack={()=>setWnSubScreen("attachments")} onHome={goHome} onNext={()=>setWnSubScreen("engineerDetails")}/>;
@@ -19096,7 +19172,7 @@ function App({ onLogout }) {
   // GSC flow
   if (screen === "gsc") {
     if (subScreen === "fileRef") return <StepFileRef data={certData} onChange={setCertData} onBack={()=>setScreen("newJob")} onHome={goHome} onNext={()=>setSubScreen("clientDetails")}/>;
-    if (subScreen === "clientDetails") return <StepClientDetails data={certData} onChange={setCertData} onBack={()=>setSubScreen("fileRef")} onHome={goHome} onNext={()=>setSubScreen("applianceList")}/>;
+    if (subScreen === "clientDetails") return <StepClientDetails data={certData} onChange={setCertData} engData={engineerData} onEngChange={setEngineerData} onBack={()=>setSubScreen("fileRef")} onHome={goHome} onNext={()=>setSubScreen("applianceList")}/>;
     if (subScreen === "applianceList") return (
       <>
         <StepApplianceList appliances={appliances} onAdd={()=>{setEditIndex(null);setSubScreen("applianceForm");}} onEdit={i=>{setEditIndex(i);setSubScreen("applianceForm");}}
@@ -19160,7 +19236,7 @@ function App({ onLogout }) {
   if (screen === "bs") {
     if (bsShowPDF) return <BSPDFPreview serviceData={serviceData} engineerData={bsEngData} signatureData={bsSigData} onClose={()=>setBsShowPDF(false)} attachments={bsAttachments}/>;
     if (bsSubScreen === "fileRef") return <BSStepFileRef data={serviceData} onChange={setServiceData} onBack={()=>setScreen("newJob")} onHome={goHome} onNext={()=>setBsSubScreen("clientDetails")}/>;
-    if (bsSubScreen === "clientDetails") return <BSStepClientDetails data={serviceData} onChange={setServiceData} onBack={()=>setBsSubScreen("fileRef")} onHome={goHome} onNext={()=>setBsSubScreen("applianceDetails")}/>;
+    if (bsSubScreen === "clientDetails") return <BSStepClientDetails data={serviceData} onChange={setServiceData} engData={bsEngData} onEngChange={setBsEngData} onBack={()=>setBsSubScreen("fileRef")} onHome={goHome} onNext={()=>setBsSubScreen("applianceDetails")}/>;
     if (bsSubScreen === "applianceDetails") return <BSStepApplianceDetails data={serviceData} onChange={setServiceData} onBack={()=>setBsSubScreen("clientDetails")} onHome={goHome} onNext={()=>setBsSubScreen("prelimChecks")}/>;
     if (bsSubScreen === "prelimChecks") return <BSStepPrelimChecks data={serviceData} onChange={setServiceData} onBack={()=>setBsSubScreen("applianceDetails")} onHome={goHome} onNext={()=>setBsSubScreen("notes")}/>;
     if (bsSubScreen === "notes") return <BSStepNotes data={serviceData} onChange={setServiceData} onBack={()=>setBsSubScreen("prelimChecks")} onHome={goHome} onNext={()=>setBsSubScreen("attachments")}/>;
