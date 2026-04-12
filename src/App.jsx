@@ -108,14 +108,36 @@ function getTrialDaysLeft() {
   } catch { return 0; }
 }
 
-function markPaymentSubmitted(bankDetails) {
+function markPaymentSubmitted(bankDetails, selectedPlan) {
   try {
     const p = JSON.parse(localStorage.getItem(sk("user_profile")) || "{}");
     p.paymentSubmitted = true;
     p.paymentSubmittedAt = new Date().toISOString();
     p.bankDetails = bankDetails; // stored locally only, also emailed to admin
+    if (selectedPlan) p.plan = selectedPlan;
     localStorage.setItem(sk("user_profile"), JSON.stringify(p));
   } catch {}
+}
+
+// ─── Plan Tier Helpers ──────────────────────────────────────────────────────
+const PLAN_CERT_LIMITS = { lite: 20, pro: Infinity, proplus: Infinity };
+
+function getUserPlan() {
+  try {
+    const u = getCurrentUser();
+    if (u && USERS.some(x => x.username === u.username)) return "proplus";
+    const p = JSON.parse(localStorage.getItem(sk("user_profile")) || "{}");
+    return p.plan || "proplus";
+  } catch { return "proplus"; }
+}
+
+function getMonthCertCount(records) {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  return (records || []).filter(r => {
+    if (!r.savedAt) return false;
+    return new Date(r.savedAt) >= monthStart;
+  }).length;
 }
 
 // Admin unlock — called from DevTools or admin panel: unlockUser("username")
@@ -2334,7 +2356,9 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
       if (!res.ok) throw new Error("Email send failed");
     } catch(e) { console.warn("Email failed:", e); }
 
-    markPaymentSubmitted({ accountName:form.accountName, sortCode:form.sortCode, accountNumber:form.accountNumber, email:form.email });
+    markPaymentSubmitted({ accountName:form.accountName, sortCode:form.sortCode, accountNumber:form.accountNumber, email:form.email }, selectedPlan);
+    // Also persist plan separately in case markPaymentSubmitted is called without selectedPlan elsewhere
+    try { const p = JSON.parse(localStorage.getItem(sk("user_profile")) || "{}"); p.plan = selectedPlan; localStorage.setItem(sk("user_profile"), JSON.stringify(p)); } catch {}
     setSubmitting(false);
     setStep("done");
     if (onPaymentSubmitted) onPaymentSubmitted();
@@ -3020,12 +3044,26 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
         </div>
         <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
           <span style={{ color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600 }}>👤 {currentUser?.displayName || currentUser?.username}</span>
+          {(() => { const _p = getUserPlan(); const badge = _p === "lite" ? "LITE" : _p === "pro" ? "PRO" : "PRO+"; const bg = _p === "lite" ? "#f59e0b" : _p === "pro" ? "#3b82f6" : "#fff200"; const col = _p === "proplus" ? "#0d1f2d" : "#fff"; return (
+            <span style={{ background:bg, color:col, fontSize:9, fontWeight:800, padding:"2px 8px", borderRadius:6, letterSpacing:0.8 }}>{badge}</span>
+          ); })()}
           <button onClick={onLogout}
             style={{ background:"rgba(255,255,255,0.18)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:8, padding:"4px 12px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>
             Sign Out
           </button>
         </div>
       </div>
+
+      {/* Lite plan cert counter banner */}
+      {getUserPlan() === "lite" && (
+        <div style={{ margin:"0 20px 12px", background:"rgba(255,255,255,0.10)", border:"1.5px solid rgba(255,242,0,0.4)", borderRadius:12, padding:"10px 16px", display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:18 }}>📊</span>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:700, fontSize:13, color:"#fff200" }}>{getMonthCertCount(records)}/20 certificates used this month</div>
+            <div style={{ fontSize:12, color:"rgba(255,255,255,0.7)" }}>Upgrade to Pro for unlimited certificates</div>
+          </div>
+        </div>
+      )}
 
       {/* Trial warning banner */}
       {trialStatus === "trial" && daysLeft <= 3 && (
@@ -3315,6 +3353,54 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Upgrade / Feature Lock Screens ─────────────────────────────────────────
+function UpgradeLimitScreen({ currentPlan, certCount, certLimit, onBack, onUpgrade }) {
+  const planLabel = currentPlan === "lite" ? "Lite" : currentPlan === "pro" ? "Pro" : "Pro+";
+  return (
+    <div style={{ minHeight:"100dvh", background:`linear-gradient(160deg,${DARK_BLUE} 0%,${BLUE} 60%,${DARK_BLUE} 100%)`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'Segoe UI',sans-serif", padding:24 }}>
+      <div style={{ background:"#fff", borderRadius:20, padding:"40px 28px", width:"100%", maxWidth:400, textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
+        <div style={{ fontSize:56, marginBottom:16 }}>🔒</div>
+        <h2 style={{ fontSize:20, fontWeight:700, color:"#0d1f2d", margin:"0 0 12px" }}>Monthly Limit Reached</h2>
+        <p style={{ fontSize:14, color:"#555", lineHeight:1.7, margin:"0 0 8px" }}>
+          You've used <strong>{certCount}/{certLimit}</strong> certificates this month on the <strong>{planLabel}</strong> plan.
+        </p>
+        <p style={{ fontSize:14, color:"#555", lineHeight:1.7, margin:"0 0 24px" }}>
+          Upgrade to <strong>Pro</strong> for unlimited certificates.
+        </p>
+        <button onClick={onUpgrade} style={{ width:"100%", padding:14, background:"#0d1f2d", color:"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:10 }}>
+          Upgrade Plan
+        </button>
+        <button onClick={onBack} style={{ width:"100%", padding:14, background:"#f5f5f5", color:"#555", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+          ← Back to Home
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FeatureLockedScreen({ feature, requiredPlan, onBack, onHome }) {
+  return (
+    <div style={{ minHeight:"100dvh", background:`linear-gradient(160deg,${DARK_BLUE} 0%,${BLUE} 60%,${DARK_BLUE} 100%)`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'Segoe UI',sans-serif", padding:24 }}>
+      <div style={{ background:"#fff", borderRadius:20, padding:"40px 28px", width:"100%", maxWidth:400, textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
+        <div style={{ fontSize:56, marginBottom:16 }}>🔒</div>
+        <h2 style={{ fontSize:20, fontWeight:700, color:"#0d1f2d", margin:"0 0 12px" }}>Feature Locked</h2>
+        <p style={{ fontSize:14, color:"#555", lineHeight:1.7, margin:"0 0 8px" }}>
+          <strong>{feature}</strong> requires the <strong>{requiredPlan}</strong> plan.
+        </p>
+        <p style={{ fontSize:14, color:"#555", lineHeight:1.7, margin:"0 0 24px" }}>
+          Upgrade to unlock this feature.
+        </p>
+        <button onClick={onHome || onBack} style={{ width:"100%", padding:14, background:"#0d1f2d", color:"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:10 }}>
+          Upgrade Plan
+        </button>
+        <button onClick={onBack} style={{ width:"100%", padding:14, background:"#f5f5f5", color:"#555", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+          ← Go Back
+        </button>
+      </div>
     </div>
   );
 }
@@ -15803,10 +15889,13 @@ function CombinedRecordsScreen({ records, type, onBack, onHome, onDelete }) {
 }
 
 
-function RecordsScreen({ records, onBack, onHome, onDelete, onImport, onEditGw, onEditGi, invoices, onCreateInvoice, onDeleteInvoice, onMarkPaid, quotes, onDeleteQuote, onConvertQuoteToInvoice, onImportInvoices, onImportQuotes, onImportReports, onImportFolders, engineerData, accountReports, onDeleteReport, yearlyReports, onDeleteYearly, onRebuildYearly, onUpdateReport, gscFolders, onAddFolder, onRenameFolder, onDeleteFolder, onUpdateRecord, profile, onRenew }) {
+function RecordsScreen({ records, onBack, onHome, onDelete, onImport, onEditGw, onEditGi, invoices, onCreateInvoice, onDeleteInvoice, onMarkPaid, quotes, onDeleteQuote, onConvertQuoteToInvoice, onImportInvoices, onImportQuotes, onImportReports, onImportFolders, engineerData, accountReports, onDeleteReport, yearlyReports, onDeleteYearly, onRebuildYearly, onUpdateReport, gscFolders, onAddFolder, onRenameFolder, onDeleteFolder, onUpdateRecord, profile, onRenew, userPlan }) {
   const [folder, setFolder] = useState(null);
 
-  if (folder === "reminders") return <RemindersScreen records={records} onBack={()=>setFolder(null)} onHome={onHome} engineerData={engineerData} onRenew={onRenew}/>;
+  if (folder === "reminders") {
+    if (userPlan === "lite") return <FeatureLockedScreen feature="Annual Reminders" requiredPlan="Pro" onBack={()=>setFolder(null)} onHome={onHome}/>;
+    return <RemindersScreen records={records} onBack={()=>setFolder(null)} onHome={onHome} engineerData={engineerData} onRenew={onRenew}/>;
+  }
   if (folder === "gsc") return <GasSafetyCertsScreen records={records} onBack={()=>setFolder(null)} onHome={onHome} onDelete={onDelete} onCreateInvoice={onCreateInvoice} gscFolders={gscFolders} onAddFolder={onAddFolder} onRenameFolder={onRenameFolder} onDeleteFolder={onDeleteFolder} onUpdateRecord={onUpdateRecord}/>;
   if (folder === "bs") return <BoilerServiceRecordsScreen records={records} onBack={()=>setFolder(null)} onHome={onHome} onDelete={onDelete} onCreateInvoice={onCreateInvoice} onUpdateRecord={onUpdateRecord}/>;
   if (folder === "wn") return <WarningNoticeRecordsScreen records={records} onBack={()=>setFolder(null)} onHome={onHome} onDelete={onDelete} onCreateInvoice={onCreateInvoice}/>;
@@ -19036,7 +19125,8 @@ function App({ onLogout }) {
     onDeleteFolder={(id)=>{ setGscFolders(prev=>prev.filter(f=>f.id!==id)); setRecords(prev=>prev.map(r=>r.gscFolder===id?{...r,gscFolder:null}:r)); }}
     onUpdateRecord={(idx, updated)=>setRecords(prev=>prev.map((r,i)=>i===idx?updated:r))}
     profile={userProfile}
-    onRenew={(rec)=>handleRenew(rec)}/>;
+    onRenew={(rec)=>handleRenew(rec)}
+    userPlan={getUserPlan()}/>;
 
 
   // ── Trial / paywall gate ──────────────────────────────────────────────────
@@ -19054,7 +19144,9 @@ function App({ onLogout }) {
   if (screen === "giEmail") return <GasIsolationEmailScreen onBack={()=>setScreen("home")} onHome={goHome} onImport={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
   if (screen === "gwEmail") return <GasWorksEmailScreen onBack={()=>setScreen("home")} onHome={goHome} onImport={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
 
-  if (screen === "report") return <MonthlyReportScreen onBack={()=>setScreen("home")} onHome={goHome} invoices={invoices} userId={getCurrentUser()?.username || "default"} onSaveReport={(r)=>{
+  if (screen === "report") {
+    if (getUserPlan() === "lite") return <FeatureLockedScreen feature="Accounts & Financial Reports" requiredPlan="Pro" onBack={()=>setScreen("home")} onHome={goHome}/>;
+    return <MonthlyReportScreen onBack={()=>setScreen("home")} onHome={goHome} invoices={invoices} userId={getCurrentUser()?.username || "default"} onSaveReport={(r)=>{
     const newMonthlyReports = [r, ...accountReports];
     setAccountReports(newMonthlyReports);
     // Rebuild yearly report for the year this report belongs to
@@ -19073,6 +19165,7 @@ function App({ onLogout }) {
       document.head.appendChild(s);
     }
   }}/>;
+  }
   if (quoteWizardOpen) return <QuoteWizard sourceRecord={null} onSave={(qData)=>{ setQuotes(prev=>[...prev,qData]); alert("✅ Quote saved to Quotes folder!"); setQuoteWizardOpen(false); goHome(); }} onClose={()=>{ setQuoteWizardOpen(false); setScreen("newJob"); }} profile={userProfile}/>;
   if (invoiceWizardOpen) return <InvoiceWizard sourceRecord={null} onSave={(invData)=>{ setInvoices(prev=>[...prev, invData]); alert("✅ Invoice saved to Invoices folder!"); setInvoiceWizardOpen(false); goHome(); }} onClose={()=>{ setInvoiceWizardOpen(false); setScreen("newJob"); }} invoiceRecords={invoices} profile={userProfile}/>;
   if (screen === "benchmark") return <BenchmarkScreen
@@ -19139,8 +19232,14 @@ function App({ onLogout }) {
     onSave={(rec)=>{ setRecords(prev=>[...prev, rec]); }}
   />;
 
-  if (screen === "newJob") return <NewJobScreen onBack={()=>setScreen("home")} onHome={goHome}
-    onSelect={job => { if(job==="Gas Safety Certificate") { setScreen("gsc"); setSubScreen("fileRef"); } else if(job==="Boiler Service") { setScreen("bs"); setBsSubScreen("fileRef"); } else if(job==="Gas Works") { setScreen("gasWorks"); setGwSubScreen("fileRef"); } else if(job==="Gas Isolation") { setScreen("gasIsolation"); setGiSubScreen("form"); } else if(job==="Invoice") { setInvoiceWizardOpen(true); } else if(job==="Quote") { setQuoteWizardOpen(true); } else if(job==="Warning Notice") { setScreen("warningNotice"); setWnSubScreen("fileRef"); } else if(job === "Leisure Industry Gas Safety Record") { setScreen("leisureRecord"); } else if(job === "Benchmark Commissioning Checklist") { setScreen("benchmark"); } else if(job === "Liquified Petroleum Gas Safety Record") { setScreen("lpgRecord"); } else if(job === "7 Day Cooling Off Period Exemption") { setScreen("coolingOff"); } else if(job === "Commercial Gas Safety Certificate") { setScreen("commercialGSC"); } else if(job === "Gas Installation Safety Report") { setScreen("gasInstallReport"); } else if(job === "Commercial Catering Inspection Record") { setScreen("cateringInspection"); } else if(job === "Gas Testing and Purging Record") { setScreen("gasTestPurge"); } else if(Object.keys(GENERIC_CERT_CONFIGS).includes(job)) { setGenericCertLabel(job); setScreen("genericCert"); } else alert(`${job} coming soon`); }}/>
+  if (screen === "newJob") {
+    const _plan = getUserPlan();
+    const _limit = PLAN_CERT_LIMITS[_plan] || Infinity;
+    const _count = getMonthCertCount(records);
+    if (_count >= _limit) return <UpgradeLimitScreen currentPlan={_plan} certCount={_count} certLimit={_limit} onBack={()=>setScreen("home")} onUpgrade={()=>setScreen("home")}/>;
+    return <NewJobScreen onBack={()=>setScreen("home")} onHome={goHome}
+    onSelect={job => { if(job==="Gas Safety Certificate") { setScreen("gsc"); setSubScreen("fileRef"); } else if(job==="Boiler Service") { setScreen("bs"); setBsSubScreen("fileRef"); } else if(job==="Gas Works") { setScreen("gasWorks"); setGwSubScreen("fileRef"); } else if(job==="Gas Isolation") { setScreen("gasIsolation"); setGiSubScreen("form"); } else if(job==="Invoice") { setInvoiceWizardOpen(true); } else if(job==="Quote") { setQuoteWizardOpen(true); } else if(job==="Warning Notice") { setScreen("warningNotice"); setWnSubScreen("fileRef"); } else if(job === "Leisure Industry Gas Safety Record") { setScreen("leisureRecord"); } else if(job === "Benchmark Commissioning Checklist") { setScreen("benchmark"); } else if(job === "Liquified Petroleum Gas Safety Record") { setScreen("lpgRecord"); } else if(job === "7 Day Cooling Off Period Exemption") { setScreen("coolingOff"); } else if(job === "Commercial Gas Safety Certificate") { setScreen("commercialGSC"); } else if(job === "Gas Installation Safety Report") { setScreen("gasInstallReport"); } else if(job === "Commercial Catering Inspection Record") { setScreen("cateringInspection"); } else if(job === "Gas Testing and Purging Record") { setScreen("gasTestPurge"); } else if(Object.keys(GENERIC_CERT_CONFIGS).includes(job)) { setGenericCertLabel(job); setScreen("genericCert"); } else alert(`${job} coming soon`); }}/>;
+  }
 
   if (screen === "gasWorks") {
     if (gwSubScreen === "fileRef") return (
