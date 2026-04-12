@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from "react";
+import { isSupabaseEnabled } from './supabaseClient';
+import { pushAll, pushProfile, pushContacts, pullAll, mergeRecords, flushSyncQueue, getSession } from './syncEngine';
 
 // ─── Multi-user auth ──────────────────────────────────────────────────────────
 // Module-level current user — set once on login, never changes during a session
@@ -2401,7 +2403,7 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
 
     markPaymentSubmitted({ accountName:form.accountName, sortCode:form.sortCode, accountNumber:form.accountNumber, email:form.email }, selectedPlan);
     // Also persist plan separately in case markPaymentSubmitted is called without selectedPlan elsewhere
-    try { const p = JSON.parse(localStorage.getItem(sk("user_profile")) || "{}"); p.plan = selectedPlan; localStorage.setItem(sk("user_profile"), JSON.stringify(p)); } catch {}
+    try { const p = JSON.parse(localStorage.getItem(sk("user_profile")) || "{}"); p.plan = selectedPlan; localStorage.setItem(sk("user_profile"), JSON.stringify(p)); if (isSupabaseEnabled()) pushProfile(p); } catch {}
     setSubmitting(false);
     setStep("done");
     if (onPaymentSubmitted) onPaymentSubmitted();
@@ -18968,6 +18970,67 @@ function App({ onLogout }) {
     try { localStorage.setItem(sk("gsc_folders"), JSON.stringify(gscFolders)); } catch {}
   }, [gscFolders]);
 
+  // ─── Supabase background sync (fire-and-forget, debounced) ──────────────────
+  useEffect(() => {
+    if (isSupabaseEnabled() && records.length > 0) {
+      const timer = setTimeout(() => pushAll('certificates', records), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [records]);
+
+  useEffect(() => {
+    if (isSupabaseEnabled() && invoices.length > 0) {
+      const timer = setTimeout(() => pushAll('invoices', invoices), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [invoices]);
+
+  useEffect(() => {
+    if (isSupabaseEnabled() && quotes.length > 0) {
+      const timer = setTimeout(() => pushAll('quotes', quotes), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [quotes]);
+
+  useEffect(() => {
+    if (isSupabaseEnabled() && accountReports.length > 0) {
+      const timer = setTimeout(() => pushAll('account_reports', accountReports), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [accountReports]);
+
+  useEffect(() => {
+    if (isSupabaseEnabled() && gscFolders.length > 0) {
+      const timer = setTimeout(() => pushAll('gsc_folders', gscFolders), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [gscFolders]);
+
+  // ─── Cloud pull on mount ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isSupabaseEnabled()) return;
+
+    (async () => {
+      try {
+        const session = await getSession();
+        if (!session) return;
+
+        const cloud = await pullAll();
+        if (!cloud) return;
+
+        if (cloud.records?.length) setRecords(prev => mergeRecords(prev, cloud.records));
+        if (cloud.invoices?.length) setInvoices(prev => mergeRecords(prev, cloud.invoices));
+        if (cloud.quotes?.length) setQuotes(prev => mergeRecords(prev, cloud.quotes));
+        if (cloud.accountReports?.length) setAccountReports(prev => mergeRecords(prev, cloud.accountReports));
+        if (cloud.gscFolders?.length) setGscFolders(prev => mergeRecords(prev, cloud.gscFolders));
+
+        flushSyncQueue();
+      } catch (e) {
+        console.warn('[Sync] Initial pull failed:', e.message);
+      }
+    })();
+  }, []);
+
   // Persist yearly reports to localStorage
   useEffect(() => {
     try { localStorage.setItem(sk("yearly_reports"), JSON.stringify(yearlyReports)); } catch {}
@@ -19071,19 +19134,20 @@ function App({ onLogout }) {
         setUserProfile(profile);
         setEngineerData(profile);
         setBsEngData(profile);
+        if (isSupabaseEnabled()) pushProfile(profile);
         setScreen("home");
       }}
       onBack={null}
     />;
   }
   if (screen === "profileSetup") return <ProfileSetupScreen
-    onSave={(profile) => { setUserProfile(profile); setEngineerData(profile); setBsEngData(profile); setScreen("home"); }}
+    onSave={(profile) => { setUserProfile(profile); setEngineerData(profile); setBsEngData(profile); if (isSupabaseEnabled()) pushProfile(profile); setScreen("home"); }}
     onBack={goHome}
   />;
   if (screen === "paymentDetails") return <PaymentDetailsScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
   if (screen === "profileEdit") return <ProfileEditScreen onHome={goHome}
     profile={userProfile}
-    onSave={(profile) => { setUserProfile(profile); setEngineerData(profile); setBsEngData(profile); setScreen("home"); }}
+    onSave={(profile) => { setUserProfile(profile); setEngineerData(profile); setBsEngData(profile); if (isSupabaseEnabled()) pushProfile(profile); setScreen("home"); }}
     onBack={goHome}
   />;
 
