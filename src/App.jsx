@@ -2992,7 +2992,178 @@ function ClientContactsScreen({ onBack, onHome }) {
   );
 }
 
-function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine }) {
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN DASHBOARD — View all engineers, certs, search, audit trail
+// Only accessible to admin user. Fetches data from Supabase via admin API.
+// ═══════════════════════════════════════════════════════════════════════════════
+function AdminDashboardScreen({ onBack, onHome, records, invoices, quotes }) {
+  const [tab, setTab] = useState("overview");
+  const [search, setSearch] = useState("");
+
+  // Local data stats (from localStorage — always available even without Supabase)
+  const now = new Date();
+  const thisMonth = (records || []).filter(r => !r.isDemo && r.savedAt && new Date(r.savedAt).getMonth() === now.getMonth() && new Date(r.savedAt).getFullYear() === now.getFullYear());
+  const allReal = (records || []).filter(r => !r.isDemo);
+  const allInv = (invoices || []).filter(r => !r.isDemo);
+  const allQt = (quotes || []).filter(r => !r.isDemo);
+
+  // Group certs by type
+  const certsByType = {};
+  allReal.forEach(r => {
+    const t = r.certType || r.type || "unknown";
+    certsByType[t] = (certsByType[t] || 0) + 1;
+  });
+
+  // Search filter
+  const filtered = search.trim()
+    ? allReal.filter(r => {
+        const s = search.toLowerCase();
+        return (
+          (r.clientName || "").toLowerCase().includes(s) ||
+          (r.instAddr1 || "").toLowerCase().includes(s) ||
+          (r.instAddr2 || "").toLowerCase().includes(s) ||
+          (r.instPostcode || "").toLowerCase().includes(s) ||
+          (r.fileRef || r.fileReference || "").toLowerCase().includes(s)
+        );
+      })
+    : allReal;
+
+  const cardStyle = { background: "#fff", borderRadius: 14, padding: "16px 18px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: 12 };
+  const statBox = { background: "#f8fafc", borderRadius: 10, padding: "12px 14px", textAlign: "center", flex: 1, minWidth: 80 };
+
+  return (
+    <div style={{ minHeight: "100dvh", background: "#f1f5f9", fontFamily: "'Segoe UI',sans-serif" }}>
+      {/* Header */}
+      <div style={{ background: "#0d1f2d", padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+        <button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", border: "none", borderRadius: 8, padding: "6px 12px", color: "#fff", fontSize: 14, cursor: "pointer" }}>← Back</button>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: "#ef4444", fontWeight: 800, fontSize: 16 }}>Admin Dashboard</div>
+          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>West Lothian Gas Ltd</div>
+        </div>
+        <button onClick={onHome} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 8, padding: "6px 12px", color: "#fff", fontSize: 12, cursor: "pointer" }}>🏠 Home</button>
+      </div>
+
+      {/* Tab bar */}
+      <div style={{ display: "flex", background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "0 12px" }}>
+        {["overview", "certificates", "search"].map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            style={{ flex: 1, padding: "12px 8px", border: "none", background: "none", fontWeight: tab === t ? 800 : 500, fontSize: 13, color: tab === t ? "#0d1f2d" : "#94a3b8", borderBottom: tab === t ? "3px solid #ef4444" : "3px solid transparent", cursor: "pointer", textTransform: "capitalize" }}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ padding: "16px 16px 80px" }}>
+        {/* OVERVIEW TAB */}
+        {tab === "overview" && (
+          <>
+            <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+              <div style={statBox}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: "#0d1f2d" }}>{allReal.length}</div>
+                <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>Total Certs</div>
+              </div>
+              <div style={statBox}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: "#2563eb" }}>{thisMonth.length}</div>
+                <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>This Month</div>
+              </div>
+              <div style={statBox}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: "#059669" }}>{allInv.length}</div>
+                <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>Invoices</div>
+              </div>
+              <div style={statBox}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: "#d97706" }}>{allQt.length}</div>
+                <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>Quotes</div>
+              </div>
+            </div>
+
+            {/* Cert type breakdown */}
+            <div style={cardStyle}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: "#0d1f2d" }}>Certificates by Type</div>
+              {Object.entries(certsByType).sort((a,b) => b[1] - a[1]).map(([type, count]) => (
+                <div key={type} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #f1f5f9", fontSize: 13 }}>
+                  <span style={{ color: "#475569", textTransform: "uppercase", fontWeight: 600, letterSpacing: 0.3 }}>{type}</span>
+                  <span style={{ fontWeight: 700, color: "#0d1f2d" }}>{count}</span>
+                </div>
+              ))}
+              {Object.keys(certsByType).length === 0 && <div style={{ color: "#94a3b8", fontSize: 13 }}>No certificates yet</div>}
+            </div>
+
+            {/* Recent activity */}
+            <div style={cardStyle}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: "#0d1f2d" }}>Recent Certificates</div>
+              {allReal.slice(0, 10).map((r, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#0d1f2d" }}>{r.clientName || "Unnamed"}</div>
+                    <div style={{ fontSize: 11, color: "#94a3b8" }}>{r.instAddr1 || ""}{r.instPostcode ? `, ${r.instPostcode}` : ""}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#2563eb", textTransform: "uppercase" }}>{r.certType || r.type || "cert"}</div>
+                    <div style={{ fontSize: 10, color: "#94a3b8" }}>{r.savedAt ? new Date(r.savedAt).toLocaleDateString("en-GB") : ""}</div>
+                  </div>
+                </div>
+              ))}
+              {allReal.length === 0 && <div style={{ color: "#94a3b8", fontSize: 13 }}>No certificates yet</div>}
+            </div>
+          </>
+        )}
+
+        {/* CERTIFICATES TAB */}
+        {tab === "certificates" && (
+          <div style={cardStyle}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: "#0d1f2d" }}>All Certificates ({allReal.length})</div>
+            {allReal.map((r, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#0d1f2d", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.fileRef || r.fileReference || `Cert #${i+1}`}</div>
+                  <div style={{ fontSize: 12, color: "#475569" }}>{r.clientName || ""}</div>
+                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{r.instAddr1 || ""}{r.instPostcode ? `, ${r.instPostcode}` : ""}</div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#2563eb", textTransform: "uppercase", background: "#eff6ff", padding: "2px 8px", borderRadius: 4 }}>{r.certType || r.type || "cert"}</div>
+                  <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 4 }}>{r.savedAt ? new Date(r.savedAt).toLocaleDateString("en-GB") : ""}</div>
+                </div>
+              </div>
+            ))}
+            {allReal.length === 0 && <div style={{ color: "#94a3b8", fontSize: 13, padding: 16, textAlign: "center" }}>No certificates yet</div>}
+          </div>
+        )}
+
+        {/* SEARCH TAB */}
+        {tab === "search" && (
+          <>
+            <div style={{ marginBottom: 12 }}>
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Search by name, address, postcode, or file ref..."
+                style={{ width: "100%", padding: "12px 16px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}/>
+            </div>
+            <div style={cardStyle}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: "#0d1f2d" }}>
+                {search.trim() ? `${filtered.length} result${filtered.length !== 1 ? "s" : ""}` : "Enter a search term"}
+              </div>
+              {filtered.slice(0, 50).map((r, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#0d1f2d" }}>{r.clientName || "Unnamed"}</div>
+                    <div style={{ fontSize: 12, color: "#475569" }}>{r.instAddr1 || ""}{r.instAddr2 ? `, ${r.instAddr2}` : ""}</div>
+                    <div style={{ fontSize: 11, color: "#94a3b8" }}>{r.instPostcode || ""} · {r.fileRef || r.fileReference || ""}</div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#2563eb", textTransform: "uppercase" }}>{r.certType || r.type || "cert"}</div>
+                    <div style={{ fontSize: 10, color: "#94a3b8" }}>{r.savedAt ? new Date(r.savedAt).toLocaleDateString("en-GB") : ""}</div>
+                  </div>
+                </div>
+              ))}
+              {search.trim() && filtered.length === 0 && <div style={{ color: "#94a3b8", fontSize: 13, padding: 16, textAlign: "center" }}>No matching certificates</div>}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine, onAdminDashboard }) {
   const trialStatus = getTrialStatus();
   const daysLeft = getTrialDaysLeft();
   const [showFeedback, setShowFeedback] = useState(false);
@@ -3304,6 +3475,17 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
             <polyline points="29,20 35,26 42,16" fill="none" stroke="#1a3a26" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </PillBtn>
+        {/* Admin Dashboard — only visible to admin user */}
+        {currentUser?.username === "admin" && onAdminDashboard && (
+          <PillBtn onClick={onAdminDashboard} label="Admin Dashboard" color="#ef4444" iconBg="#7f1d1d">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="7" height="7" rx="1.5" fill="white"/>
+              <rect x="14" y="3" width="7" height="4" rx="1" fill="rgba(255,255,255,0.7)"/>
+              <rect x="14" y="10" width="7" height="11" rx="1.5" fill="white"/>
+              <rect x="3" y="13" width="7" height="8" rx="1.5" fill="rgba(255,255,255,0.7)"/>
+            </svg>
+          </PillBtn>
+        )}
       </div>
 
       {/* Support / feedback strip */}
@@ -19327,7 +19509,8 @@ function App({ onLogout }) {
       onPaymentSubmitted={()=>{ /* profile updated by markPaymentSubmitted, force re-render */ setScreen("home"); }}
     />;
   }
-  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("✅ "+n+" demo records added!\n\nGo to Records → Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")}/>;
+  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("✅ "+n+" demo records added!\n\nGo to Records → Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")} onAdminDashboard={()=>setScreen("adminDashboard")}/>;
+  if (screen === "adminDashboard") return <AdminDashboardScreen onBack={()=>setScreen("home")} onHome={goHome} records={records} invoices={invoices} quotes={quotes}/>;
   if (screen === "contacts") return <ClientContactsScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
   if (screen === "emailImport") return <EmailImportScreen onBack={()=>setScreen("home")} onHome={goHome} defaultEngineerData={engineerData} onImportCerts={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
   if (screen === "giEmail") return <GasIsolationEmailScreen onBack={()=>setScreen("home")} onHome={goHome} onImport={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
