@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { isSupabaseEnabled } from './supabaseClient';
-import { pushAll, pushProfile, pushContacts, pullAll, mergeRecords, flushSyncQueue, getSession } from './syncEngine';
+import { pushAll, pushProfile, pushContacts, pullAll, mergeRecords, flushSyncQueue, getSession, signIn as supabaseSignIn, signUp as supabaseSignUp, signOut as supabaseSignOut } from './syncEngine';
 
 // ─── Multi-user auth ──────────────────────────────────────────────────────────
 // Module-level current user — set once on login, never changes during a session
@@ -261,10 +261,40 @@ function LoginScreen({ onLogin, onBack }) {
     if (!password) { setError("Please enter your password."); return; }
     setLoading(true); setError("");
     try {
+      // 1. Try hardcoded users first (admin/dev accounts)
       const hashed = await hashPassword(password);
-      const user = findUser(username);
-      if (user && user.hash === hashed) { onLogin(user); }
-      else { setError("Incorrect username or password."); }
+      const localUser = findUser(username);
+      if (localUser && localUser.hash === hashed) { onLogin(localUser); setLoading(false); return; }
+
+      // 2. If Supabase is enabled, try Supabase Auth
+      if (isSupabaseEnabled()) {
+        try {
+          const { user: sbUser, session } = await supabaseSignIn(username, password);
+          if (sbUser && session) {
+            // Build a user entry compatible with the existing system
+            const userEntry = {
+              username: sbUser.email,
+              displayName: sbUser.user_metadata?.engineerName || sbUser.user_metadata?.displayName || sbUser.email,
+              supabaseId: sbUser.id,
+              isSupabaseUser: true,
+            };
+            // Register locally so findUser works next time
+            saveRegisteredUser({ ...userEntry, hash: hashed });
+            onLogin(userEntry);
+            setLoading(false);
+            return;
+          }
+        } catch (sbErr) {
+          // Supabase auth failed — show error
+          const msg = sbErr?.message || "Login failed.";
+          setError(msg === "Invalid login credentials" ? "Incorrect email or password." : msg);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 3. Neither hardcoded nor Supabase matched
+      setError("Incorrect username or password.");
     } catch { setError("Login failed. Please try again."); }
     setLoading(false);
   }
@@ -2068,10 +2098,35 @@ function ProfileForm({ initial, onSave, onBack, isSetup, onRegistered }) {
 
       setSaving(true);
       setError("");
+
       let hash = "";
       try { hash = await hashPassword(creds.password); } catch { setError("Failed to hash password. Please try again."); setSaving(false); return; }
       if (!hash) { setError("Failed to create account. Please try again."); setSaving(false); return; }
-      const userEntry = { username: u, displayName: form.engineerName, hash };
+
+      // If Supabase is enabled, create a Supabase Auth account too
+      let supabaseId = null;
+      if (isSupabaseEnabled()) {
+        try {
+          const { user: sbUser } = await supabaseSignUp(u, creds.password, {
+            engineerName: form.engineerName,
+            companyName: form.companyName,
+            gasSafeNo: form.gasSafeNo,
+          });
+          supabaseId = sbUser?.id || null;
+        } catch (sbErr) {
+          // If the email is already registered in Supabase, show a helpful message
+          const msg = sbErr?.message || "";
+          if (msg.includes("already registered") || msg.includes("already been registered")) {
+            setError("This email is already registered. Please sign in instead.");
+          } else {
+            // Non-blocking: Supabase signup failed but local registration can proceed
+            console.warn("[Auth] Supabase signUp failed (continuing with local):", msg);
+          }
+          if (msg.includes("already registered") || msg.includes("already been registered")) { setSaving(false); return; }
+        }
+      }
+
+      const userEntry = { username: u, displayName: form.engineerName, hash, ...(supabaseId ? { supabaseId, isSupabaseUser: true } : {}) };
       try { saveRegisteredUser(userEntry); } catch { setError("Failed to save account. Please try again."); setSaving(false); return; }
 
       // Fire-and-forget notification email to admin
@@ -20251,9 +20306,50 @@ function AppWithAuth() {
     if (user?.username && !USERS.some(u => u.username === user.username)) {
       checkStripeSubscription(user.username).catch(() => {});
     }
+    // Supabase: pull cloud data, merge with local, and auto-create profile if needed
+    if (isSupabaseEnabled() && user?.isSupabaseUser) {
+      (async () => {
+        try {
+          // Pull cloud data and merge with local storage
+          const cloudData = await pullAll();
+          if (cloudData) {
+            // Merge records
+            const localRecords = (() => { try { return JSON.parse(localStorage.getItem(`${user.username}_records`) || "[]"); } catch { return []; } })();
+            const merged = mergeRecords(localRecords, cloudData.records || []);
+            if (merged.length) { try { localStorage.setItem(`${user.username}_records`, JSON.stringify(merged)); } catch {} }
+
+            // Merge contacts
+            if (cloudData.contacts?.length) {
+              const localContacts = (() => { try { return JSON.parse(localStorage.getItem(`${user.username}_contacts`) || "[]"); } catch { return []; } })();
+              const mergedContacts = mergeRecords(localContacts, cloudData.contacts);
+              try { localStorage.setItem(`${user.username}_contacts`, JSON.stringify(mergedContacts)); } catch {}
+            }
+
+            // If cloud has a profile, merge it
+            if (cloudData.profile) {
+              const localProfile = (() => { try { return JSON.parse(localStorage.getItem(`${user.username}_user_profile`) || "{}"); } catch { return {}; } })();
+              const mergedProfile = { ...cloudData.profile, ...localProfile };
+              try { localStorage.setItem(`${user.username}_user_profile`, JSON.stringify(mergedProfile)); } catch {}
+            }
+          }
+
+          // Auto-create Supabase profile if none exists on cloud
+          const localProfile = (() => { try { return JSON.parse(localStorage.getItem(`${user.username}_user_profile`) || "{}"); } catch { return {}; } })();
+          if (localProfile.engineerName || localProfile.companyName) {
+            pushProfile({ ...localProfile, username: user.username }).catch(() => {});
+          }
+        } catch (e) {
+          console.warn("[Auth] Post-login sync failed:", e.message);
+        }
+      })();
+    }
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    // Sign out of Supabase if enabled
+    if (isSupabaseEnabled()) {
+      try { await supabaseSignOut(); } catch (e) { console.warn("[Auth] Supabase signOut error:", e.message); }
+    }
     setCurrentUser(null);
     setAuthed(false);
     setScreen("landing");
@@ -20269,6 +20365,10 @@ function AppWithAuth() {
       // Save the profile under the new user's storage key
       const profileWithDate = { ...profile, registeredAt: new Date().toISOString() };
       try { localStorage.setItem(`${userEntry.username}_user_profile`, JSON.stringify(profileWithDate)); } catch {}
+      // Push profile to Supabase if enabled (fire-and-forget)
+      if (isSupabaseEnabled() && userEntry.isSupabaseUser) {
+        pushProfile({ ...profileWithDate, username: userEntry.username }).catch(() => {});
+      }
       // Auto-login
       setAuthed(true);
     }}
