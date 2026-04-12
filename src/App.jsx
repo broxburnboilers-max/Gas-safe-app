@@ -16510,15 +16510,10 @@ function BSStepFileRef({ data, onChange, onNext, onBack, onHome }) {
         />
       </div>
       <BottomBar onHome={onHome} onNext={onNext}/>
-      {bsPickerTarget && <ContactPickerModal
-        title={bsPickerTarget==="client" ? "Choose Client" : "Choose Installation"}
-        onSelect={c=>pickContact(bsPickerTarget,c)}
-        onClose={()=>setBsPickerTarget(null)}/>}
     </div>
   );
 }
 
-// Screen 3: Appliance Details
 function BSStepClientDetails({ data, onChange, onNext, onBack, onHome }) {
   const copyClientToInst = () => {
     onChange({...data, instName:data.clientName, instAddr1:data.clientAddr1, instAddr2:data.clientAddr2, instAddr3:data.clientAddr3, instPostcode:data.clientPostcode, instTel:data.clientTel });
@@ -16656,15 +16651,9 @@ function BSStepPrelimChecks({ data, onChange, onNext, onBack, onHome }) {
         <div style={{height:16}}/>
       </div>
       <BottomBar onHome={onHome} onNext={onNext}/>
-      {bsPickerTarget && <ContactPickerModal
-        title={bsPickerTarget==="client" ? "Choose Client" : "Choose Installation"}
-        onSelect={c=>pickContact(bsPickerTarget,c)}
-        onClose={()=>setBsPickerTarget(null)}/>}
     </div>
   );
 }
-
-// Screen 3: Appliance Details
 
 function BSStepNotes({ data, onChange, onNext, onBack, onHome }) {
   return (
@@ -16688,15 +16677,10 @@ function BSStepNotes({ data, onChange, onNext, onBack, onHome }) {
         </div>
       </div>
       <BottomBar onHome={onHome} onNext={onNext}/>
-      {bsPickerTarget && <ContactPickerModal
-        title={bsPickerTarget==="client" ? "Choose Client" : "Choose Installation"}
-        onSelect={c=>pickContact(bsPickerTarget,c)}
-        onClose={()=>setBsPickerTarget(null)}/>}
     </div>
   );
 }
 
-// Screen 3: Appliance Details
 function BSStepSignature({ data, onChange, onNext, onBack, onHome }) {
   const today = new Date().toISOString().slice(0,10);
   const [showPrivacy, setShowPrivacy] = useState(false);
