@@ -1668,8 +1668,32 @@ function MonthlyReportScreen({ onBack, onHome, invoices, onSaveReport, userId })
     setGenerating(false);
   }
 
+  function saveReportOnly() {
+    const income = transactions.filter(t => t.isIncome);
+    const expenses = transactions.filter(t => !t.isIncome);
+    const totalInc = income.reduce((s,t) => s+t.amount, 0);
+    const totalExp = expenses.reduce((s,t) => s+t.amount, 0);
+    const monthName = uploadedFileName || period.replace(" to ", "_").replace(/\s/g,"_");
+    const fileName = `West_Lothian_Gas_${monthName}.xlsx`;
+    if (onSaveReport) {
+      onSaveReport({
+        id: Date.now(),
+        fileName,
+        period,
+        totalIncome: totalInc.toFixed(2),
+        totalExpenses: totalExp.toFixed(2),
+        net: (totalInc - totalExp).toFixed(2),
+        createdAt: new Date().toISOString(),
+        incomeRows: income.map(t => ({ date:t.date, description:t.description, amount:t.amount, invoiceNo:t.invoiceNo })),
+        expenseRows: expenses.map(t => ({ date:t.date, description:t.description, amount:t.amount, category:t.category })),
+      });
+      alert("✅ Report saved to your Account Reports.");
+    }
+  }
+
   const BLUE_BTN = { padding:"13px 0", background:BLUE, color:"#fff", border:"none", borderRadius:10, fontWeight:700, fontSize:14, cursor:"pointer", width:"100%" };
   const OUTLINE_BTN = { padding:"13px 0", background:"#f5f5f5", color:BLUE, border:`2px solid ${BLUE}`, borderRadius:10, fontWeight:700, fontSize:14, cursor:"pointer", width:"100%" };
+  const SAVE_BTN = { padding:"13px 0", background:"#1d4a2e", color:"#fff", border:"none", borderRadius:10, fontWeight:700, fontSize:14, cursor:"pointer", width:"100%" };
 
   if (step === "upload") return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
@@ -1792,6 +1816,9 @@ function MonthlyReportScreen({ onBack, onHome, invoices, onSaveReport, userId })
             })}
           </div>
 
+          <button onClick={saveReportOnly} style={{...SAVE_BTN, marginBottom:10}}>
+            💾 Save Report
+          </button>
           <button onClick={generateReport} disabled={generating} style={{...BLUE_BTN, background:generating?"#aaa":BLUE, marginBottom:16}}>
             {generating ? "⏳ Generating..." : "⬇ Download .xlsx Report"}
           </button>
