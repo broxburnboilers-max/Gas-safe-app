@@ -333,6 +333,15 @@ const SIG_STYLE = { fontFamily:"'Ms Madi', cursive", fontWeight:"bold", fontSize
 // v2 - Google Contacts integration
 const BLUE = "#1a3a4a";        // Deep teal-slate
 const DARK_BLUE = "#0d1f2d";   // Near-black navy
+
+const STRIPE_LINKS = {
+  lite_monthly:    "https://buy.stripe.com/test_6oUfZa2NZ9s36fCeTfcEw04",
+  lite_annual:     "https://buy.stripe.com/test_28E3cocoz0VxavS5iFcEw01",
+  pro_monthly:     "https://buy.stripe.com/test_fZucMY88j9s3cE09yVcEw02",
+  pro_annual:      "https://buy.stripe.com/test_bJecMY3S3gUv7jG6mJcEw00",
+  proplus_monthly: "https://buy.stripe.com/test_00w00cagr7jV8nK8uRcEw03",
+  proplus_annual:  "https://buy.stripe.com/test_28EbIU60b5bNbzW8uRcEw05",
+};
 const LIGHT_BG = "#f0f2f5";    // Cool grey background
 const GS_YELLOW = "#fff200";   // Gas Safe yellow
 const GS_MID = "#35463d";      // Gas Safe mid green
@@ -2498,9 +2507,20 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
               ))}
             </div>
 
+            <button onClick={()=>{ const stripeKey = `${selectedPlan}_${billingCycle}`; window.open(STRIPE_LINKS[stripeKey], '_blank'); }}
+              style={{ width:"100%", padding:16, background:"#fff200", color:"#0d1f2d", border:"none", borderRadius:12, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:12, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+              <span style={{ fontSize:20 }}>💳</span> Subscribe Now — {priceLabel}
+            </button>
+
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
+              <div style={{ flex:1, height:1, background:"rgba(255,255,255,0.2)" }}/>
+              <span style={{ color:"rgba(255,255,255,0.5)", fontSize:12, fontWeight:600 }}>or</span>
+              <div style={{ flex:1, height:1, background:"rgba(255,255,255,0.2)" }}/>
+            </div>
+
             <button onClick={()=>setStep("form")}
-              style={{ width:"100%", padding:16, background:"#0d1f2d", color:"#fff200", border:"none", borderRadius:12, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:12 }}>
-              Set Up {priceLabel} Direct Debit →
+              style={{ width:"100%", padding:12, background:"rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.7)", border:"1px solid rgba(255,255,255,0.2)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", marginBottom:12 }}>
+              Set Up Direct Debit Instead →
             </button>
             <div style={{ textAlign:"center" }}>
               <button onClick={onLogout} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.5)", fontSize:13, cursor:"pointer", textDecoration:"underline" }}>Sign out</button>
@@ -3360,6 +3380,7 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
 // ─── Upgrade / Feature Lock Screens ─────────────────────────────────────────
 function UpgradeLimitScreen({ currentPlan, certCount, certLimit, onBack, onUpgrade }) {
   const planLabel = currentPlan === "lite" ? "Lite" : currentPlan === "pro" ? "Pro" : "Pro+";
+  const upgradePlan = currentPlan === "proplus" ? "proplus" : currentPlan === "pro" ? "proplus" : "pro";
   return (
     <div style={{ minHeight:"100dvh", background:`linear-gradient(160deg,${DARK_BLUE} 0%,${BLUE} 60%,${DARK_BLUE} 100%)`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'Segoe UI',sans-serif", padding:24 }}>
       <div style={{ background:"#fff", borderRadius:20, padding:"40px 28px", width:"100%", maxWidth:400, textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
@@ -3371,8 +3392,8 @@ function UpgradeLimitScreen({ currentPlan, certCount, certLimit, onBack, onUpgra
         <p style={{ fontSize:14, color:"#555", lineHeight:1.7, margin:"0 0 24px" }}>
           Upgrade to <strong>Pro</strong> for unlimited certificates.
         </p>
-        <button onClick={onUpgrade} style={{ width:"100%", padding:14, background:"#0d1f2d", color:"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:10 }}>
-          Upgrade Plan
+        <button onClick={()=>window.open(STRIPE_LINKS[`${upgradePlan}_monthly`], '_blank')} style={{ width:"100%", padding:14, background:"#fff200", color:"#0d1f2d", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:10, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+          <span style={{ fontSize:18 }}>💳</span> Upgrade Plan
         </button>
         <button onClick={onBack} style={{ width:"100%", padding:14, background:"#f5f5f5", color:"#555", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
           ← Back to Home
@@ -3383,6 +3404,7 @@ function UpgradeLimitScreen({ currentPlan, certCount, certLimit, onBack, onUpgra
 }
 
 function FeatureLockedScreen({ feature, requiredPlan, onBack, onHome }) {
+  const planKey = requiredPlan === "Pro+" ? "proplus" : requiredPlan.toLowerCase();
   return (
     <div style={{ minHeight:"100dvh", background:`linear-gradient(160deg,${DARK_BLUE} 0%,${BLUE} 60%,${DARK_BLUE} 100%)`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'Segoe UI',sans-serif", padding:24 }}>
       <div style={{ background:"#fff", borderRadius:20, padding:"40px 28px", width:"100%", maxWidth:400, textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
@@ -3394,8 +3416,8 @@ function FeatureLockedScreen({ feature, requiredPlan, onBack, onHome }) {
         <p style={{ fontSize:14, color:"#555", lineHeight:1.7, margin:"0 0 24px" }}>
           Upgrade to unlock this feature.
         </p>
-        <button onClick={onHome || onBack} style={{ width:"100%", padding:14, background:"#0d1f2d", color:"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:10 }}>
-          Upgrade Plan
+        <button onClick={()=>window.open(STRIPE_LINKS[`${planKey}_monthly`], '_blank')} style={{ width:"100%", padding:14, background:"#fff200", color:"#0d1f2d", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:10, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+          <span style={{ fontSize:18 }}>💳</span> Upgrade Plan
         </button>
         <button onClick={onBack} style={{ width:"100%", padding:14, background:"#f5f5f5", color:"#555", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
           ← Go Back
