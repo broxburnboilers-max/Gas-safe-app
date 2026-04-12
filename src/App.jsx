@@ -2791,42 +2791,99 @@ function HomeScreen({ onNew, onRecords, onGscEmail, onBsEmail, onReport, onLogou
       document.head.appendChild(d);
     }
   }, []);
-  const [feedbackType, setFeedbackType] = useState("Bug Report");
-  const [feedbackMsg, setFeedbackMsg] = useState("");
-  const [feedbackSending, setFeedbackSending] = useState(false);
-  const [feedbackDone, setFeedbackDone] = useState(false);
+  const [ticketStep, setTicketStep] = useState(1);
+  const [ticketType, setTicketType] = useState("");
+  const [ticketScreen, setTicketScreen] = useState("");
+  const [ticketDesc, setTicketDesc] = useState("");
+  const [ticketSteps, setTicketSteps] = useState("");
+  const [ticketExpected, setTicketExpected] = useState("");
+  const [ticketEmail, setTicketEmail] = useState("");
+  const [ticketName, setTicketName] = useState("");
+  const [ticketPhone, setTicketPhone] = useState("");
+  const [ticketScreenshots, setTicketScreenshots] = useState([]);
+  const [ticketSending, setTicketSending] = useState(false);
+  const [ticketDone, setTicketDone] = useState(false);
+  const [ticketRef, setTicketRef] = useState("");
 
-  async function sendFeedback() {
-    if (!feedbackMsg.trim()) return;
-    setFeedbackSending(true);
+  const TICKET_SCREENS = ["Home Screen","New Job Menu","Gas Safety Certificate","Boiler Service","Warning Notice","Leisure Industry GSR","Benchmark Checklist","LPG Safety Record","Commercial GSC","Gas Install Report","Catering Inspection","Gas Test & Purge","Invoice","Quote","Records","PDF Preview","Settings/Profile","Other"];
+  const TICKET_TYPES = [
+    { id:"bug", label:"Bug / Error", icon:"🐛", desc:"Something isn't working correctly" },
+    { id:"blank", label:"Blank Screen", icon:"⬜", desc:"A screen shows nothing or won't load" },
+    { id:"pdf", label:"PDF Issue", icon:"📄", desc:"PDF not generating, missing data, or layout wrong" },
+    { id:"feature", label:"Feature Request", icon:"💡", desc:"Suggest a new feature or improvement" },
+    { id:"other", label:"Other", icon:"💬", desc:"General question or feedback" },
+  ];
+
+  function handleScreenshot(e) {
+    const files = Array.from(e.target.files || []);
+    files.forEach(f => {
+      const reader = new FileReader();
+      reader.onload = () => setTicketScreenshots(prev => [...prev, { name: f.name, dataUrl: reader.result }]);
+      reader.readAsDataURL(f);
+    });
+  }
+
+  async function sendTicket() {
+    if (!ticketType || !ticketDesc.trim()) return;
+    setTicketSending(true);
+    const ref = "TKT-" + Date.now().toString(36).toUpperCase();
+    setTicketRef(ref);
     try {
       const profile = (() => { try { return JSON.parse(localStorage.getItem(sk("user_profile"))||"{}"); } catch { return {}; } })();
+      const typeLbl = (TICKET_TYPES.find(t=>t.id===ticketType)||{}).label || ticketType;
+      const body = [
+        `SUPPORT TICKET: ${ref}`,
+        `Type: ${typeLbl}`,
+        `Screen: ${ticketScreen || "Not specified"}`,
+        `User: ${currentUser?.username || "unknown"}`,
+        `Engineer: ${profile.engineerName || "N/A"}`,
+        `Company: ${profile.companyName || "N/A"}`,
+        `Gas Safe No: ${profile.gasSafeNo || "N/A"}`,
+        `Contact Name: ${ticketName || "N/A"}`,
+        `Contact Email: ${ticketEmail || "N/A"}`,
+        `Contact Phone: ${ticketPhone || "N/A"}`,
+        `Date: ${new Date().toLocaleString("en-GB")}`,
+        ``,
+        `DESCRIPTION:`,
+        ticketDesc,
+        ``,
+        ticketSteps ? `STEPS TO REPRODUCE:\n${ticketSteps}` : "",
+        ticketExpected ? `EXPECTED BEHAVIOUR:\n${ticketExpected}` : "",
+        ticketScreenshots.length ? `SCREENSHOTS: ${ticketScreenshots.length} attached` : "",
+      ].filter(Boolean).join("\n");
+
+      // Send via EmailJS
       const payload = {
         service_id: EMAILJS_SERVICE_ID,
         template_id: EMAILJS_TEMPLATE_ID,
         user_id: EMAILJS_PUBLIC_KEY,
         template_params: {
-          to_email: "westlothiangas@gmail.com",
+          to_email: "broxburnboilers@gmail.com",
           username: currentUser?.username || "",
           engineer_name: profile.engineerName || "",
           company_name: profile.companyName || "",
           gas_safe_no: profile.gasSafeNo || "",
           registered_at: new Date().toLocaleString("en-GB"),
-          subject: `Gas Safe App — ${feedbackType}`,
-          message: `Type: ${feedbackType}\nUser: ${currentUser?.username || ""}\nEngineer: ${profile.engineerName || ""}\nCompany: ${profile.companyName || ""}\n\n${feedbackMsg}`,
+          subject: `[${ref}] Gas Safe App — ${typeLbl} — ${ticketScreen || "General"}`,
+          message: body,
         }
       };
       await fetch("https://api.emailjs.com/api/v1.0/email/send", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) });
-    } catch(e) { console.warn("Feedback email failed:", e); }
-    setFeedbackSending(false);
-    setFeedbackDone(true);
+
+      // Also save ticket locally for reference
+      try {
+        const tickets = JSON.parse(localStorage.getItem(sk("support_tickets")) || "[]");
+        tickets.push({ ref, type: typeLbl, screen: ticketScreen, desc: ticketDesc, email: ticketEmail, name: ticketName, date: new Date().toISOString(), status: "submitted" });
+        localStorage.setItem(sk("support_tickets"), JSON.stringify(tickets));
+      } catch(e) {}
+    } catch(e) { console.warn("Support ticket email failed:", e); }
+    setTicketSending(false);
+    setTicketDone(true);
   }
 
   function closeFeedback() {
     setShowFeedback(false);
-    setFeedbackMsg("");
-    setFeedbackType("Bug Report");
-    setFeedbackDone(false);
+    setTicketStep(1); setTicketType(""); setTicketScreen(""); setTicketDesc(""); setTicketSteps(""); setTicketExpected(""); setTicketEmail(""); setTicketName(""); setTicketPhone(""); setTicketScreenshots([]); setTicketDone(false); setTicketRef("");
   }
 
   function PillBtn({ onClick, label, color=BLUE, iconBg, children }) {
@@ -3040,68 +3097,160 @@ function HomeScreen({ onNew, onRecords, onGscEmail, onBsEmail, onReport, onLogou
         </button>
       </div>
 
-      {/* Feedback modal */}
+      {/* Support Ticket Modal */}
       {showFeedback && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:"20px 20px 88px" }}>
-          <div style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:400, overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"flex-start", justifyContent:"center", zIndex:1000, padding:"20px 16px", overflowY:"auto" }}>
+          <div style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:440, overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.3)", margin:"auto 0" }}>
             {/* Modal header */}
             <div style={{ background:"#03180d", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
               <div>
-                <div style={{ color:"#fff200", fontWeight:700, fontSize:16 }}>Support & Feedback</div>
-                <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginTop:2 }}>Report a bug or send us a message</div>
+                <div style={{ color:"#fff200", fontWeight:700, fontSize:16 }}>Support Ticket</div>
+                <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginTop:2 }}>{ticketDone ? "Ticket submitted" : `Step ${ticketStep} of 3`}</div>
               </div>
               <button onClick={closeFeedback} style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:"50%", width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#fff", fontSize:18, flexShrink:0 }}>×</button>
             </div>
 
+            {/* Progress bar */}
+            {!ticketDone && <div style={{ height:3, background:"#e5e7eb" }}><div style={{ height:3, background:"#fff200", width:`${(ticketStep/3)*100}%`, transition:"width 0.3s" }}/></div>}
+
             <div style={{ padding:"20px 20px 24px" }}>
-              {feedbackDone ? (
+              {ticketDone ? (
                 <div style={{ textAlign:"center", padding:"16px 0" }}>
                   <div style={{ fontSize:44, marginBottom:12 }}>✅</div>
-                  <div style={{ fontWeight:700, fontSize:16, color:"#03180d", marginBottom:8 }}>Message sent — thank you!</div>
-                  <div style={{ fontSize:14, color:"#666", marginBottom:20, lineHeight:1.6 }}>We'll look into it and get back to you if needed.</div>
+                  <div style={{ fontWeight:700, fontSize:16, color:"#03180d", marginBottom:4 }}>Ticket Submitted</div>
+                  <div style={{ fontSize:13, color:"#888", marginBottom:12, fontFamily:"monospace", background:"#f5f5f5", padding:"6px 12px", borderRadius:8, display:"inline-block" }}>{ticketRef}</div>
+                  <div style={{ fontSize:14, color:"#666", marginBottom:20, lineHeight:1.6 }}>We’ll review your ticket and get back to you{ticketEmail ? ` at ${ticketEmail}` : ""}. Keep your reference number for tracking.</div>
                   <button onClick={closeFeedback}
                     style={{ background:"#03180d", color:"#fff200", border:"none", borderRadius:10, padding:"12px 28px", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
                     Close
                   </button>
                 </div>
+              ) : ticketStep === 1 ? (
+                <>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#333", marginBottom:12 }}>What type of issue?</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
+                    {TICKET_TYPES.map(t => (
+                      <button key={t.id} onClick={()=>setTicketType(t.id)}
+                        style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", borderRadius:12, border:`2px solid ${ticketType===t.id?"#03180d":"#e5e7eb"}`, background:ticketType===t.id?"#f0fdf4":"#fff", cursor:"pointer", textAlign:"left", transition:"all 0.15s" }}>
+                        <span style={{ fontSize:22, flexShrink:0 }}>{t.icon}</span>
+                        <div>
+                          <div style={{ fontSize:14, fontWeight:600, color:ticketType===t.id?"#03180d":"#333" }}>{t.label}</div>
+                          <div style={{ fontSize:12, color:"#888", marginTop:1 }}>{t.desc}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {ticketType && (
+                    <>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#333", marginBottom:8 }}>Which screen were you on?</div>
+                      <select value={ticketScreen} onChange={e=>setTicketScreen(e.target.value)}
+                        style={{ width:"100%", padding:"10px 12px", border:"2px solid #e5e7eb", borderRadius:10, fontSize:14, fontFamily:"inherit", marginBottom:16, outline:"none", background:"#fff", appearance:"auto" }}>
+                        <option value="">Select a screen...</option>
+                        {TICKET_SCREENS.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </>
+                  )}
+
+                  <button onClick={()=>{ if(ticketType) setTicketStep(2); }} disabled={!ticketType}
+                    style={{ width:"100%", padding:14, background:!ticketType?"#ccc":"#03180d", color:!ticketType?"#999":"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:!ticketType?"default":"pointer", fontFamily:"inherit" }}>
+                    Next →
+                  </button>
+                </>
+              ) : ticketStep === 2 ? (
+                <>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#333", marginBottom:8 }}>Describe the issue</div>
+                  <textarea value={ticketDesc} onChange={e=>setTicketDesc(e.target.value)} rows={4}
+                    placeholder={ticketType==="feature" ? "Describe the feature you'd like..." : ticketType==="other" ? "Your message..." : "What happened? Be as specific as possible..."}
+                    style={{ width:"100%", padding:"12px 14px", border:"2px solid #e5e7eb", borderRadius:10, fontSize:14, boxSizing:"border-box", fontFamily:"inherit", resize:"vertical", outline:"none", marginBottom:12 }}/>
+
+                  {(ticketType==="bug"||ticketType==="blank"||ticketType==="pdf") && (
+                    <>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#333", marginBottom:8 }}>Steps to reproduce (optional)</div>
+                      <textarea value={ticketSteps} onChange={e=>setTicketSteps(e.target.value)} rows={3}
+                        placeholder="1. Go to New Job\n2. Select Gas Safety Certificate\n3. Add an appliance and mark it as serviced\n4. Screen goes blank"
+                        style={{ width:"100%", padding:"12px 14px", border:"2px solid #e5e7eb", borderRadius:10, fontSize:14, boxSizing:"border-box", fontFamily:"inherit", resize:"vertical", outline:"none", marginBottom:12 }}/>
+
+                      <div style={{ fontSize:13, fontWeight:700, color:"#333", marginBottom:8 }}>What did you expect to happen? (optional)</div>
+                      <textarea value={ticketExpected} onChange={e=>setTicketExpected(e.target.value)} rows={2}
+                        placeholder="e.g. The PDF should show a warning notice on page 2"
+                        style={{ width:"100%", padding:"12px 14px", border:"2px solid #e5e7eb", borderRadius:10, fontSize:14, boxSizing:"border-box", fontFamily:"inherit", resize:"vertical", outline:"none", marginBottom:12 }}/>
+                    </>
+                  )}
+
+                  {/* Screenshots */}
+                  <div style={{ fontSize:13, fontWeight:700, color:"#333", marginBottom:8 }}>Screenshots (optional)</div>
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
+                    {ticketScreenshots.map((s,i) => (
+                      <div key={i} style={{ position:"relative", width:64, height:64, borderRadius:8, overflow:"hidden", border:"1px solid #ddd" }}>
+                        <img src={s.dataUrl} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt=""/>
+                        <button onClick={()=>setTicketScreenshots(p=>p.filter((_,j)=>j!==i))}
+                          style={{ position:"absolute", top:2, right:2, background:"rgba(0,0,0,0.6)", color:"#fff", border:"none", borderRadius:"50%", width:18, height:18, fontSize:11, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+                      </div>
+                    ))}
+                    <label style={{ width:64, height:64, borderRadius:8, border:"2px dashed #ccc", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:24, color:"#aaa" }}>
+                      +
+                      <input type="file" accept="image/*" multiple onChange={handleScreenshot} style={{ display:"none" }}/>
+                    </label>
+                  </div>
+
+                  <div style={{ display:"flex", gap:8, marginTop:16 }}>
+                    <button onClick={()=>setTicketStep(1)}
+                      style={{ flex:1, padding:14, background:"#f5f5f5", color:"#555", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                      ← Back
+                    </button>
+                    <button onClick={()=>{ if(ticketDesc.trim()) setTicketStep(3); }} disabled={!ticketDesc.trim()}
+                      style={{ flex:2, padding:14, background:!ticketDesc.trim()?"#ccc":"#03180d", color:!ticketDesc.trim()?"#999":"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:!ticketDesc.trim()?"default":"pointer", fontFamily:"inherit" }}>
+                      Next →
+                    </button>
+                  </div>
+                </>
               ) : (
                 <>
-                  {/* Type selector */}
+                  <div style={{ fontSize:13, fontWeight:700, color:"#333", marginBottom:12 }}>Your contact details</div>
+                  <div style={{ fontSize:12, color:"#888", marginBottom:12 }}>So we can let you know when it’s fixed</div>
+
+                  <div style={{ marginBottom:10 }}>
+                    <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4 }}>Name</div>
+                    <input value={ticketName} onChange={e=>setTicketName(e.target.value)} placeholder="Your name"
+                      style={{ width:"100%", padding:"10px 12px", border:"2px solid #e5e7eb", borderRadius:10, fontSize:14, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }}/>
+                  </div>
+                  <div style={{ marginBottom:10 }}>
+                    <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4 }}>Email address</div>
+                    <input value={ticketEmail} onChange={e=>setTicketEmail(e.target.value)} placeholder="you@example.com" type="email"
+                      style={{ width:"100%", padding:"10px 12px", border:"2px solid #e5e7eb", borderRadius:10, fontSize:14, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }}/>
+                  </div>
                   <div style={{ marginBottom:16 }}>
-                    <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:8 }}>Type of feedback</div>
-                    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                      {["Bug Report","Feature Request","General Feedback"].map(t => (
-                        <button key={t} onClick={()=>setFeedbackType(t)}
-                          style={{ padding:"7px 14px", borderRadius:20, border:`2px solid ${feedbackType===t?"#03180d":"#ddd"}`, background:feedbackType===t?"#03180d":"#fff", color:feedbackType===t?"#fff200":"#555", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s" }}>
-                          {t}
-                        </button>
-                      ))}
+                    <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4 }}>Phone (optional)</div>
+                    <input value={ticketPhone} onChange={e=>setTicketPhone(e.target.value)} placeholder="07..." type="tel"
+                      style={{ width:"100%", padding:"10px 12px", border:"2px solid #e5e7eb", borderRadius:10, fontSize:14, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }}/>
+                  </div>
+
+                  {/* Summary */}
+                  <div style={{ background:"#f9fafb", border:"1px solid #e5e7eb", borderRadius:10, padding:"12px 14px", marginBottom:16, fontSize:13 }}>
+                    <div style={{ fontWeight:700, color:"#333", marginBottom:6 }}>Ticket Summary</div>
+                    <div style={{ color:"#666", lineHeight:1.6 }}>
+                      <div><strong>Type:</strong> {(TICKET_TYPES.find(t=>t.id===ticketType)||{}).label}</div>
+                      {ticketScreen && <div><strong>Screen:</strong> {ticketScreen}</div>}
+                      <div><strong>Issue:</strong> {ticketDesc.length > 80 ? ticketDesc.slice(0,80)+"..." : ticketDesc}</div>
+                      {ticketScreenshots.length > 0 && <div><strong>Screenshots:</strong> {ticketScreenshots.length} attached</div>}
                     </div>
                   </div>
 
-                  {/* Message */}
-                  <div style={{ marginBottom:6 }}>
-                    <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:6 }}>
-                      {feedbackType === "Bug Report" ? "Describe the bug — what happened and what you expected" :
-                       feedbackType === "Feature Request" ? "Describe the feature you'd like to see" :
-                       "Your message"}
-                    </div>
-                    <textarea value={feedbackMsg} onChange={e=>setFeedbackMsg(e.target.value)}
-                      rows={5} placeholder={
-                        feedbackType === "Bug Report" ? "e.g. When I tap New Job and select Gas Safety Certificate, the screen goes blank..." :
-                        feedbackType === "Feature Request" ? "e.g. It would be great if the certificate could include a photo of the appliance..." :
-                        "Your message..."
-                      }
-                      style={{ width:"100%", padding:"12px 14px", border:"2px solid #1d4a2e", borderRadius:10, fontSize:14, boxSizing:"border-box", fontFamily:"inherit", resize:"vertical", outline:"none" }}/>
-                  </div>
-                  <div style={{ fontSize:11, color:"#aaa", marginBottom:16 }}>
-                    Sent from: {currentUser?.username || "unknown"}
+                  <div style={{ fontSize:11, color:"#aaa", marginBottom:12 }}>
+                    Logged in as: {currentUser?.username || "unknown"}
                   </div>
 
-                  <button onClick={sendFeedback} disabled={feedbackSending || !feedbackMsg.trim()}
-                    style={{ width:"100%", padding:14, background:feedbackSending||!feedbackMsg.trim()?"#ccc":"#03180d", color:feedbackSending||!feedbackMsg.trim()?"#999":"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:feedbackSending||!feedbackMsg.trim()?"default":"pointer", fontFamily:"inherit" }}>
-                    {feedbackSending ? "Sending…" : "Send Feedback →"}
-                  </button>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <button onClick={()=>setTicketStep(2)}
+                      style={{ flex:1, padding:14, background:"#f5f5f5", color:"#555", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                      ← Back
+                    </button>
+                    <button onClick={sendTicket} disabled={ticketSending || !ticketEmail.trim()}
+                      style={{ flex:2, padding:14, background:ticketSending||!ticketEmail.trim()?"#ccc":"#03180d", color:ticketSending||!ticketEmail.trim()?"#999":"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:ticketSending||!ticketEmail.trim()?"default":"pointer", fontFamily:"inherit" }}>
+                      {ticketSending ? "Submitting…" : "Submit Ticket →"}
+                    </button>
+                  </div>
                 </>
               )}
             </div>
