@@ -11867,7 +11867,7 @@ function BatchDownloader({ queue, onDone }) {
   const renderPreview = () => {
     const r = item.record;
     const key = `batch-${currentIdx}`;
-    if (item.type === "gsc") return <PDFPreview key={key} certData={r.certData} appliances={r.appliances} faults={r.faults} finalChecks={r.finalChecks} signatureData={r.signatureData} engineerData={r.engineerData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments||[]}/>;
+    if (item.type === "gsc") return <PDFPreview key={key} certData={r.certData} appliances={r.appliances} faults={r.faults} finalChecks={r.finalChecks} signatureData={r.signatureData} engineerData={r.engineerData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments||[]} gscWnData={r.gscWnData||null}/>;
     if (item.type === "bs")  return <BSPDFPreview key={key} serviceData={r.serviceData} engineerData={r.bsEngData} signatureData={r.bsSigData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments||[]}/>;
     if (item.type === "wn")  return <WNPDFPreview key={key} wnFormData={r.wnFormData} wnEngData={r.wnEngData} wnSigData={r.wnSigData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments||[]}/>;
     if (item.type === "gw")  return <GasWorksPDFPreview key={key} form={r.gwData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
@@ -11908,10 +11908,12 @@ function BatchDownloader({ queue, onDone }) {
 }
 
 // PDF Preview
-function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, engineerData, onClose, autoDownload, onDownloadDone, attachments, onCombineCapture }) {
+function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, engineerData, onClose, autoDownload, onDownloadDone, attachments, onCombineCapture, gscWnData }) {
   const certRef = useRef(null);
+  const wnRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const autoDownloadDoneRef = useRef(false);
+  const hasWN = !!(gscWnData && (gscWnData.make || gscWnData.model || gscWnData.idGasEscape === "YES" || gscWnData.arReason));
   // Safely parse dates - they may be strings when loaded from localStorage
   const parseDate = (d) => {
     if (!d) return null;
@@ -11923,6 +11925,39 @@ function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, 
   const certDate = parseDate(engineerData.certDate) || today();
   const ref = certData.certRef || ("GSC-" + Date.now());
   const certNo = "GSC-" + Date.now();
+
+  // Helper to capture a DOM element to a canvas at fixed width
+  const captureElement = async (el, renderWidth) => {
+    const prevWidth = el.style.width;
+    const prevMaxWidth = el.style.maxWidth;
+    const prevMinWidth = el.style.minWidth;
+    el.style.width = renderWidth + "px";
+    el.style.maxWidth = renderWidth + "px";
+    el.style.minWidth = renderWidth + "px";
+    await new Promise(r => setTimeout(r, 150));
+    const canvas = await window.html2canvas(el, {
+      scale: 2, useCORS: true, logging: false,
+      width: renderWidth, height: el.scrollHeight,
+      windowWidth: renderWidth, scrollX: 0, scrollY: 0,
+    });
+    el.style.width = prevWidth;
+    el.style.maxWidth = prevMaxWidth;
+    el.style.minWidth = prevMinWidth;
+    return canvas;
+  };
+
+  // Helper to add a canvas image to a jsPDF page (landscape A4)
+  const addCanvasToPage = (pdf, canvas, pdfW, pdfH) => {
+    const imgAspect = canvas.width / canvas.height;
+    const pageAspect = pdfW / pdfH;
+    let drawW, drawH, drawX, drawY;
+    if (imgAspect > pageAspect) {
+      drawW = pdfW; drawH = pdfW / imgAspect; drawX = 0; drawY = (pdfH - drawH) / 2;
+    } else {
+      drawH = pdfH; drawW = pdfH * imgAspect; drawX = (pdfW - drawW) / 2; drawY = 0;
+    }
+    pdf.addImage(canvas.toDataURL("image/jpeg", 0.97), "JPEG", drawX, drawY, drawW, drawH);
+  };
 
   const downloadPDF = async () => {
     setDownloading(true);
@@ -11944,65 +11979,23 @@ function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, 
         })
       ]);
 
-      const el = certRef.current;
-
-      // Force a fixed wide render width so mobile viewports don't produce a narrow capture
-      const RENDER_WIDTH = 1200;
-      const prevWidth = el.style.width;
-      const prevMaxWidth = el.style.maxWidth;
-      const prevMinWidth = el.style.minWidth;
-      el.style.width = RENDER_WIDTH + "px";
-      el.style.maxWidth = RENDER_WIDTH + "px";
-      el.style.minWidth = RENDER_WIDTH + "px";
-      // Wait for reflow
-      await new Promise(r => setTimeout(r, 150));
-
-      const elHeight = el.scrollHeight;
-
-      const canvas = await window.html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        width: RENDER_WIDTH,
-        height: elHeight,
-        windowWidth: RENDER_WIDTH,
-        scrollX: 0,
-        scrollY: 0,
-      });
-
-      // Restore
-      el.style.width = prevWidth;
-      el.style.maxWidth = prevMaxWidth;
-      el.style.minWidth = prevMinWidth;
-
       const { jsPDF } = window.jspdf;
-      // A4 landscape
       const pdfW = 297;
       const pdfH = 210;
       const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
-      // Scale to fit within page maintaining aspect ratio - no stretching
-      const imgAspect = canvas.width / canvas.height;
-      const pageAspect = pdfW / pdfH;
-      let drawW, drawH, drawX, drawY;
-      if (imgAspect > pageAspect) {
-        // Image wider than page - fit to width
-        drawW = pdfW;
-        drawH = pdfW / imgAspect;
-        drawX = 0;
-        drawY = (pdfH - drawH) / 2;
-      } else {
-        // Image taller than page - fit to height
-        drawH = pdfH;
-        drawW = pdfH * imgAspect;
-        drawX = (pdfW - drawW) / 2;
-        drawY = 0;
+      // Page 1: GSC certificate
+      const gscCanvas = await captureElement(certRef.current, 1200);
+      addCanvasToPage(pdf, gscCanvas, pdfW, pdfH);
+
+      // Page 2: Warning Notice (if applicable)
+      if (hasWN && wnRef.current) {
+        pdf.addPage();
+        const wnCanvas = await captureElement(wnRef.current, 1050);
+        addCanvasToPage(pdf, wnCanvas, pdfW, pdfH);
       }
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.97);
-      pdf.addImage(imgData, "JPEG", drawX, drawY, drawW, drawH);
-
-      // Filename: installation address + postcode only
+      // Page 3+: Photos and imported PDFs
       const instParts = [certData.instAddr1, certData.instPostcode].filter(Boolean).join(" ");
       const filename = (instParts || certData.clientName || "certificate").replace(/[^a-zA-Z0-9 ]/g, "").trim().replace(/\s+/g, "_") + ".pdf";
       await appendAttachmentPages(pdf, attachments, "landscape");
@@ -12303,6 +12296,165 @@ function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, 
           For appliances not owned by the Landlord the recorded 'Appliance Safe' response is based on a visual check for obvious defects only.
         </div>
       </div>
+
+      {/* ── Warning Notice page (page 2 when applicable) ── */}
+      {hasWN && (() => {
+        const wnData = gscWnData || {};
+        const wnEng = engineerData || {};
+        const wnToday = new Date().toISOString().slice(0,10);
+        const wnCb = (val) => (
+          <span style={{ display:"inline-block", width:11, height:11, border:"1.5px solid #444", background:(val==="YES"||val==="yes")?"#1a3bbf":"#fff", marginRight:3, verticalAlign:"middle", flexShrink:0 }}/>
+        );
+        return (
+          <div ref={wnRef} style={{ background:"#fff", margin:"24px auto", width:"100%", maxWidth:"min(1100px, calc(100vw - 32px))", padding:"14px 16px", boxShadow:"0 4px 24px rgba(0,0,0,0.4)", fontFamily:"Arial,Helvetica,sans-serif", fontSize:9, boxSizing:"border-box", color:"#111" }}>
+
+            {/* WN Header */}
+            <div style={{ display:"flex", alignItems:"center", marginBottom:6 }}>
+              <div style={{ flex:1, display:"flex", alignItems:"center", gap:8 }}>
+                <img src={GAS_SAFE_LOGO} style={{ height:48, objectFit:"contain" }} alt="Gas Safe"/>
+                <img src={getCompanyLogo()} style={{ height:48, objectFit:"contain", maxWidth:110 }} alt="Company"/>
+              </div>
+              <div style={{ flex:2, textAlign:"center" }}>
+                <div style={{ fontSize:22, fontWeight:900, color:"#111", letterSpacing:0.5 }}>WARNING NOTICE – DANGER DO NOT USE</div>
+                <div style={{ fontSize:8.5, color:"#444", marginTop:2 }}>This form should be completed in accordance with the requirements of the current Gas Industry Unsafe Situations Procedure</div>
+              </div>
+              <div style={{ flex:1, textAlign:"right" }}>
+                <div style={{ fontSize:8, color:"#555" }}>Certificate No.</div>
+                <div style={{ border:"1px solid #aaa", padding:"3px 8px", fontSize:9, fontWeight:700, display:"inline-block", marginTop:2, minWidth:160, textAlign:"center" }}>{ref}</div>
+              </div>
+            </div>
+
+            {/* 3-col details table */}
+            <table style={{ width:"100%", borderCollapse:"collapse", marginBottom:4 }}>
+              <thead>
+                <tr>{["Registered Business Details","Installation Details","Client Details"].map(h=>(
+                  <th key={h} style={{ background:"#111111", color:"#fff", padding:"4px 6px", fontSize:9, border:"1px solid #888", textAlign:"left", width:"33%" }}>{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ border:"1px solid #aaa", padding:"4px 6px", fontSize:9, verticalAlign:"top", height:64 }}>
+                    <div style={{ fontWeight:700 }}>{wnEng.companyName||""}</div>
+                    <div>{wnEng.companyAddr||""}</div>
+                    <div>{wnEng.companyTel||""} &nbsp; Postcode: {wnEng.companyPostcode||""}</div>
+                  </td>
+                  <td style={{ border:"1px solid #aaa", padding:"4px 6px", fontSize:9, verticalAlign:"top", height:64 }}>
+                    <div>{certData.instAddr1||""}</div><div>{certData.instAddr2||""}</div>
+                    <div style={{ marginTop:4 }}>Postcode: {certData.instPostcode||""}</div>
+                  </td>
+                  <td style={{ border:"1px solid #aaa", padding:"4px 6px", fontSize:9, verticalAlign:"top", height:64 }}>
+                    <div style={{ fontWeight:700 }}>{certData.clientName||""}</div>
+                    <div>{certData.clientAddr1||""}</div>
+                    <div style={{ marginTop:4 }}>Postcode: {certData.clientPostcode||""}</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Section 1 - Appliance */}
+            <div style={{ background:"#f5c400", color:"#111", fontWeight:700, padding:"3px 6px", fontSize:9, marginBottom:2 }}>1. THE GAS APPLIANCE / GAS INSTALLATION</div>
+            <table style={{ width:"100%", borderCollapse:"collapse", marginBottom:3 }}>
+              <tbody>
+                <tr>
+                  <td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9, width:"25%" }}><strong>Make:</strong> {wnData.make||""}</td>
+                  <td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9, width:"25%" }}><strong>Model:</strong> {wnData.model||""}</td>
+                  <td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9, width:"25%" }}><strong>Type:</strong> {wnData.type||""}</td>
+                  <td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9, width:"25%" }}><strong>Serial No:</strong> {wnData.serialNo||""}</td>
+                </tr>
+                <tr><td colSpan={4} style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9 }}><strong>Installation Details:</strong> {wnData.installationDetails||""}</td></tr>
+                <tr><td colSpan={4} style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9 }}><strong>Fixed in the room / location:</strong> {wnData.locationRoom||""}</td></tr>
+              </tbody>
+            </table>
+
+            {/* Sections 2 & 3 */}
+            <div style={{ display:"flex", gap:3, marginBottom:3 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ background:"#111111", color:"#fff", fontWeight:700, padding:"3px 6px", fontSize:9, marginBottom:2 }}>2. IS UNSAFE AND HAS BEEN CATEGORISED IMMEDIATELY DANGEROUS (ID) because:</div>
+                <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                  <tbody>
+                    <tr><td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9 }}>{wnCb(wnData.idGasEscape)} A gas escape has been detected on the appliance / installation or</td></tr>
+                    <tr><td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9 }}>{wnCb(wnData.idDisconnected)} with your permission it has been disconnected from the gas supply and a DANGER DO NOT USE label attached or,</td></tr>
+                    <tr><td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9 }}>{wnCb(wnData.idRefused)} as you have refused to allow it to be made safe, a DANGER DO NOT USE label has been attached *</td></tr>
+                    <tr><td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9 }}><strong>Gas Emergency Contact Centre Reference:</strong> {wnData.gasEmergencyRef||"n/a"}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ background:"#111111", color:"#fff", fontWeight:700, padding:"3px 6px", fontSize:9, marginBottom:2 }}>3. IS UNSAFE AND HAS BEEN CATEGORISED AT RISK (AR) because:</div>
+                <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                  <tbody>
+                    <tr><td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9, fontStyle:"italic" }}>{wnData.arReason||""}</td></tr>
+                    <tr><td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9 }}>{wnCb(wnData.arTurnedOff)} with your permission it has been TURNED OFF and a DANGER DO NOT USE label attached or,</td></tr>
+                    <tr><td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9 }}>{wnCb(wnData.arRefused)} as you have refused to allow it to be made safe, it has a DANGER DO NOT USE label attached</td></tr>
+                    <tr><td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9 }}>{wnCb(wnData.arTurningOffNoHelp)} turning off will not reduce the risk, please contact the following to undertake further investigation</td></tr>
+                    <tr><td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9 }}><strong>Name:</strong> {wnData.contactName||"n/a"} &nbsp;&nbsp; <strong>Tel No:</strong> {wnData.contactTel||"n/a"}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* RIDDOR note */}
+            <div style={{ background:"#f5f5f5", border:"1px solid #bbb", padding:"3px 7px", fontSize:8, color:"#333", marginBottom:3, fontStyle:"italic" }}>
+              *PLEASE NOTE: Registered gas operatives are required by law to report cases where they are refused permission to disconnect an IMMEDIATELY DANGEROUS gas installation. All Gas Transporters operate a gas emergency service and have powers under the Gas Safety (Rights of Entry) Regulations to visit properties and disconnect unsafe gas appliances / installations.
+            </div>
+
+            {/* Sections 4 & 5 */}
+            <div style={{ display:"flex", gap:3, marginBottom:3 }}>
+              <div style={{ flex:"0 0 280px" }}>
+                <div style={{ background:"#111111", color:"#fff", fontWeight:700, padding:"3px 6px", fontSize:9, marginBottom:2 }}>4. RIDDOR:</div>
+                <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                  <tbody><tr><td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9 }}>{wnCb(wnData.riddor)} The unsafe situation(s) identified is reportable to the HSE under RIDDOR</td></tr></tbody>
+                </table>
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ background:"#111111", color:"#fff", fontWeight:700, padding:"3px 6px", fontSize:9, marginBottom:2 }}>5. REMEDIAL ACTION REQUIRED:</div>
+                <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                  <tbody><tr><td style={{ border:"1px solid #aaa", padding:"3px 5px", fontSize:9, minHeight:32 }}>{wnData.remedialAction||""}</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Safety banner */}
+            <div style={{ textAlign:"center", fontWeight:900, fontSize:10, border:"2px solid #111", padding:"4px 8px", marginBottom:4, letterSpacing:0.3 }}>
+              FOR YOUR OWN SAFETY 'IMMEDIATELY DANGEROUS' &amp; 'AT RISK' GAS APPLIANCES / INSTALLATIONS SHOULD NOT BE USED
+            </div>
+
+            {/* Declarations */}
+            <div style={{ display:"flex", gap:3, marginBottom:4 }}>
+              <div style={{ flex:1, border:"1px solid #aaa", padding:"4px 6px", fontSize:8.5 }}>
+                <strong>Gas User/Responsible Person Declaration:</strong> I confirm that I have received this Warning Notice concerning the safety of the gas installation. I understand that the use of the appliance/installation in case of an <strong>IMMEDIATELY DANGEROUS</strong> or <strong>AT RISK</strong> installation, could present a danger and could place me in breach of the Gas Safety (Installation and Use) Regulations.
+                <div style={{ marginTop:8, display:"flex", gap:6, alignItems:"flex-end" }}>
+                  <div style={{ flex:1 }}>Signed: <div style={{ borderBottom:"1px solid #555", marginTop:16 }}/></div>
+                  <div style={{ flex:1 }}>Print Name: <div style={{ borderBottom:"1px solid #555", marginTop:4, fontWeight:700, fontSize:8 }}>{certData.clientName||""}</div></div>
+                </div>
+                <div style={{ marginTop:6 }}>Date: <span style={{ fontWeight:700 }}>{fmtShort(certDate)}</span></div>
+              </div>
+              <div style={{ flex:1, border:"1px solid #aaa", padding:"4px 6px", fontSize:8.5 }}>
+                <strong>Gas Operative Declaration:</strong> I confirm that the situation(s) recorded above, has been identified and brought to the attention of the Gas User/Responsible Person in accordance with the Gas Safety (Installation and Use) Regulations (GSIUR), Industry Standards and Procedures.
+                <div style={{ marginTop:6, display:"flex", gap:16 }}>
+                  <div><div style={{ fontSize:8, color:"#666" }}>Licence No:</div><div style={{ fontWeight:700, fontSize:11 }}>{wnEng.gasSafeNo||""}</div></div>
+                  <div><div style={{ fontSize:8, color:"#666" }}>Gas Safe Card No:</div><div style={{ fontWeight:700, fontSize:11 }}>{wnEng.gasId||""}</div></div>
+                </div>
+                <div style={{ marginTop:6, display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ minWidth:36, fontSize:8 }}>Signed:</span>
+                  <span style={{ flex:1, borderBottom:"1px solid #555", minHeight:22, display:"flex", alignItems:"flex-end" }}>
+                    {(()=>{ try { const s=localStorage.getItem(sk("gsc_engineer_sig")); return s ? <img src={s} style={{ height:22, maxWidth:"100%", objectFit:"contain" }}/> : <span style={SIG_STYLE}>{wnEng.engineerName||""}</span>; } catch(e){ return <span style={SIG_STYLE}>{wnEng.engineerName||""}</span>; } })()}
+                  </span>
+                </div>
+                <div style={{ marginTop:6, display:"flex", gap:16 }}>
+                  <div>Issue Date: <span style={{ fontWeight:700 }}>{fmtShort(certDate)}</span></div>
+                  <div>Name: <span style={{ fontWeight:700 }}>{wnEng.engineerName||""}</span></div>
+                </div>
+              </div>
+            </div>
+
+            {/* WN Footer */}
+            <div style={{ textAlign:"center", fontSize:7.5, color:"#666", borderTop:"1px solid #ddd", paddingTop:3 }}>
+              This Gas Warning Notice was produced by {wnEng.companyName||""} · Gas Safe Reg: {wnEng.gasId||""} · Tel: {wnEng.companyTel||""}{wnEng.companyWeb ? ` · ${wnEng.companyWeb}` : ""}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -14154,7 +14306,7 @@ function GasSafetyCertsScreen({ records, onBack, onHome, onDelete, onCreateInvoi
   }
   if (viewing !== null) {
     const r = viewRecords[viewing];
-    return <PDFPreview certData={r.certData} appliances={r.appliances} faults={r.faults} finalChecks={r.finalChecks} signatureData={r.signatureData} engineerData={r.engineerData} onClose={()=>setViewing(null)} attachments={r.attachments}/>;
+    return <PDFPreview certData={r.certData} appliances={r.appliances} faults={r.faults} finalChecks={r.finalChecks} signatureData={r.signatureData} engineerData={r.engineerData} onClose={()=>setViewing(null)} attachments={r.attachments} gscWnData={r.gscWnData||null}/>;
   }
 
   const toggleCheck = (i) => setCheckedItems(prev => prev.includes(i) ? prev.filter(x=>x!==i) : [...prev, i]);
@@ -16460,10 +16612,6 @@ function BSStepApplianceDetails({ data, onChange, onNext, onBack, onHome }) {
         <div style={{height:16}}/>
       </div>
       <BottomBar onHome={onHome} onNext={onNext}/>
-      {bsPickerTarget && <ContactPickerModal
-        title={bsPickerTarget==="client" ? "Choose Client" : "Choose Installation"}
-        onSelect={c=>pickContact(bsPickerTarget,c)}
-        onClose={()=>setBsPickerTarget(null)}/>}
     </div>
   );
 }
@@ -16748,7 +16896,7 @@ function WNStepClientDetails({ data, onChange, onNext, onBack, onHome }) {
 }
 
 // WN Step 3: Notice Details
-function WNStepNoticeDetails({ data, onChange, onNext, onBack, onHome }) {
+function WNStepNoticeDetails({ data, onChange, onNext, onBack, onHome, embeddedMode=false }) {
   const set = (k, v) => onChange({...data, [k]: v});
   const [wnPicker, setWnPicker] = useState(null);
 
@@ -16764,9 +16912,13 @@ function WNStepNoticeDetails({ data, onChange, onNext, onBack, onHome }) {
     );
   }
 
+  const headerTitle = embeddedMode
+    ? <span><span style={{color:"#ff3333",fontWeight:700}}>Warning</span> Notice Details</span>
+    : "Notice Details";
+
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Notice Details" onBack={onBack}/>
+      <Header title={headerTitle} onBack={onBack}/>
       <div style={{ flex:1, overflowY:"auto" }}>
         <SectionHeader title="1. The Gas Appliance / Gas Installation"/>
         <div onClick={()=>setWnPicker("make")} style={{ padding:"12px 16px", background:"#fff", borderBottom:"1px solid #eee", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center" }}><span style={{ flex:1, color:"#666" }}>Make:</span><span style={{ color: data.make ? "#222" : "#aaa" }}>{data.make || "Select..."}</span></div>
@@ -16797,7 +16949,7 @@ function WNStepNoticeDetails({ data, onChange, onNext, onBack, onHome }) {
         <FormInput placeholder="Describe remedial action taken..." value={data.remedialAction||""} onChange={v=>set("remedialAction",v)} multiline/>
         <div style={{ height:20 }}/>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
+      <BottomBar onHome={onHome} onNext={onNext} nextLabel={embeddedMode ? "Next: Signatures" : "Next"}/>
     </div>
   );
 }
@@ -17443,6 +17595,7 @@ function CombineRenderer({ items, onAllDone, onProgress }) {
         autoDownload={false}
         onCombineCapture={advance}
         attachments={[]}
+        gscWnData={r.gscWnData||null}
       />
     );
     if (rtype === "bs") return (
@@ -17752,6 +17905,7 @@ function CombineRunnerQueue({ items, onProgress, onDone }) {
         finalChecks={r.finalChecks} signatureData={r.signatureData}
         engineerData={r.engineerData} onClose={()=>{}}
         autoDownload onDownloadDone={advance} attachments={r.attachments||[]}
+        gscWnData={r.gscWnData||null}
       />
     );
     if (rtype === "bs") return (
@@ -17846,6 +18000,8 @@ function App({ onLogout }) {
   const [wnSigData, setWnSigData] = useState({});
   const [wnEngData, setWnEngData] = useState(() => profileDefaults());
   const [wnAttachments, setWnAttachments] = useState([]);
+  // WN data embedded in GSC flow (when appliance has warning notice)
+  const [gscWnData, setGscWnData] = useState({ make:"", model:"", type:"", serialNo:"", installationDetails:"", locationRoom:"", idGasEscape:"NO", idDisconnected:"NA", idRefused:"NO", gasEmergencyRef:"", arReason:"", arTurnedOff:"NO", arRefused:"NO", arTurningOffNoHelp:"NO", contactName:"", contactTel:"", riddor:"NO", remedialAction:"" });
   const [editIndex, setEditIndex] = useState(null);
   const [showOptions, setShowOptions] = useState(false);
   const [showPDF, setShowPDF] = useState(false);
@@ -18376,7 +18532,7 @@ function App({ onLogout }) {
       onBack={() => { setSubScreen("faultList"); setEditIndex(null); }}/>;
   }
 
-  if (showPDF) return <PDFPreview certData={certData} appliances={appliances} faults={faults} finalChecks={finalChecks} signatureData={signatureData} engineerData={engineerData} onClose={()=>setShowPDF(false)} attachments={gscAttachments}/>;
+  if (showPDF) return <PDFPreview certData={certData} appliances={appliances} faults={faults} finalChecks={finalChecks} signatureData={signatureData} engineerData={engineerData} onClose={()=>setShowPDF(false)} attachments={gscAttachments} gscWnData={faults.some(f => f.warningNotice === "Yes") ? gscWnData : null}/>;
 
   if (screen === "login") return null; // handled by AppWithAuth wrapper
   if (screen === "records") return <RecordsScreen records={records} onBack={()=>setScreen("home")} onHome={goHome} onDelete={(i)=>setRecords(r=>r.filter((_,idx)=>idx!==i))} onImport={(imported)=>setRecords(prev=>{
@@ -18634,35 +18790,38 @@ function App({ onLogout }) {
     if (subScreen === "faultList") return <StepFaultList faults={faults} onAdd={()=>{setEditIndex(null);setSubScreen("faultForm");}} onEdit={i=>{setEditIndex(i);setSubScreen("faultForm");}}
       onDelete={()=>setFaults(faults.slice(0,-1))} onNext={()=>setSubScreen("finalChecks")} onBack={()=>setSubScreen("applianceList")} onHome={goHome}/>;
     if (subScreen === "finalChecks") return <StepFinalChecks data={finalChecks} onChange={setFinalChecks} onNext={()=>setSubScreen("attachments")} onBack={()=>setSubScreen("faultList")} onHome={goHome}/>;
-    if (subScreen === "attachments") return <AttachmentsStep data={{attachments:gscAttachments}} onChange={d=>setGscAttachments(d.attachments||[])} onBack={()=>setSubScreen("finalChecks")} onHome={goHome} onNext={()=>setSubScreen("signature")} nextLabel="Next: Signatures"/>;
-    if (subScreen === "signature") return <StepSignature data={signatureData} onChange={setSignatureData} onNext={()=>setSubScreen("engineerDetails")} onBack={()=>setSubScreen("attachments")} onHome={goHome}/>;
+    if (subScreen === "attachments") {
+      const _hasWN = faults.some(f => f.warningNotice === "Yes");
+      return <AttachmentsStep data={{attachments:gscAttachments}} onChange={d=>setGscAttachments(d.attachments||[])} onBack={()=>setSubScreen("finalChecks")} onHome={goHome} onNext={()=>setSubScreen(_hasWN ? "wnDetails" : "signature")} nextLabel={_hasWN ? "Next: Warning Notice" : "Next: Signatures"}/>;
+    }
+    if (subScreen === "wnDetails") return <WNStepNoticeDetails data={gscWnData} onChange={setGscWnData} onNext={()=>setSubScreen("signature")} onBack={()=>setSubScreen("attachments")} onHome={goHome} embeddedMode={true}/>;
+    if (subScreen === "signature") {
+      const _hasWN = faults.some(f => f.warningNotice === "Yes");
+      return <StepSignature data={signatureData} onChange={setSignatureData} onNext={()=>setSubScreen("engineerDetails")} onBack={()=>setSubScreen(_hasWN ? "wnDetails" : "attachments")} onHome={goHome}/>;
+    }
     if (subScreen === "engineerDetails") return (
       <>
         <StepEngineerDetails data={engineerData} onChange={setEngineerData} onBack={()=>setSubScreen("signature")} onHome={goHome}
           onOptions={()=>setShowOptions(true)}/>
         {showOptions && (() => {
-          const _needsWN = faults.some(f => f.warningNotice === "Yes");
           const _needsBS = appliances.some(a => a.applianceServiced === "Yes");
-          const _blocked = _needsWN || _needsBS;
-          const _blockMsg = _needsWN && _needsBS
-            ? "This certificate has a Warning Notice and a serviced appliance. Please use SAVE to complete those certificates first."
-            : _needsWN
-            ? "This certificate has a Warning Notice raised. Please use SAVE — the Warning Notice must be completed before previewing."
-            : "This certificate has a serviced appliance. Please use SAVE — the Boiler Service record must be completed before previewing.";
+          const _blocked = _needsBS;
+          const _blockMsg = "This certificate has a serviced appliance. Please use SAVE — the Boiler Service record must be completed before previewing.";
           return <OptionsMenu
             onPreview={_blocked ? ()=>{ setShowOptions(false); alert(_blockMsg); } : ()=>{setShowOptions(false);setShowPDF(true);}}
             onSave={async ()=>{
               const savedAt = new Date().toISOString();
-              const _gscRec = {certData,appliances,faults,finalChecks,signatureData,engineerData,savedAt,attachments:gscAttachments};
+              const _hasWN = faults.some(f => f.warningNotice === "Yes");
+              const _gscRec = {certData,appliances,faults,finalChecks,signatureData,engineerData,savedAt,attachments:gscAttachments, ...(_hasWN ? {gscWnData} : {})};
               setRecords(r=>[...r,_gscRec]);
               setShowOptions(false);
               alert("\u2705 Certificate saved to Records!");
-              checkAndTriggerWN(_gscRec);
               checkAndTriggerBS(_gscRec);
             }}
             onCopyToInvoice={_blocked ? ()=>{ setShowOptions(false); alert(_blockMsg); } : ()=>{
               const savedAt = new Date().toISOString();
-              const rec = {certData,appliances,faults,finalChecks,signatureData,engineerData,savedAt};
+              const _hasWN = faults.some(f => f.warningNotice === "Yes");
+              const rec = {certData,appliances,faults,finalChecks,signatureData,engineerData,savedAt, ...(_hasWN ? {gscWnData} : {})};
               setRecords(r=>[...r,rec]);
               setShowOptions(false);
               setGscInvoiceSource(rec);
