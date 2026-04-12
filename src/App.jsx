@@ -13155,6 +13155,14 @@ function InvoiceWizard({ sourceRecord, onSave, onClose, invoiceRecords, profile 
           <span style={{ fontSize: 12, color: "#888" }}>Invoice No: </span>
           <span style={{ fontWeight: 700, fontSize: 15 }}>{invoiceNo.current}</span>
         </div>
+        {sectionHeader("Engineer Details")}
+        <input style={inputStyle} placeholder="Company Name" value={companyName} onChange={e=>setCompanyName(e.target.value)}/>
+        <input style={inputStyle} placeholder="Address" value={companyAddr} onChange={e=>setCompanyAddr(e.target.value)}/>
+        <input style={inputStyle} placeholder="Postcode" value={companyPostcode2} onChange={e=>setCompanyPostcode2(e.target.value)}/>
+        <input style={inputStyle} placeholder="Telephone" value={companyTel2} onChange={e=>setCompanyTel2(e.target.value)}/>
+        <input style={inputStyle} placeholder="Gas Safe Registration No" value={gasSafeNo2} onChange={e=>setGasSafeNo2(e.target.value)}/>
+        <input style={inputStyle} placeholder="Engineer Name" value={issuedBy} onChange={e=>setIssuedBy(e.target.value)}/>
+        <input style={inputStyle} placeholder="Engineer ID Card No" value={engineerId} onChange={e=>setEngineerId(e.target.value)}/>
         {invContactError && <div style={{ background:"#fee", color:"#c00", padding:"8px 12px", borderRadius:8, fontSize:13, marginBottom:8 }}>{invContactError}</div>}
         {sectionHeader("Client Details", <InvContactBtn target="client"/>)}
         <input style={inputStyle} placeholder="Client Name" value={clientName} onChange={e => setClientName(e.target.value)} />
@@ -13166,7 +13174,7 @@ function InvoiceWizard({ sourceRecord, onSave, onClose, invoiceRecords, profile 
         <input style={inputStyle} placeholder="Email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} />
         {sectionHeader("Installation Details",
           <div style={{ display:"flex", gap:6 }}>
-            <button onClick={copyClientToInst} style={{ background: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.6)", borderRadius: 6, padding: "4px 10px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>✓ Copy</button>
+            <button onClick={copyClientToInst} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
             <InvContactBtn target="inst"/>
           </div>
         )}
@@ -13668,6 +13676,14 @@ function QuoteWizard({ sourceRecord, onSave, onClose, profile }) {
         <div style={{ background:"#fff", borderRadius:8, padding:"10px 14px", marginBottom:10, textAlign:"center", border:"1px solid #ddd" }}>
           <span style={{ fontSize:12, color:"#888" }}>Quote No: </span><span style={{ fontWeight:700, fontSize:15 }}>{quoteNo.current}</span>
         </div>
+        {sectionHeader("Engineer Details")}
+        <input style={inputStyle} placeholder="Company Name" value={companyName} onChange={e=>setCompanyName(e.target.value)}/>
+        <input style={inputStyle} placeholder="Address" value={companyAddr} onChange={e=>setCompanyAddr(e.target.value)}/>
+        <input style={inputStyle} placeholder="Postcode" value={companyPostcode2} onChange={e=>setCompanyPostcode2(e.target.value)}/>
+        <input style={inputStyle} placeholder="Telephone" value={companyTel2} onChange={e=>setCompanyTel2(e.target.value)}/>
+        <input style={inputStyle} placeholder="Gas Safe Registration No" value={gasSafeNo2} onChange={e=>setGasSafeNo2(e.target.value)}/>
+        <input style={inputStyle} placeholder="Engineer Name" value={issuedBy} onChange={e=>setIssuedBy(e.target.value)}/>
+        <input style={inputStyle} placeholder="Engineer ID Card No" value={engineerId} onChange={e=>setEngineerId(e.target.value)}/>
         {contactError && <div style={{ background:"#fee", color:"#c00", padding:"8px 12px", borderRadius:8, fontSize:13, marginBottom:8 }}>{contactError}</div>}
         {sectionHeader("Client Details", <ContactBtn target="client"/>)}
         <input style={inputStyle} placeholder="Client Name" value={clientName} onChange={e=>setClientName(e.target.value)}/>
@@ -13679,7 +13695,7 @@ function QuoteWizard({ sourceRecord, onSave, onClose, profile }) {
         <input style={inputStyle} placeholder="Email" value={clientEmail} onChange={e=>setClientEmail(e.target.value)}/>
         {sectionHeader("Installation Details",
           <div style={{ display:"flex", gap:6 }}>
-            <button onClick={()=>{setInstName(clientName);setInstAddr1(clientAddr1);setInstAddr2(clientAddr2);setInstAddr3(clientAddr3);setInstPostcode(clientPostcode);setInstTel(clientTel);}} style={{ background:"rgba(255,255,255,0.25)", border:"1px solid rgba(255,255,255,0.6)", borderRadius:6, padding:"4px 10px", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer" }}>✓ Copy</button>
+            <button onClick={()=>{setInstName(clientName);setInstAddr1(clientAddr1);setInstAddr2(clientAddr2);setInstAddr3(clientAddr3);setInstPostcode(clientPostcode);setInstTel(clientTel);}} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
             <ContactBtn target="inst"/>
           </div>
         )}
