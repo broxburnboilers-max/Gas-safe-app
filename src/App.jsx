@@ -2769,7 +2769,7 @@ function ClientContactsScreen({ onBack, onHome }) {
   );
 }
 
-function HomeScreen({ onNew, onRecords, onGscEmail, onBsEmail, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine }) {
+function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine }) {
   const trialStatus = getTrialStatus();
   const daysLeft = getTrialDaysLeft();
   const [showFeedback, setShowFeedback] = useState(false);
@@ -3043,12 +3043,7 @@ function HomeScreen({ onNew, onRecords, onGscEmail, onBsEmail, onReport, onLogou
 
 
 
-        <PillBtn onClick={onGscEmail} label="GSC Email" color="#fff200" iconBg="#0d2b1a">
-          <svg width="30" height="26" viewBox="0 0 52 48" fill="none"><rect x="2" y="6" width="48" height="36" rx="5" fill="rgba(255,255,255,0.3)"/><polyline points="2,6 26,28 50,6" fill="none" stroke="white" strokeWidth="3.5"/><text x="26" y="38" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold" fontFamily="sans-serif">GSC</text></svg>
-        </PillBtn>
-        <PillBtn onClick={onBsEmail} label="BS Email" color="#fff200" iconBg="#3a5e45">
-          <svg width="30" height="26" viewBox="0 0 52 48" fill="none"><rect x="2" y="6" width="48" height="36" rx="5" fill="rgba(255,255,255,0.3)"/><polyline points="2,6 26,28 50,6" fill="none" stroke="white" strokeWidth="3.5"/><text x="26" y="38" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold" fontFamily="sans-serif">BS</text></svg>
-        </PillBtn>
+
         <PillBtn onClick={onReport} label="Reports" color="#fff200" iconBg="#1a3a26">
           <svg width="30" height="30" viewBox="0 0 52 52" fill="none"><rect x="10" y="28" width="8" height="16" rx="2" fill="white"/><rect x="22" y="18" width="8" height="26" rx="2" fill="white"/><rect x="34" y="10" width="8" height="34" rx="2" fill="white"/></svg>
         </PillBtn>
@@ -18914,13 +18909,12 @@ function App({ onLogout }) {
       onPaymentSubmitted={()=>{ /* profile updated by markPaymentSubmitted, force re-render */ setScreen("home"); }}
     />;
   }
-  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onGscEmail={()=>setScreen("gscEmail")} onBsEmail={()=>setScreen("bsEmail")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("✅ "+n+" demo records added!\n\nGo to Records → Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")}/>;
+  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("✅ "+n+" demo records added!\n\nGo to Records → Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")}/>;
   if (screen === "contacts") return <ClientContactsScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
   if (screen === "emailImport") return <EmailImportScreen onBack={()=>setScreen("home")} onHome={goHome} defaultEngineerData={engineerData} onImportCerts={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
   if (screen === "giEmail") return <GasIsolationEmailScreen onBack={()=>setScreen("home")} onHome={goHome} onImport={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
   if (screen === "gwEmail") return <GasWorksEmailScreen onBack={()=>setScreen("home")} onHome={goHome} onImport={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
-  if (screen === "gscEmail") return <GasSafetyCertEmailScreen onBack={()=>setScreen("home")} onHome={goHome} defaultEngineerData={engineerData} onImport={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
-  if (screen === "bsEmail") return <BoilerServiceEmailScreen onBack={()=>setScreen("home")} onHome={goHome} defaultEngData={bsEngData} onImport={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
+
   if (screen === "report") return <MonthlyReportScreen onBack={()=>setScreen("home")} onHome={goHome} invoices={invoices} userId={getCurrentUser()?.username || "default"} onSaveReport={(r)=>{
     const newMonthlyReports = [r, ...accountReports];
     setAccountReports(newMonthlyReports);
