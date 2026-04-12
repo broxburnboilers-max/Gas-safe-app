@@ -1,8 +1,19 @@
 // Stripe webhook handler for Gas Safe App
 // Receives checkout.session.completed events and logs subscription details
+// Also syncs subscription status to Supabase when configured
 // Endpoint: /.netlify/functions/stripe-webhook
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
+// Supabase admin client for server-side writes (bypasses RLS)
+let supabaseAdmin = null;
+if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
+  const { createClient } = require("@supabase/supabase-js");
+  supabaseAdmin = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY
+  );
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -71,6 +82,33 @@ exports.handler = async (event) => {
         });
 
         console.log(`📝 Subscription ${subscriptionId} tagged: ${clientRef} → ${planName}`);
+
+        // Sync to Supabase if configured
+        if (supabaseAdmin && clientRef) {
+          try {
+            // Find the Supabase user by username in profiles
+            const { data: profile } = await supabaseAdmin
+              .from("profiles")
+              .select("user_id")
+              .eq("username", clientRef)
+              .single();
+
+            if (profile) {
+              await supabaseAdmin
+                .from("profiles")
+                .update({
+                  plan: planName,
+                  subscription_active: true,
+                  stripe_customer_id: customerId,
+                  stripe_subscription_id: subscriptionId,
+                })
+                .eq("user_id", profile.user_id);
+              console.log(`🗄️ Supabase profile updated: ${clientRef} → ${planName}`);
+            }
+          } catch (dbErr) {
+            console.error("Failed to update Supabase profile:", dbErr.message);
+          }
+        }
       } catch (err) {
         console.error("Failed to update subscription metadata:", err.message);
       }
@@ -82,6 +120,26 @@ exports.handler = async (event) => {
     const subscription = stripeEvent.data.object;
     const username = subscription.metadata?.app_username;
     console.log(`❌ Subscription cancelled for: ${username || "unknown"}`);
+
+    // Downgrade in Supabase
+    if (supabaseAdmin && username) {
+      try {
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("user_id")
+          .eq("username", username)
+          .single();
+        if (profile) {
+          await supabaseAdmin
+            .from("profiles")
+            .update({ plan: "lite", subscription_active: false })
+            .eq("user_id", profile.user_id);
+          console.log(`🗄️ Supabase: ${username} downgraded to lite`);
+        }
+      } catch (dbErr) {
+        console.error("Failed to downgrade in Supabase:", dbErr.message);
+      }
+    }
   }
 
   // Handle invoice payment failed
