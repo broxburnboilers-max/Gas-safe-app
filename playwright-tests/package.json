@@ -1,0 +1,17 @@
+{
+  "name": "gas-safe-app-playwright",
+  "version": "1.0.0",
+  "description": "Playwright tests for the Gas Safe App",
+  "type": "module",
+  "scripts": {
+    "test":         "playwright test",
+    "test:headed":  "playwright test --headed",
+    "test:ui":      "playwright test --ui",
+    "test:mobile":  "playwright test --project='Mobile Chrome'",
+    "test:desktop": "playwright test --project='Desktop Chrome'",
+    "test:report":  "playwright show-report test-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.43.0"
+  }
+}

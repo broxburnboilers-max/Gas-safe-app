@@ -1408,15 +1408,54 @@ function MonthlyReportScreen({ onBack, onHome, invoices, onSaveReport, userId })
         setPeriod(`${fmt(pd(dates[0]))} to ${fmt(pd(dates[dates.length-1]))}`);
       }
       const learned = loadLearned();
+      // Bank-category map (Monzo / Starling category names → app categories)
       const catMap = { "bills":"Bills","entertainment":"General","eating out":"Meals","transport":"Travel","shopping":"General","expenses":"General","holidays":"Travel","insurance":"Insurance","savings":"General","taxes":"Tax","wages":"Wages","software":"Software" };
+      // Merchant keyword pre-map: applied on first import when no learned category exists.
+      // Keys are lowercase substrings to match against the transaction description.
+      const MERCHANT_MAP = [
+        // Fuel & travel
+        { kw:["shell","bp ","esso","texaco","fuel","petrol","diesel","moto ","welcome break","roadchef"], cat:"Travel" },
+        { kw:["trainline","scotrail","avanti","lner","tfl ","oyster","uber ","lyft","taxi","parking","nccp","ringo"], cat:"Travel" },
+        // Materials & trade
+        { kw:["screwfix","toolstation","jewson","travis perkins","b&q","wickes","selco","city plumbing","mkm ","national heating","city merchant"], cat:"Materials" },
+        { kw:["amazon","ebay","rs components","farnell","cpc ","electrical"], cat:"Materials" },
+        // Software & subscriptions
+        { kw:["google ","microsoft","adobe","dropbox","xero","quickbooks","sage ","slack","zoom","apple ","icloud","netflix","spotify","aws ","digitalocean"], cat:"Software" },
+        // Meals
+        { kw:["greggs","costa ","starbucks","mcdonald","kfc ","burger king","subway","domino","deliveroo","just eat","uber eat","nandos","morrison","tesco","sainsbury","asda","lidl","aldi","co-op food","marks & spencer food"], cat:"Meals" },
+        // Insurance
+        { kw:["aviva","axa","ageas","allianz","admiral","direct line","churchill","esure","comparethemarket","moneysupermarket","hastings","hiscox","simply business","gasinsur","corgi direct","bgus","gas insur"], cat:"Insurance" },
+        // Rent & premises
+        { kw:["rent","storage","lock-up","lockup","garage rent","self storage","safestore","big yellow"], cat:"Rent" },
+        // Phone & broadband
+        { kw:["bt ","sky ","virgin media","vodafone","o2 ","ee ","three ","talktalk","plusnet","giffgaff","iD mobile"], cat:"Bills" },
+        // Equipment & tools
+        { kw:["hilti","dewalt","milwaukee","makita","snap-on","sealey","halfords","machine mart","powertools"], cat:"Equipment" },
+        // Wages / payroll
+        { kw:["payroll","salary","bacs payment","wages","hmrc ","paye","p60","p45"], cat:"Wages" },
+        // Tax & accountancy
+        { kw:["hmrc","vat payment","corporation tax","self assessment","accountant","bookkeeper"], cat:"Tax" },
+        // Pension
+        { kw:["pension","nest ","aviva pension","scottish widows","royal london pension"], cat:"Pension" },
+      ];
+      // Helper: look up merchant category from description
+      function merchantCategory(desc) {
+        const d = desc.toLowerCase();
+        for (const entry of MERCHANT_MAP) {
+          if (entry.kw.some(kw => d.includes(kw.toLowerCase()))) return entry.cat;
+        }
+        return null;
+      }
       const enriched = rows.map(row => {
         const amount = parseFloat(row["Amount"]) || 0;
         const isIncome = amount > 0;
         const bankCategory = row["Category"] || row["Type"] || row["Transaction Type"] || "General";
         const desc = (row["Name"] || row["Description"] || "").trim();
         const learnedCat = learned[desc.toLowerCase()] || null;
+        // Category priority: 1) user-learned, 2) merchant keyword, 3) bank category name, 4) General
+        const autoCategory = learnedCat || merchantCategory(desc) || catMap[bankCategory.toLowerCase()] || "General";
         const matchedInvoice = isIncome ? matchInvoice(row, invoices) : null;
-        return { date:row["Date"]||"", description:desc, amount:Math.abs(amount), isIncome, balance:parseFloat(row["Balance"])||0, category:isIncome?"Income":(learnedCat||(catMap[bankCategory.toLowerCase()]||"General")), invoiceNo:matchedInvoice||"", bankCategory, _learned:!isIncome&&!!learnedCat, _raw:row };
+        return { date:row["Date"]||"", description:desc, amount:Math.abs(amount), isIncome, balance:parseFloat(row["Balance"])||0, category:isIncome?"Income":autoCategory, invoiceNo:matchedInvoice||"", bankCategory, _learned:!isIncome&&!!learnedCat, _raw:row };
       });
       setCsvRows(rows);
       setTransactions(enriched);
@@ -2423,13 +2462,33 @@ function ClientContactsScreen({ onBack, onHome }) {
     return parsed;
   }
 
+  // Decode quoted-printable encoded text (RFC 2045)
+  function decodeQP(str) {
+    if (!str) return str;
+    // Join soft line breaks (= at end of line, possibly followed by \r\n or \n)
+    let s = str.replace(/=\r?\n/g, "");
+    // Decode =XX hex sequences
+    s = s.replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => {
+      try { return decodeURIComponent("%" + hex); } catch { return ""; }
+    });
+    return s;
+  }
+
   // Parse a vCard (.vcf) file
   function parseVCF(text) {
-    const cards = text.split("BEGIN:VCARD").slice(1);
+    // First, unfold quoted-printable soft line breaks across the whole card text
+    // vCards sometimes fold QP lines with =\r\n or =\n
+    const unfoldedText = text.replace(/=\r?\n[ \t]?/g, "").replace(/\r?\n[ \t]/g, " ");
+    const cards = unfoldedText.split("BEGIN:VCARD").slice(1);
     return cards.map(card => {
       const get = (field) => {
         const m = card.match(new RegExp(field + "[^:]*:([^\\r\\n]+)", "i"));
-        return m ? m[1].trim() : "";
+        if (!m) return "";
+        // Decode quoted-printable if the property line indicates it
+        const propLine = card.match(new RegExp(field + "[^\\r\\n]*", "i"));
+        const isQP = propLine && /ENCODING=QUOTED-PRINTABLE/i.test(propLine[0]);
+        const val = m[1].trim();
+        return isQP ? decodeQP(val) : val;
       };
       const fnVal = get("FN");
       const nameVal = get("N");
@@ -2441,12 +2500,59 @@ function ClientContactsScreen({ onBack, onHome }) {
       const phone = get("TEL");
       const email = get("EMAIL");
       const org = get("ORG");
-      const adr = get("ADR").replace(/;/g, ", ").replace(/^,\s*/, "");
+      const adr = decodeQP(get("ADR")).replace(/;/g, ", ").replace(/^,\s*/, "").replace(/,\s*,/g, ",").replace(/^,\s*/, "").trim();
       if (name || phone || email) {
         return { id: Date.now() + Math.random(), name, phone, email, company: org, addr: adr };
       }
       return null;
     }).filter(Boolean);
+  }
+
+  // Chunked async VCF parser — processes cards in batches to avoid blocking the UI thread.
+  // Calls onProgress(done, total) after each chunk, onDone(parsedArray) when complete.
+  function parseVCFAsync(text, onProgress, onDone) {
+    // First, unfold quoted-printable soft line breaks across the whole card text
+    const unfoldedText = text.replace(/=\r?\n[ \t]?/g, "").replace(/\r?\n[ \t]/g, " ");
+    const rawCards = unfoldedText.split("BEGIN:VCARD").slice(1);
+    const total = rawCards.length;
+    const CHUNK = 100;
+    let idx = 0;
+    const results = [];
+    function processChunk() {
+      const end = Math.min(idx + CHUNK, total);
+      for (; idx < end; idx++) {
+        const card = rawCards[idx];
+        const get = (field) => {
+          const m = card.match(new RegExp(field + "[^:]*:([^\\r\\n]+)", "i"));
+          if (!m) return "";
+          const propLine = card.match(new RegExp(field + "[^\\r\\n]*", "i"));
+          const isQP = propLine && /ENCODING=QUOTED-PRINTABLE/i.test(propLine[0]);
+          const val = m[1].trim();
+          return isQP ? decodeQP(val) : val;
+        };
+        const fnVal = get("FN");
+        const nameVal = get("N");
+        let name = fnVal;
+        if (!name && nameVal) {
+          const parts = nameVal.split(";");
+          name = [parts[1], parts[0]].filter(Boolean).join(" ");
+        }
+        const phone = get("TEL");
+        const email = get("EMAIL");
+        const org = get("ORG");
+        const adr = decodeQP(get("ADR")).replace(/;/g, ", ").replace(/^,\s*/, "").replace(/,\s*,/g, ",").replace(/^,\s*/, "").trim();
+        if (name || phone || email) {
+          results.push({ id: Date.now() + Math.random(), name, phone, email, company: org, addr: adr });
+        }
+      }
+      onProgress(idx, total);
+      if (idx < total) {
+        setTimeout(processChunk, 0); // yield to browser between chunks
+      } else {
+        onDone(results);
+      }
+    }
+    setTimeout(processChunk, 0);
   }
 
   function handleFile(e) {
@@ -2457,26 +2563,40 @@ function ClientContactsScreen({ onBack, onHome }) {
     const reader = new FileReader();
     reader.onload = ev => {
       const text = ev.target.result;
-      let parsed = [];
       if (file.name.toLowerCase().endsWith(".vcf")) {
-        parsed = parseVCF(text);
+        // Use chunked async parser to avoid blocking the UI on large VCF files (1,000+ contacts)
+        setParseError("Importing contacts… please wait");
+        parseVCFAsync(text,
+          (done, total) => { setParseError(`Importing contacts… ${done} of ${total}`); },
+          (parsed) => {
+            setParseError("");
+            if (!parsed.length) { setParseError("No contacts found in the file. Please check it is a valid vCard export."); return; }
+            const existing = contacts;
+            const newOnes = parsed.filter(p => !existing.some(ex =>
+              (p.phone && ex.phone && p.phone === ex.phone) ||
+              (p.email && ex.email && p.email === ex.email)
+            ));
+            const merged = [...existing, ...newOnes];
+            saveContacts(merged);
+            setImportCount(newOnes.length);
+            setTab("list");
+          }
+        );
       } else if (file.name.toLowerCase().endsWith(".csv")) {
-        parsed = parseGoogleCSV(text);
+        const parsed = parseGoogleCSV(text);
+        if (!parsed.length) { setParseError("No contacts found in the file. Please check it is a valid export."); return; }
+        const existing = contacts;
+        const newOnes = parsed.filter(p => !existing.some(ex =>
+          (p.phone && ex.phone && p.phone === ex.phone) ||
+          (p.email && ex.email && p.email === ex.email)
+        ));
+        const merged = [...existing, ...newOnes];
+        saveContacts(merged);
+        setImportCount(newOnes.length);
+        setTab("list");
       } else {
         setParseError("Please upload a .csv (Google Contacts) or .vcf file.");
-        return;
       }
-      if (!parsed.length) { setParseError("No contacts found in the file. Please check it is a valid export."); return; }
-      // Merge — skip duplicates by phone or email
-      const existing = contacts;
-      const newOnes = parsed.filter(p => !existing.some(e =>
-        (p.phone && e.phone && p.phone === e.phone) ||
-        (p.email && e.email && p.email === e.email)
-      ));
-      const merged = [...existing, ...newOnes];
-      saveContacts(merged);
-      setImportCount(newOnes.length);
-      setTab("list");
     };
     reader.readAsText(file);
   }
@@ -2900,7 +3020,7 @@ function HomeScreen({ onNew, onRecords, onGscEmail, onBsEmail, onReport, onLogou
             <span style={{ fontSize:26 }}>👥</span>
           </PillBtn>
         </div>
-        <PillBtn onClick={onCombine} label="Combine PDFs" color="#fff200" iconBg="#1a3a26">
+        <PillBtn onClick={onCombine} label="Combine Certs / Reports" color="#fff200" iconBg="#1a3a26">
           <svg width="30" height="28" viewBox="0 0 52 48" fill="none">
             <rect x="4" y="4" width="26" height="34" rx="3" fill="rgba(255,255,255,0.35)" stroke="white" strokeWidth="2"/>
             <rect x="16" y="10" width="26" height="34" rx="3" fill="rgba(255,255,255,0.6)" stroke="white" strokeWidth="2"/>
@@ -3493,11 +3613,20 @@ function LPGStepDeclaration({ data, onChange, onNext, onBack, onHome }) {
 
 // ─── PDF ──────────────────────────────────────────────────────────────────────
 
-function LPGPDF({ formData, engineerData, onClose, onSave }) {
+function LPGPDF({ formData, engineerData, onClose, onSave, autoDownload, onDownloadDone, onCombineCapture }) {
   const certRef = useRef(null);
   const serviceRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const autoDownloadDoneRef = useRef(null);
+  useEffect(() => {
+    if (onCombineCapture) { onCombineCapture(certRef, "landscape"); return; }
+    if (autoDownload && !autoDownloadDoneRef.current) {
+      autoDownloadDoneRef.current = true;
+      setTimeout(() => { downloadPDF().then(() => { if (onDownloadDone) onDownloadDone(); }); }, 600);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fd = formData || {};
   // Auto-populate dates — fall back to today if blank
@@ -3927,10 +4056,19 @@ function CoolOffStepEngineering({ data, onChange, onNext, onBack, onHome }) {
 
 // ─── PDF ──────────────────────────────────────────────────────────────────────
 
-function CoolOffPDF({ formData, engineerData, onClose, onSave }) {
+function CoolOffPDF({ formData, engineerData, onClose, onSave, autoDownload, onDownloadDone, onCombineCapture }) {
   const certRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const autoDownloadDoneRef = useRef(null);
+  useEffect(() => {
+    if (onCombineCapture) { onCombineCapture(certRef, "portrait"); return; }
+    if (autoDownload && !autoDownloadDoneRef.current) {
+      autoDownloadDoneRef.current = true;
+      setTimeout(() => { downloadPDF().then(() => { if (onDownloadDone) onDownloadDone(); }); }, 600);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fd = formData || {};
   // Auto-populate dates — fall back to today if blank
@@ -4609,11 +4747,20 @@ function BmkStepCompanyDetails({ data, onChange, onNext, onBack, onHome }) {
 
 // ─── BENCHMARK PDF ────────────────────────────────────────────────────────────
 
-function BenchmarkPDF({ formData, engineerData, onClose, onSave }) {
+function BenchmarkPDF({ formData, engineerData, onClose, onSave, autoDownload, onDownloadDone, onCombineCapture }) {
   const certRef = useRef(null);
   const serviceRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const autoDownloadDoneRef = useRef(null);
+  useEffect(() => {
+    if (onCombineCapture) { onCombineCapture(certRef, "portrait"); return; }
+    if (autoDownload && !autoDownloadDoneRef.current) {
+      autoDownloadDoneRef.current = true;
+      setTimeout(() => { downloadPDF().then(() => { if (onDownloadDone) onDownloadDone(); }); }, 600);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fd = formData || {};
   const eng = engineerData || {};
@@ -5348,10 +5495,19 @@ function CGSCStepDeclaration({ data, onChange, onNext, onBack, onHome }) {
 
 // ─── COMMERCIAL GSC PDF ───────────────────────────────────────────────────────
 
-function CommercialGSCPDF({ formData, engineerData, onClose, onSave }) {
+function CommercialGSCPDF({ formData, engineerData, onClose, onSave, autoDownload, onDownloadDone, onCombineCapture }) {
   const certRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const autoDownloadDoneRef = useRef(null);
+  useEffect(() => {
+    if (onCombineCapture) { onCombineCapture(certRef, "landscape"); return; }
+    if (autoDownload && !autoDownloadDoneRef.current) {
+      autoDownloadDoneRef.current = true;
+      setTimeout(() => { downloadPDF().then(() => { if (onDownloadDone) onDownloadDone(); }); }, 600);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fd = formData || {};
   // Auto-populate dates — fall back to today if blank
@@ -5921,10 +6077,19 @@ function GISRStepDeclaration({ data, onChange, onNext, onBack, onHome }) {
 
 // ─── GAS INSTALLATION SAFETY REPORT PDF ──────────────────────────────────────
 
-function GasInstallReportPDF({ formData, engineerData, onClose, onSave }) {
+function GasInstallReportPDF({ formData, engineerData, onClose, onSave, autoDownload, onDownloadDone, onCombineCapture }) {
   const certRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const autoDownloadDoneRef = useRef(null);
+  useEffect(() => {
+    if (onCombineCapture) { onCombineCapture(certRef, "portrait"); return; }
+    if (autoDownload && !autoDownloadDoneRef.current) {
+      autoDownloadDoneRef.current = true;
+      setTimeout(() => { downloadPDF().then(() => { if (onDownloadDone) onDownloadDone(); }); }, 600);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fd = formData || {};
   // Auto-populate dates — fall back to today if blank
@@ -6609,11 +6774,20 @@ function CCIStepDeclaration({ data, onChange, onNext, onBack, onHome }) {
 
 // ─── COMMERCIAL CATERING INSPECTION RECORD PDF + ORCHESTRATOR ────────────────
 
-function CateringInspectionPDF({ formData, engineerData, onClose, onSave }) {
+function CateringInspectionPDF({ formData, engineerData, onClose, onSave, autoDownload, onDownloadDone, onCombineCapture }) {
   const certRef = useRef(null);
   const certRefB = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const autoDownloadDoneRef = useRef(null);
+  useEffect(() => {
+    if (onCombineCapture) { onCombineCapture(certRef, "portrait"); return; }
+    if (autoDownload && !autoDownloadDoneRef.current) {
+      autoDownloadDoneRef.current = true;
+      setTimeout(() => { downloadPDF().then(() => { if (onDownloadDone) onDownloadDone(); }); }, 600);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fd = formData || {};
   // Auto-populate dates — fall back to today if blank
@@ -7394,10 +7568,19 @@ function GTPStepSignature({ data, onChange, onNext, onBack, onHome }) {
 
 // ─── GAS TESTING AND PURGING PDF ─────────────────────────────────────────────
 
-function GasTestPurgePDF({ formData, engineerData, onClose, onSave }) {
+function GasTestPurgePDF({ formData, engineerData, onClose, onSave, autoDownload, onDownloadDone, onCombineCapture }) {
   const certRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const autoDownloadDoneRef = useRef(null);
+  useEffect(() => {
+    if (onCombineCapture) { onCombineCapture(certRef, "portrait"); return; }
+    if (autoDownload && !autoDownloadDoneRef.current) {
+      autoDownloadDoneRef.current = true;
+      setTimeout(() => { downloadPDF().then(() => { if (onDownloadDone) onDownloadDone(); }); }, 600);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fd = formData || {};
   // Auto-populate dates — fall back to today if blank
@@ -8291,7 +8474,7 @@ function AttachmentsStep({ data, onChange, onNext, onBack, onHome, accentColor="
 
   const addFile = (file, type) => {
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { alert("File must be under 5MB"); return; }
+    if (file.size > 20 * 1024 * 1024) { alert("File must be under 20MB"); return; }
     const reader = new FileReader();
     reader.onload = ev => {
       const updated = [...attachments, { name: file.name, type, dataUrl: ev.target.result }];
@@ -8323,7 +8506,7 @@ function AttachmentsStep({ data, onChange, onNext, onBack, onHome, accentColor="
               📄 Import PDF
             </button>
           </div>
-          <input ref={imgRef} type="file" accept="image/*" capture="environment" onChange={e => { addFile(e.target.files?.[0], "image"); e.target.value=""; }} style={{ display:"none" }}/>
+          <input ref={imgRef} type="file" accept="image/*" onChange={e => { addFile(e.target.files?.[0], "image"); e.target.value=""; }} style={{ display:"none" }}/>
           <input ref={pdfRef} type="file" accept="application/pdf" onChange={e => { addFile(e.target.files?.[0], "pdf"); e.target.value=""; }} style={{ display:"none" }}/>
 
           {attachments.length > 0 && (
@@ -8850,7 +9033,7 @@ function GasWorksForm({ data: initialData, onBack, onHome, onSave }) {
   );
 }
 
-function GasWorksPDFPreview({ form, onClose, autoDownload, onDownloadDone }) {
+function GasWorksPDFPreview({ form, onClose, autoDownload, onDownloadDone, onCombineCapture }) {
   const pdfRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const autoDownloadDoneRef = useRef(false);
@@ -8898,6 +9081,7 @@ function GasWorksPDFPreview({ form, onClose, autoDownload, onDownloadDone }) {
   };
 
   useEffect(() => {
+    if (onCombineCapture) { onCombineCapture(pdfRef, "portrait"); return; }
     if (autoDownload && !autoDownloadDoneRef.current) {
       autoDownloadDoneRef.current = true;
       setTimeout(() => { downloadPDF().then(() => { if (onDownloadDone) onDownloadDone(); }); }, 600);
@@ -9781,10 +9965,19 @@ function OptionsMenu({ onPreview, onSave, onCopyToInvoice, onClose }) {
 
 // ─── Shared PDF download utilities ──────────────────────────────────────────
 async function loadPDFLibs() {
-  await Promise.all([
-    new Promise((res,rej)=>{ if(window.html2canvas) return res(); const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); }),
-    new Promise((res,rej)=>{ if(window.jspdf) return res(); const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); }),
-  ]);
+  try {
+    await Promise.all([
+      new Promise((res,rej)=>{ if(window.html2canvas) return res(); const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); }),
+      new Promise((res,rej)=>{ if(window.jspdf) return res(); const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); }),
+    ]);
+  } catch (e) {
+    // Provide a clear, user-friendly message if CDN scripts fail (e.g. offline)
+    throw new Error(
+      "PDF generation requires an internet connection to load required libraries. " +
+      "Please check your connection and try again. " +
+      "If you are offline, reconnect to Wi-Fi or mobile data first."
+    );
+  }
 }
 
 async function captureAndSavePDF(el, filename, orientation="portrait", attachments=null) {
@@ -9851,10 +10044,21 @@ function BatchDownloader({ queue, onDone }) {
   const renderPreview = () => {
     const r = item.record;
     const key = `batch-${currentIdx}`;
-    if (item.type === "gsc") return <PDFPreview key={key} certData={r.certData} appliances={r.appliances} faults={r.faults} finalChecks={r.finalChecks} signatureData={r.signatureData} engineerData={r.engineerData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments}/>;
-    if (item.type === "bs")  return <BSPDFPreview key={key} serviceData={r.serviceData} engineerData={r.bsEngData} signatureData={r.bsSigData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments}/>;
+    if (item.type === "gsc") return <PDFPreview key={key} certData={r.certData} appliances={r.appliances} faults={r.faults} finalChecks={r.finalChecks} signatureData={r.signatureData} engineerData={r.engineerData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments||[]}/>;
+    if (item.type === "bs")  return <BSPDFPreview key={key} serviceData={r.serviceData} engineerData={r.bsEngData} signatureData={r.bsSigData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments||[]}/>;
+    if (item.type === "wn")  return <WNPDFPreview key={key} wnFormData={r.wnFormData} wnEngData={r.wnEngData} wnSigData={r.wnSigData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments||[]}/>;
     if (item.type === "gw")  return <GasWorksPDFPreview key={key} form={r.gwData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
     if (item.type === "gi")  return <GasIsolationPDFPreview key={key} form={r.giData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
+    if (item.type === "leisure_gsc") return <LPGPDF key={key} formData={{...r.form,_titleOverride:"Leisure Industry Gas Safety Record"}} engineerData={r.engineerData} onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
+    if (item.type === "lpg_gsc") return <LPGPDF key={key} formData={r.form} engineerData={r.engineerData} onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
+    if (item.type === "cooling_off") return <CoolOffPDF key={key} formData={r.form} engineerData={r.engineerData} onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
+    if (item.type === "benchmark") return <BenchmarkPDF key={key} formData={r.form} engineerData={r.engineerData} onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
+    if (item.type === "commercial_gsc") return <CommercialGSCPDF key={key} formData={r.form} engineerData={r.engineerData} onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
+    if (item.type === "gas_install_report") return <GasInstallReportPDF key={key} formData={r.form} engineerData={r.engineerData} onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
+    if (item.type === "catering_inspection") return <CateringInspectionPDF key={key} formData={r.form} engineerData={r.engineerData} onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
+    if (item.type === "gas_test_purge") return <GasTestPurgePDF key={key} formData={r.form} engineerData={r.engineerData} onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
+    // Unknown type: skip
+    setTimeout(stableAdvance, 100);
     return null;
   };
 
@@ -9881,7 +10085,7 @@ function BatchDownloader({ queue, onDone }) {
 }
 
 // PDF Preview
-function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, engineerData, onClose, autoDownload, onDownloadDone, attachments }) {
+function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, engineerData, onClose, autoDownload, onDownloadDone, attachments, onCombineCapture }) {
   const certRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const autoDownloadDoneRef = useRef(false);
@@ -9989,6 +10193,7 @@ function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, 
 
   // Auto-download mode (used by batch downloader)
   useEffect(() => {
+    if (onCombineCapture) { onCombineCapture(certRef, "portrait"); return; }
     if (autoDownload && !autoDownloadDoneRef.current) {
       autoDownloadDoneRef.current = true;
       setTimeout(() => { downloadPDF().then(() => { if (onDownloadDone) onDownloadDone(); }); }, 600);
@@ -12557,6 +12762,24 @@ function GenericCertRecordsScreen({ type, records, onBack, onHome, onDelete, onC
 
   if (viewing !== null) {
     const r = typeRecords[viewing];
+    // Route each type to its dedicated full PDF component
+    if (type === "benchmark")
+      return <BenchmarkPDF formData={r.form} engineerData={r.engineerData} onClose={()=>setViewing(null)} onSave={()=>{}}/>;
+    if (type === "leisure_gsc")
+      return <LPGPDF formData={{...r.form, _titleOverride:"Leisure Industry Gas Safety Record"}} engineerData={r.engineerData} onClose={()=>setViewing(null)} onSave={()=>{}}/>;
+    if (type === "lpg_gsc")
+      return <LPGPDF formData={r.form} engineerData={r.engineerData} onClose={()=>setViewing(null)} onSave={()=>{}}/>;
+    if (type === "cooling_off")
+      return <CoolOffPDF formData={r.form} engineerData={r.engineerData} onClose={()=>setViewing(null)} onSave={()=>{}}/>;
+    if (type === "commercial_gsc")
+      return <CommercialGSCPDF formData={r.form} engineerData={r.engineerData} onClose={()=>setViewing(null)} onSave={()=>{}}/>;
+    if (type === "gas_install_report")
+      return <GasInstallReportPDF formData={r.form} engineerData={r.engineerData} onClose={()=>setViewing(null)} onSave={()=>{}}/>;
+    if (type === "catering_inspection")
+      return <CateringInspectionPDF formData={r.form} engineerData={r.engineerData} onClose={()=>setViewing(null)} onSave={()=>{}}/>;
+    if (type === "gas_test_purge")
+      return <GasTestPurgePDF formData={r.form} engineerData={r.engineerData} onClose={()=>setViewing(null)} onSave={()=>{}}/>;
+    // Fallback for any unknown generic type
     return <GenericCertPDF certLabel={r.certLabel} config={config} form={r.form} engineerData={r.engineerData}
       onClose={()=>setViewing(null)} onSave={()=>{}}/>;
   }
@@ -13125,6 +13348,70 @@ function CommissioningRecordsScreen({ records, onBack, onHome, onDelete, onCreat
   );
 }
 
+// ─── Combined GSC + WN / GSC + BS Records Screen ─────────────────────────────
+function CombinedRecordsScreen({ records, type, onBack, onHome, onDelete }) {
+  const [combiningIdx, setCombiningIdx] = useState(null); // index of record being downloaded
+
+  const myRecords = (records || [])
+    .map((r, i) => ({ ...r, _origIdx: i }))
+    .filter(r => r.type === type)
+    .sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+
+  const isWN = type === "gsc_wn_combined";
+  const title = isWN ? "GSC + Warning Notice" : "GSC + Boiler Service";
+  const accent = isWN ? "#b91c1c" : "#1a3a8f";
+
+  // Active combine: build items for CombineRenderer
+  const activeRec = combiningIdx !== null ? myRecords.find(r => r._origIdx === combiningIdx) : null;
+  const combineItems = activeRec ? [
+    { type: activeRec.gscRec?.type || "gsc", record: activeRec.gscRec },
+    { type: isWN ? "wn" : "bs", record: activeRec.secondRec },
+  ] : null;
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:"#f0f4f8", fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title={title} onBack={onBack} />
+      <div style={{ flex:1, overflowY:"auto", padding:"12px 16px 100px" }}>
+        {myRecords.length === 0 ? (
+          <div style={{ textAlign:"center", color:"#aaa", marginTop:60, fontSize:15 }}>No combined records yet</div>
+        ) : myRecords.map((rec) => {
+          const dateStr = rec.savedAt ? new Date(rec.savedAt).toLocaleDateString("en-GB") : "";
+          const isThis = combiningIdx === rec._origIdx;
+          return (
+            <div key={rec._origIdx} style={{ background:"#fff", borderRadius:12, padding:"14px 16px", marginBottom:10, boxShadow:"0 2px 10px rgba(0,0,0,0.07)" }}>
+              <div style={{ fontWeight:700, fontSize:15, color:"#222", marginBottom:2 }}>{rec.label || (isWN ? "GSC + Warning Notice" : "GSC + Boiler Service")}</div>
+              {dateStr && <div style={{ fontSize:12, color:"#999", marginBottom:10 }}>Saved {dateStr}</div>}
+              <div style={{ display:"flex", gap:8 }}>
+                <button
+                  disabled={combiningIdx !== null}
+                  onClick={() => { if (combiningIdx === null) setCombiningIdx(rec._origIdx); }}
+                  style={{ flex:1, padding:"10px", background: isThis ? "#888" : combiningIdx !== null ? "#ccc" : accent, color:"#fff", border:"none", borderRadius:8, fontWeight:700, fontSize:13, cursor: combiningIdx !== null ? "default" : "pointer" }}>
+                  {isThis ? "Building PDF…" : "⬇ Download Combined PDF"}
+                </button>
+                <button
+                  disabled={combiningIdx !== null}
+                  onClick={() => { if (combiningIdx === null && window.confirm("Delete this combined record?")) onDelete(rec._origIdx); }}
+                  style={{ padding:"10px 14px", background:"#fee2e2", color:"#c00", border:"none", borderRadius:8, fontWeight:700, fontSize:13, cursor: combiningIdx !== null ? "default" : "pointer" }}>
+                  🗑
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <BottomBar onHome={onHome} />
+      {/* CombineRenderer runs entirely off-screen — no overlay needed */}
+      {combineItems && (
+        <CombineRenderer
+          items={combineItems}
+          onAllDone={() => setCombiningIdx(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+
 function RecordsScreen({ records, onBack, onHome, onDelete, onImport, onEditGw, onEditGi, invoices, onCreateInvoice, onDeleteInvoice, onMarkPaid, quotes, onDeleteQuote, onConvertQuoteToInvoice, onImportInvoices, onImportQuotes, onImportReports, onImportFolders, engineerData, accountReports, onDeleteReport, yearlyReports, onDeleteYearly, onRebuildYearly, onUpdateReport, gscFolders, onAddFolder, onRenameFolder, onDeleteFolder, onUpdateRecord, profile, onRenew }) {
   const [folder, setFolder] = useState(null);
 
@@ -13140,6 +13427,8 @@ function RecordsScreen({ records, onBack, onHome, onDelete, onImport, onEditGw, 
   if (folder === "commissioning") return <CommissioningRecordsScreen records={records} onBack={()=>setFolder(null)} onHome={onHome} onDelete={onDelete} onCreateInvoice={onCreateInvoice} onUpdateRecord={onUpdateRecord} onRenew={onRenew}/>;
   const GENERIC_CERT_TYPES_EXCL = GENERIC_CERT_TYPES.filter(t=>t!=="benchmark");
   if (GENERIC_CERT_TYPES_EXCL.includes(folder)) return <GenericCertRecordsScreen type={folder} records={records} onBack={()=>setFolder(null)} onHome={onHome} onDelete={onDelete} onCreateInvoice={onCreateInvoice} onUpdateRecord={onUpdateRecord} onRenew={onRenew}/>;
+  if (folder === "gsc_wn_combined") return <CombinedRecordsScreen type="gsc_wn_combined" records={records} onBack={()=>setFolder(null)} onHome={onHome} onDelete={onDelete}/>;
+  if (folder === "gsc_bs_combined") return <CombinedRecordsScreen type="gsc_bs_combined" records={records} onBack={()=>setFolder(null)} onHome={onHome} onDelete={onDelete}/>;
 
   const exportRecords = () => {
     let exportedContacts = [];
@@ -13254,6 +13543,8 @@ function RecordsScreen({ records, onBack, onHome, onDelete, onImport, onEditGw, 
     { id:"inv", label:"Invoices", icon:"💼", count: invCount, color: INV_GREEN_DARK },
     { id:"quotes", label:"Quotes", icon:"📄", count: quoteCount, color: BLUE },
     { id:"reports", label:"Account Reports", icon:"📈", count: reportCount, color: "#7c3aed" },
+    { id:"gsc_wn_combined", label:"GSC + Warning Notice (Combined)", icon:"📑", count: records.filter(r=>r.type==="gsc_wn_combined").length, color:"#b91c1c", desc:"Combined Gas Safety & Warning Notice PDFs" },
+    { id:"gsc_bs_combined", label:"GSC + Boiler Service (Combined)", icon:"📑", count: records.filter(r=>r.type==="gsc_bs_combined").length, color:"#1a3a8f", desc:"Combined Gas Safety & Boiler Service PDFs" },
   ];
 
   return (
@@ -14781,7 +15072,7 @@ function WNOptionsMenu({ onPreview, onSave, onClose }) {
 }
 
 // WN PDF Preview (mirrors PDFPreview)
-function WNPDFPreview({ wnFormData, wnEngData, wnSigData, onClose, autoDownload, onDownloadDone, attachments }) {
+function WNPDFPreview({ wnFormData, wnEngData, wnSigData, onClose, autoDownload, onDownloadDone, attachments, onCombineCapture }) {
   const certRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
 
@@ -14793,6 +15084,7 @@ function WNPDFPreview({ wnFormData, wnEngData, wnSigData, onClose, autoDownload,
   const CERT_YELLOW_WN = "#f5c400";
 
   useEffect(() => {
+    if (onCombineCapture) { onCombineCapture(certRef, "landscape"); return; }
     if (autoDownload) { handleDownload(); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -14991,7 +15283,7 @@ function WNPDFPreview({ wnFormData, wnEngData, wnSigData, onClose, autoDownload,
 }
 
 // BS PDF Preview — Gas Service/Breakdown Record
-function BSPDFPreview({ serviceData, engineerData, signatureData, onClose, autoDownload, onDownloadDone, attachments }) {
+function BSPDFPreview({ serviceData, engineerData, signatureData, onClose, autoDownload, onDownloadDone, attachments, onCombineCapture }) {
   const certRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const autoDownloadDoneRef = useRef(false);
@@ -15033,6 +15325,7 @@ function BSPDFPreview({ serviceData, engineerData, signatureData, onClose, autoD
   };
 
   useEffect(() => {
+    if (onCombineCapture) { onCombineCapture(certRef, "portrait"); return; }
     if (autoDownload && !autoDownloadDoneRef.current) {
       autoDownloadDoneRef.current = true;
       setTimeout(() => { downloadPDF().then(() => { if (onDownloadDone) onDownloadDone(); }); }, 600);
@@ -15207,310 +15500,299 @@ function BSPDFPreview({ serviceData, engineerData, signatureData, onClose, autoD
 
 // ── COMBINE MULTIPLE CERTIFICATES ────────────────────────────────────────────
 
-function CombineCertsScreen({ records, onBack, onHome }) {
-  const [selected, setSelected] = React.useState(new Set());
-  const [generating, setGenerating] = React.useState(false);
-  const [progress, setProgress] = React.useState({ current: 0, total: 0 });
-  const renderContainerRef = React.useRef(null);
+// Helper: captures a DOM element to canvas pages and appends them to an existing jsPDF
+async function captureElToPages(pdf, el, orientation, isFirst) {
+  const isLandscape = orientation === "landscape";
+  const RENDER_WIDTH = isLandscape ? 1240 : 900;
+  const pdfW = isLandscape ? 297 : 210;
+  const pdfH = isLandscape ? 210 : 297;
+  const prev = [el.style.width, el.style.maxWidth, el.style.minWidth];
+  el.style.width = RENDER_WIDTH + "px";
+  el.style.maxWidth = RENDER_WIDTH + "px";
+  el.style.minWidth = RENDER_WIDTH + "px";
+  await new Promise(r => setTimeout(r, 300));
+  const canvas = await window.html2canvas(el, {
+    scale: 2, useCORS: true, logging: false,
+    width: RENDER_WIDTH, height: el.scrollHeight,
+    windowWidth: RENDER_WIDTH, scrollX: 0, scrollY: 0,
+  });
+  el.style.width = prev[0]; el.style.maxWidth = prev[1]; el.style.minWidth = prev[2];
 
-  // Build a flat list of all records with a display label and a unique key
-  const allItems = React.useMemo(() => {
-    return (records || []).map((r, idx) => {
-      let label = "Certificate";
-      let sub = "";
-      if (r.type === "gsc") {
-        label = r.certData?.clientName || r.certData?.instName || "Gas Safety Cert";
-        sub = r.certData?.instAddr1 || r.certData?.clientAddr1 || "";
-      } else if (r.type === "bs") {
-        label = r.serviceData?.clientName || r.serviceData?.instAddr1 || "Boiler Service";
-        sub = r.serviceData?.instAddr1 || r.serviceData?.clientAddr1 || "";
-      } else if (r.type === "wn") {
-        label = r.wnFormData?.instAddr1 || r.wnFormData?.clientName || "Warning Notice";
-        sub = r.wnFormData?.instAddr2 || "";
-      } else if (r.type === "gw") {
-        label = r.gwData?.project || r.gwData?.address || "Gas Works";
-        sub = r.gwData?.address || "";
-      } else if (r.type === "gi") {
-        label = r.giData?.propertyName || r.giData?.contractName || "Gas Isolation";
-        sub = r.giData?.date || "";
-      } else if (r.certLabel) {
-        label = r.form?.clientName || r.certLabel;
-        sub = r.form?.clientAddr || r.form?.clientAddr1 || "";
+  if (isLandscape) {
+    if (!isFirst) pdf.addPage("a4", "landscape");
+    const imgAspect = canvas.width / canvas.height;
+    const pageAspect = pdfW / pdfH;
+    let drawW, drawH, drawX, drawY;
+    if (imgAspect > pageAspect) { drawW = pdfW; drawH = pdfW / imgAspect; drawX = 0; drawY = (pdfH - drawH) / 2; }
+    else { drawH = pdfH; drawW = pdfH * imgAspect; drawX = (pdfW - drawW) / 2; drawY = 0; }
+    pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", drawX, drawY, drawW, drawH);
+  } else {
+    const mmPerPx = pdfW / RENDER_WIDTH / 2;
+    const totalMM = canvas.height * mmPerPx;
+    const pages = Math.ceil(totalMM / pdfH);
+    for (let i = 0; i < pages; i++) {
+      if (!isFirst || i > 0) pdf.addPage("a4", "portrait");
+      const srcY = i * pdfH / mmPerPx;
+      const srcH = Math.min(pdfH / mmPerPx, canvas.height - srcY);
+      const pc = document.createElement("canvas");
+      pc.width = canvas.width; pc.height = Math.round(srcH);
+      pc.getContext("2d").drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+      pdf.addImage(pc.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, pdfW, srcH * mmPerPx);
+    }
+  }
+}
+
+// CombineRenderer: renders one cert at a time off-screen, captures it, then advances
+// Uses same pattern as BatchDownloader
+function CombineRenderer({ items, onAllDone, onProgress }) {
+  const [idx, setIdx] = useState(-1); // -1 = not yet initialised
+  const idxRef = useRef(0);
+  const pdfRef = useRef(null);
+  const doneRef = useRef(false);
+
+  const advance = async (certRef, orientation) => {
+    if (doneRef.current) return;
+    if (!pdfRef.current) return; // guard: jsPDF not yet ready
+    const el = certRef && certRef.current;
+    if (el) {
+      try {
+        await captureElToPages(pdfRef.current, el, orientation || "portrait", idxRef.current === 0);
+        // Append attachments for this cert
+        const r = items[idxRef.current].record;
+        if (r.attachments && r.attachments.length > 0) {
+          await appendAttachmentPages(pdfRef.current, r.attachments, orientation || "portrait");
+        }
+      } catch (e) {
+        console.warn("Combine: failed to capture cert", idxRef.current, e);
       }
-      const dateStr = r.savedAt ? new Date(r.savedAt).toLocaleDateString("en-GB") : "";
-      return { idx, record: r, label, sub, dateStr, type: r.type };
-    });
-  }, [records]);
+    }
+    const next = idxRef.current + 1;
+    idxRef.current = next;
+    if (onProgress) onProgress(next, items.length);
+    if (next >= items.length) {
+      doneRef.current = true;
+      const filename = "combined_certificates_" + new Date().toISOString().slice(0, 10) + ".pdf";
+      try { pdfRef.current.save(filename); } catch(e) { alert("Save failed: " + e.message); }
+      onAllDone();
+    } else {
+      setIdx(next);
+    }
+  };
 
-  // Group by cert type for display
+  useEffect(() => {
+    // Initialise the jsPDF then reveal the first cert by setting idx to 0
+    (async () => {
+      await loadPDFLibs();
+      const { jsPDF } = window.jspdf;
+      pdfRef.current = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      // Only now set idx to 0 — this triggers the first cert to render and call onCombineCapture
+      setIdx(0);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Don't render anything until jsPDF is ready (idx stays -1 until then)
+  if (doneRef.current || idx < 0 || !pdfRef.current) return null;
+
+  const item = items[idx];
+  if (!item) return null;
+  const r = item.record;
+  const rtype = item.type;
+  const key = "combine-" + idx;
+
+  const renderCert = () => {
+    if (rtype === "gsc") return (
+      <PDFPreview key={key}
+        certData={r.certData} appliances={r.appliances} faults={r.faults}
+        finalChecks={r.finalChecks} signatureData={r.signatureData}
+        engineerData={r.engineerData} onClose={()=>{}}
+        autoDownload={false}
+        onCombineCapture={advance}
+        attachments={[]}
+      />
+    );
+    if (rtype === "bs") return (
+      <BSPDFPreview key={key}
+        serviceData={r.serviceData} engineerData={r.bsEngData}
+        signatureData={r.bsSigData} onClose={()=>{}}
+        autoDownload={false}
+        onCombineCapture={advance}
+        attachments={[]}
+      />
+    );
+    if (rtype === "wn") return (
+      <WNPDFPreview key={key}
+        wnFormData={r.wnFormData} wnEngData={r.wnEngData}
+        wnSigData={r.wnSigData} onClose={()=>{}}
+        autoDownload={false}
+        onCombineCapture={advance}
+        attachments={[]}
+      />
+    );
+    if (rtype === "gw") return (
+      <GasWorksPDFPreview key={key} form={r.gwData} onClose={()=>{}}
+        autoDownload={false} onCombineCapture={advance}
+      />
+    );
+    if (rtype === "gi") return (
+      <GasIsolationPDFPreview key={key} form={r.giData} onClose={()=>{}}
+        autoDownload={false} onCombineCapture={advance}
+      />
+    );
+    if (rtype === "leisure_gsc") return (
+      <LPGPDF key={key}
+        formData={{...r.form, _titleOverride:"Leisure Industry Gas Safety Record"}}
+        engineerData={r.engineerData} onClose={()=>{}} onSave={()=>{}}
+        autoDownload={false} onCombineCapture={advance}
+      />
+    );
+    if (rtype === "lpg_gsc") return (
+      <LPGPDF key={key} formData={r.form} engineerData={r.engineerData}
+        onClose={()=>{}} onSave={()=>{}} autoDownload={false} onCombineCapture={advance}
+      />
+    );
+    if (rtype === "cooling_off") return (
+      <CoolOffPDF key={key} formData={r.form} engineerData={r.engineerData}
+        onClose={()=>{}} onSave={()=>{}} autoDownload={false} onCombineCapture={advance}
+      />
+    );
+    if (rtype === "benchmark") return (
+      <BenchmarkPDF key={key} formData={r.form} engineerData={r.engineerData}
+        onClose={()=>{}} onSave={()=>{}} autoDownload={false} onCombineCapture={advance}
+      />
+    );
+    if (rtype === "commercial_gsc") return (
+      <CommercialGSCPDF key={key} formData={r.form} engineerData={r.engineerData}
+        onClose={()=>{}} onSave={()=>{}} autoDownload={false} onCombineCapture={advance}
+      />
+    );
+    if (rtype === "gas_install_report") return (
+      <GasInstallReportPDF key={key} formData={r.form} engineerData={r.engineerData}
+        onClose={()=>{}} onSave={()=>{}} autoDownload={false} onCombineCapture={advance}
+      />
+    );
+    if (rtype === "catering_inspection") return (
+      <CateringInspectionPDF key={key} formData={r.form} engineerData={r.engineerData}
+        onClose={()=>{}} onSave={()=>{}} autoDownload={false} onCombineCapture={advance}
+      />
+    );
+    if (rtype === "gas_test_purge") return (
+      <GasTestPurgePDF key={key} formData={r.form} engineerData={r.engineerData}
+        onClose={()=>{}} onSave={()=>{}} autoDownload={false} onCombineCapture={advance}
+      />
+    );
+    // Unknown type — skip
+    advance(null, "portrait");
+    return null;
+  };
+
+  return (
+    <div style={{ position: "fixed", left: "-9999px", top: 0, width: "960px", overflow: "visible", pointerEvents: "none", zIndex: -1 }}>
+      {renderCert()}
+    </div>
+  );
+}
+
+function CombineCertsScreen({ records, onBack, onHome }) {
+  const [selected, setSelected] = useState(new Set());
+  const [combining, setCombining] = useState(false);
+  const [combineQueue, setCombineQueue] = useState(null);
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
+
   const TYPE_LABELS = {
-    gsc: "Gas Safety Certificate",
-    bs: "Boiler Service Record",
-    wn: "Warning Notice",
+    gsc: "Gas Safety Certificates",
+    bs: "Boiler Service Records",
+    wn: "Warning Notices",
     gw: "Gas Works",
     gi: "Gas Isolation",
     leisure_gsc: "Leisure Gas Safety",
     lpg_gsc: "LPG Gas Safety",
-    cooling_off: "Cooling Off Exemption",
-    benchmark: "Benchmark Checklist",
+    cooling_off: "Cooling Off Exemptions",
+    benchmark: "Benchmark Checklists",
     commercial_gsc: "Commercial Gas Safety",
-    gas_install_report: "Gas Install Report",
-    catering_inspection: "Catering Inspection",
+    gas_install_report: "Gas Install Reports",
+    catering_inspection: "Catering Inspections",
     gas_test_purge: "Gas Test & Purge",
   };
 
   const TYPE_COLORS = {
-    gsc: "#1a6b3a",
-    bs: "#1a3a8f",
-    wn: "#b45309",
-    gw: "#6d28d9",
-    gi: "#0e7490",
-    leisure_gsc: "#1d7a4a",
-    lpg_gsc: "#2563eb",
-    cooling_off: "#0891b2",
-    benchmark: "#6d9b3a",
-    commercial_gsc: "#b45309",
-    gas_install_report: "#374151",
-    catering_inspection: "#7c3aed",
-    gas_test_purge: "#065f46",
+    gsc: "#1a6b3a", bs: "#1a3a8f", wn: "#b45309", gw: "#6d28d9",
+    gi: "#0e7490", leisure_gsc: "#1d7a4a", lpg_gsc: "#2563eb",
+    cooling_off: "#0891b2", benchmark: "#6d9b3a", commercial_gsc: "#b45309",
+    gas_install_report: "#374151", catering_inspection: "#7c3aed", gas_test_purge: "#065f46",
   };
 
-  const grouped = React.useMemo(() => {
-    const groups = {};
-    allItems.forEach(item => {
-      const key = item.type;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(item);
-    });
-    return groups;
-  }, [allItems]);
+  // Build flat list — GSC records have no type field, detect by certData presence
+  const allItems = (records || []).map((r, idx) => {
+    const rtype = r.type || (r.certData ? "gsc" : "unknown");
+    let label = "Certificate", sub = "";
+    if (rtype === "gsc") {
+      label = r.certData?.clientName || r.certData?.instName || "Gas Safety Cert";
+      sub = r.certData?.instAddr1 || r.certData?.clientAddr1 || "";
+    } else if (rtype === "bs") {
+      label = r.serviceData?.clientName || r.serviceData?.instAddr1 || "Boiler Service";
+      sub = r.serviceData?.instAddr1 || "";
+    } else if (rtype === "wn") {
+      label = r.wnFormData?.instAddr1 || r.wnFormData?.clientName || "Warning Notice";
+      sub = r.wnFormData?.instAddr2 || "";
+    } else if (rtype === "gw") {
+      label = r.gwData?.project || r.gwData?.address || "Gas Works";
+      sub = r.gwData?.address || "";
+    } else if (rtype === "gi") {
+      label = r.giData?.propertyName || r.giData?.contractName || "Gas Isolation";
+      sub = r.giData?.date || "";
+    } else if (r.certLabel) {
+      label = r.form?.clientName || r.certLabel;
+      sub = r.form?.clientAddr || r.form?.clientAddr1 || "";
+    }
+    const dateStr = r.savedAt ? new Date(r.savedAt).toLocaleDateString("en-GB") : "";
+    return { idx, record: r, label, sub, dateStr, type: rtype };
+  }).filter(i => i.type !== "unknown");
+
+  // Group by type
+  const grouped = {};
+  allItems.forEach(item => {
+    if (!grouped[item.type]) grouped[item.type] = [];
+    grouped[item.type].push(item);
+  });
 
   const toggleItem = (idx) => {
     setSelected(prev => {
       const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx);
-      else next.add(idx);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
       return next;
     });
   };
 
   const toggleGroup = (typeKey) => {
-    const groupIdxs = (grouped[typeKey] || []).map(i => i.idx);
-    const allSelected = groupIdxs.every(i => selected.has(i));
+    const ids = (grouped[typeKey] || []).map(i => i.idx);
+    const allSel = ids.every(i => selected.has(i));
     setSelected(prev => {
       const next = new Set(prev);
-      if (allSelected) {
-        groupIdxs.forEach(i => next.delete(i));
-      } else {
-        groupIdxs.forEach(i => next.add(i));
-      }
+      if (allSel) ids.forEach(i => next.delete(i));
+      else ids.forEach(i => next.add(i));
       return next;
     });
   };
 
-  // Load libs helper
-  const loadLibs = () => Promise.all([
-    new Promise((res, rej) => {
-      if (window.html2canvas) return res();
-      const s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-      s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    }),
-    new Promise((res, rej) => {
-      if (window.jspdf) return res();
-      const s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-      s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    }),
-  ]);
-
-  // Render a single record's cert HTML into a hidden container and capture to canvas
-  const renderRecordToCanvas = async (item) => {
-    const container = renderContainerRef.current;
-    if (!container) throw new Error("Render container missing");
-
-    // Render the correct PDF preview component
-    const RENDER_WIDTH = 900;
-    let el = null;
-
-    // We create a temporary div inside the container, render JSX into it, capture it
-    const wrapper = document.createElement("div");
-    wrapper.style.position = "absolute";
-    wrapper.style.left = "0";
-    wrapper.style.top = "0";
-    wrapper.style.width = RENDER_WIDTH + "px";
-    wrapper.style.maxWidth = RENDER_WIDTH + "px";
-    wrapper.style.minWidth = RENDER_WIDTH + "px";
-    wrapper.style.background = "#fff";
-    container.appendChild(wrapper);
-
-    await new Promise(resolve => {
-      const r = item.record;
-      let node = null;
-      if (r.type === "gsc") {
-        node = React.createElement(PDFPreview, {
-          certData: r.certData,
-          appliances: r.appliances,
-          faults: r.faults,
-          finalChecks: r.finalChecks,
-          signatureData: r.signatureData,
-          engineerData: r.engineerData,
-          onClose: () => {},
-          attachments: r.attachments,
-        });
-      } else if (r.type === "bs") {
-        node = React.createElement(BSPDFPreview, {
-          serviceData: r.serviceData,
-          engineerData: r.bsEngData,
-          signatureData: r.bsSigData,
-          onClose: () => {},
-          attachments: r.attachments,
-        });
-      } else if (r.type === "wn") {
-        node = React.createElement(WNPDFPreview, {
-          wnFormData: r.wnFormData,
-          wnEngData: r.wnEngData,
-          wnSigData: r.wnSigData,
-          onClose: () => {},
-          attachments: r.attachments,
-        });
-      } else if (r.type === "gw") {
-        node = React.createElement(GasWorksPDFPreview, {
-          form: r.gwData,
-          onClose: () => {},
-        });
-      } else if (r.type === "gi") {
-        node = React.createElement(GasIsolationPDFPreview, {
-          form: r.giData,
-          onClose: () => {},
-        });
-      } else if (r.certLabel) {
-        const config = Object.values(GENERIC_CERT_CONFIGS).find(c => c.type === r.type);
-        if (config) {
-          node = React.createElement(GenericCertPDF, {
-            certLabel: r.certLabel,
-            config,
-            form: r.form,
-            engineerData: r.engineerData,
-            onClose: () => {},
-            onSave: () => {},
-          });
-        }
-      }
-      if (!node) { resolve(); return; }
-      ReactDOM.render(node, wrapper, resolve);
-    });
-
-    // Find the cert content div (exclude the sticky top-bar by looking for a white background div)
-    // We capture the whole wrapper but clip the toolbar by finding the cert ref div
-    el = wrapper.querySelector("[data-certref]") || wrapper.querySelector("div[style*='background:#fff']") || wrapper.querySelector("div[style*='background: #fff']") || wrapper.querySelector("div[style*='background:white']") || wrapper;
-
-    // Force width
-    el.style.width = RENDER_WIDTH + "px";
-    el.style.maxWidth = RENDER_WIDTH + "px";
-    el.style.minWidth = RENDER_WIDTH + "px";
-    await new Promise(r => setTimeout(r, 200));
-
-    const canvas = await window.html2canvas(el, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      width: RENDER_WIDTH,
-      height: el.scrollHeight,
-      windowWidth: RENDER_WIDTH,
-      scrollX: 0,
-      scrollY: 0,
-    });
-
-    // Unmount and remove
-    try { ReactDOM.unmountComponentAtNode(wrapper); } catch(e) {}
-    container.removeChild(wrapper);
-
-    return canvas;
-  };
-
-  const generateCombinedPDF = async () => {
+  const startCombine = () => {
     const selectedItems = allItems.filter(item => selected.has(item.idx));
-    if (selectedItems.length === 0) {
-      alert("Please select at least one certificate.");
-      return;
-    }
-
-    setGenerating(true);
+    if (selectedItems.length === 0) { alert("Please select at least one certificate."); return; }
     setProgress({ current: 0, total: selectedItems.length });
-
-    try {
-      await loadLibs();
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pdfW = 210;
-      const pdfH = 297;
-
-      for (let i = 0; i < selectedItems.length; i++) {
-        const item = selectedItems[i];
-        setProgress({ current: i + 1, total: selectedItems.length });
-
-        try {
-          const canvas = await renderRecordToCanvas(item);
-          if (!canvas) continue;
-
-          // Slice canvas into A4 pages
-          const pageHeightPx = Math.round(canvas.width * (pdfH / pdfW));
-          let y = 0;
-          let firstPageOfCert = true;
-
-          while (y < canvas.height) {
-            const sliceH = Math.min(canvas.height - y, pageHeightPx);
-            const pageCanvas = document.createElement("canvas");
-            pageCanvas.width = canvas.width;
-            pageCanvas.height = sliceH;
-            pageCanvas.getContext("2d").drawImage(
-              canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH
-            );
-            // Add a new page for every page except the very first cert's first page
-            if (i > 0 || !firstPageOfCert) pdf.addPage();
-            pdf.addImage(
-              pageCanvas.toDataURL("image/jpeg", 0.92),
-              "JPEG", 0, 0, pdfW, sliceH * (pdfW / canvas.width)
-            );
-            y += sliceH;
-            firstPageOfCert = false;
-          }
-
-          // Append attachments if present
-          const r = item.record;
-          const attachments = r.attachments || [];
-          if (attachments.length > 0) {
-            await appendAttachmentPages(pdf, attachments, "portrait");
-          }
-        } catch (e) {
-          console.warn("Failed to render cert at index", item.idx, e);
-        }
-      }
-
-      const filename = "combined_certificates_" + new Date().toISOString().slice(0, 10) + ".pdf";
-      pdf.save(filename);
-    } catch (e) {
-      alert("Error generating combined PDF: " + e.message);
-    }
-
-    setGenerating(false);
+    setCombineQueue(selectedItems);
+    setCombining(true);
   };
 
   const selectedCount = selected.size;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#f0f4f8", fontFamily: "'Segoe UI', sans-serif" }}>
-      <Header title="Combine Certificates" onBack={onBack} onHome={onHome} />
+      <Header title="Combine Certs / Reports" onBack={combining ? undefined : onBack} />
 
-      {/* Instruction strip */}
       <div style={{ background: "#03180d", padding: "10px 16px", color: "rgba(255,255,255,0.85)", fontSize: 13 }}>
-        Select certificates from any folder below, then tap <strong style={{ color: "#fff200" }}>Generate Combined PDF</strong>.
+        Select certificates below, then tap <strong style={{ color: "#fff200" }}>Generate Combined PDF</strong>.
       </div>
 
-      {/* Certificate list */}
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px 120px" }}>
         {allItems.length === 0 ? (
           <div style={{ textAlign: "center", color: "#aaa", marginTop: 60, fontSize: 15 }}>No certificates saved yet</div>
@@ -15520,75 +15802,29 @@ function CombineCertsScreen({ records, onBack, onHome }) {
           const groupLabel = TYPE_LABELS[typeKey] || typeKey;
           const allGroupSelected = items.every(i => selected.has(i.idx));
           const someGroupSelected = items.some(i => selected.has(i.idx));
-
           return (
             <div key={typeKey} style={{ marginBottom: 16 }}>
-              {/* Group header */}
-              <div
-                onClick={() => toggleGroup(typeKey)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  background: color, color: "#fff",
-                  borderRadius: 10, padding: "10px 14px",
-                  cursor: "pointer", marginBottom: 6,
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-                  userSelect: "none",
-                }}
-              >
-                <div style={{
-                  width: 22, height: 22, borderRadius: 4,
-                  border: "2px solid rgba(255,255,255,0.8)",
-                  background: allGroupSelected ? "#fff200" : someGroupSelected ? "rgba(255,242,0,0.4)" : "transparent",
-                  flexShrink: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
+              <div onClick={() => toggleGroup(typeKey)}
+                style={{ display: "flex", alignItems: "center", gap: 10, background: color, color: "#fff", borderRadius: 10, padding: "10px 14px", cursor: "pointer", marginBottom: 6, userSelect: "none" }}>
+                <div style={{ width: 22, height: 22, borderRadius: 4, border: "2px solid rgba(255,255,255,0.8)", background: allGroupSelected ? "#fff200" : someGroupSelected ? "rgba(255,242,0,0.4)" : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {allGroupSelected && <svg width="13" height="13" viewBox="0 0 13 13"><polyline points="1,7 5,11 12,2" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                 </div>
                 <span style={{ fontWeight: 700, fontSize: 14, flex: 1 }}>{groupLabel}</span>
                 <span style={{ fontSize: 12, opacity: 0.85 }}>{items.length} cert{items.length !== 1 ? "s" : ""}</span>
               </div>
-
-              {/* Individual items */}
               {items.map(item => {
-                const isSelected = selected.has(item.idx);
+                const isSel = selected.has(item.idx);
                 return (
-                  <div
-                    key={item.idx}
-                    onClick={() => toggleItem(item.idx)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 12,
-                      background: isSelected ? "#e8f5e9" : "#fff",
-                      border: isSelected ? `2px solid ${color}` : "2px solid transparent",
-                      borderRadius: 8, padding: "10px 14px",
-                      marginBottom: 6, marginLeft: 8,
-                      cursor: "pointer",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
-                      transition: "border-color 0.15s, background 0.15s",
-                      userSelect: "none",
-                    }}
-                  >
-                    <div style={{
-                      width: 22, height: 22, borderRadius: 4,
-                      border: `2px solid ${isSelected ? color : "#ccc"}`,
-                      background: isSelected ? color : "transparent",
-                      flexShrink: 0,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      {isSelected && <svg width="13" height="13" viewBox="0 0 13 13"><polyline points="1,7 5,11 12,2" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                  <div key={item.idx} onClick={() => toggleItem(item.idx)}
+                    style={{ display: "flex", alignItems: "center", gap: 12, background: isSel ? "#e8f5e9" : "#fff", border: isSel ? `2px solid ${color}` : "2px solid transparent", borderRadius: 8, padding: "10px 14px", marginBottom: 6, marginLeft: 8, cursor: "pointer", userSelect: "none" }}>
+                    <div style={{ width: 22, height: 22, borderRadius: 4, border: `2px solid ${isSel ? color : "#ccc"}`, background: isSel ? color : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {isSel && <svg width="13" height="13" viewBox="0 0 13 13"><polyline points="1,7 5,11 12,2" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {item.label}
-                      </div>
-                      {item.sub && (
-                        <div style={{ fontSize: 12, color: "#666", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {item.sub}
-                        </div>
-                      )}
+                      <div style={{ fontWeight: 600, fontSize: 14, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</div>
+                      {item.sub && <div style={{ fontSize: 12, color: "#666", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.sub}</div>}
                     </div>
-                    {item.dateStr && (
-                      <div style={{ fontSize: 11, color: "#999", flexShrink: 0 }}>{item.dateStr}</div>
-                    )}
+                    {item.dateStr && <div style={{ fontSize: 11, color: "#999", flexShrink: 0 }}>{item.dateStr}</div>}
                   </div>
                 );
               })}
@@ -15597,88 +15833,172 @@ function CombineCertsScreen({ records, onBack, onHome }) {
         })}
       </div>
 
-      {/* Fixed bottom bar */}
-      <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0,
-        background: "#03180d", padding: "14px 20px",
-        display: "flex", alignItems: "center", gap: 12,
-        boxShadow: "0 -4px 20px rgba(0,0,0,0.3)",
-        zIndex: 100,
-      }}>
+      {/* Bottom action bar */}
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#03180d", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 -4px 20px rgba(0,0,0,0.3)", zIndex: 100 }}>
         <div style={{ flex: 1, color: "rgba(255,255,255,0.8)", fontSize: 13 }}>
-          {selectedCount === 0
-            ? "No certificates selected"
-            : `${selectedCount} certificate${selectedCount !== 1 ? "s" : ""} selected`}
+          {selectedCount === 0 ? "No certificates selected" : `${selectedCount} selected`}
         </div>
-        <button
-          onClick={generateCombinedPDF}
-          disabled={selectedCount === 0 || generating}
-          style={{
-            background: selectedCount === 0 || generating ? "#555" : "#fff200",
-            color: selectedCount === 0 || generating ? "#999" : "#03180d",
-            border: "none", borderRadius: 10,
-            padding: "12px 20px", fontWeight: 800, fontSize: 14,
-            cursor: selectedCount === 0 || generating ? "default" : "pointer",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {generating
-            ? `Generating… (${progress.current}/${progress.total})`
-            : "Generate Combined PDF"}
+        <button onClick={startCombine} disabled={selectedCount === 0 || combining}
+          style={{ background: selectedCount === 0 || combining ? "#555" : "#fff200", color: selectedCount === 0 || combining ? "#999" : "#03180d", border: "none", borderRadius: 10, padding: "12px 20px", fontWeight: 800, fontSize: 14, cursor: selectedCount === 0 || combining ? "default" : "pointer", whiteSpace: "nowrap" }}>
+          Generate Combined PDF
         </button>
       </div>
 
-      {/* Off-screen render container */}
-      <div
-        ref={renderContainerRef}
-        style={{
-          position: "fixed",
-          left: "-9999px",
-          top: 0,
-          width: "920px",
-          overflow: "visible",
-          pointerEvents: "none",
-          zIndex: -1,
-        }}
-      />
-
-      {/* Generating overlay */}
-      {generating && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          zIndex: 9999,
-        }}>
-          <div style={{
-            background: "#fff", borderRadius: 20, padding: "32px 28px",
-            textAlign: "center", maxWidth: 320, width: "88%",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
-          }}>
+      {/* Progress overlay */}
+      {combining && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+          <div style={{ background: "#fff", borderRadius: 20, padding: "32px 28px", textAlign: "center", maxWidth: 320, width: "88%" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>📄</div>
-            <div style={{ fontWeight: 800, fontSize: 17, color: "#222", marginBottom: 8 }}>
-              Building Combined PDF
-            </div>
+            <div style={{ fontWeight: 800, fontSize: 17, color: "#222", marginBottom: 8 }}>Building Combined PDF</div>
             <div style={{ fontSize: 13, color: "#666", marginBottom: 20 }}>
-              Rendering certificate {progress.current} of {progress.total}…
+              Downloading {progress.current} of {progress.total}…
             </div>
             <div style={{ background: "#f0f2f8", borderRadius: 99, height: 8, overflow: "hidden" }}>
-              <div style={{
-                background: "#03180d",
-                height: "100%",
-                width: progress.total > 0 ? Math.round((progress.current / progress.total) * 100) + "%" : "0%",
-                transition: "width 0.4s ease",
-                borderRadius: 99,
-              }} />
-            </div>
-            <div style={{ fontSize: 12, color: "#aaa", marginTop: 8 }}>
-              {progress.current} of {progress.total} complete
+              <div style={{ background: "#03180d", height: "100%", width: progress.total > 0 ? Math.round((progress.current / progress.total) * 100) + "%" : "0%", transition: "width 0.4s ease", borderRadius: 99 }} />
             </div>
           </div>
         </div>
       )}
+
+      {/* CombineRenderer: renders each cert off-screen and builds one combined PDF */}
+      {combining && combineQueue && (
+        <CombineRenderer
+          items={combineQueue}
+          onAllDone={() => { setCombining(false); setCombineQueue(null); }}
+        />
+      )}
     </div>
   );
 }
+
+// CombineRunnerQueue: sequentially renders each cert off-screen using autoDownload,
+// intercepts the download to append pages to a single combined PDF instead.
+function CombineRunnerQueue({ items, onProgress, onDone }) {
+  const [idx, setIdx] = useState(0);
+  const [ready, setReady] = useState(false);
+  const stateRef = useRef({ pdf: null, idx: 0, done: false });
+
+  // Initialise combined PDF on mount
+  useEffect(() => {
+    (async () => {
+      await loadPDFLibs();
+      const { jsPDF } = window.jspdf;
+      stateRef.current.pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      onProgress(0, items.length);
+      setReady(true);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Called by each cert's onDownloadDone after it has finished its own download
+  const advance = () => {
+    if (stateRef.current.done) return;
+    const next = stateRef.current.idx + 1;
+    stateRef.current.idx = next;
+    onProgress(next, items.length);
+    if (next >= items.length) {
+      stateRef.current.done = true;
+      onDone();
+    } else {
+      setIdx(next);
+    }
+  };
+
+  if (!ready || stateRef.current.done) return null;
+  const item = items[idx];
+  if (!item) return null;
+  const r = item.record;
+  const rtype = item.type;
+  const k = "cr-" + idx;
+
+  const renderCert = () => {
+    if (rtype === "gsc") return (
+      <PDFPreview key={k}
+        certData={r.certData} appliances={r.appliances} faults={r.faults}
+        finalChecks={r.finalChecks} signatureData={r.signatureData}
+        engineerData={r.engineerData} onClose={()=>{}}
+        autoDownload onDownloadDone={advance} attachments={r.attachments||[]}
+      />
+    );
+    if (rtype === "bs") return (
+      <BSPDFPreview key={k}
+        serviceData={r.serviceData} engineerData={r.bsEngData}
+        signatureData={r.bsSigData} onClose={()=>{}}
+        autoDownload onDownloadDone={advance} attachments={r.attachments||[]}
+      />
+    );
+    if (rtype === "wn") return (
+      <WNPDFPreview key={k}
+        wnFormData={r.wnFormData} wnEngData={r.wnEngData}
+        wnSigData={r.wnSigData} onClose={()=>{}}
+        autoDownload onDownloadDone={advance} attachments={r.attachments||[]}
+      />
+    );
+    if (rtype === "gw") return (
+      <GasWorksPDFPreview key={k} form={r.gwData} onClose={()=>{}}
+        autoDownload onDownloadDone={advance}
+      />
+    );
+    if (rtype === "gi") return (
+      <GasIsolationPDFPreview key={k} form={r.giData} onClose={()=>{}}
+        autoDownload onDownloadDone={advance}
+      />
+    );
+    if (rtype === "leisure_gsc") return (
+      <LPGPDF key={k}
+        formData={{...r.form, _titleOverride:"Leisure Industry Gas Safety Record"}}
+        engineerData={r.engineerData} onClose={()=>{}} onSave={()=>{}}
+        autoDownload onDownloadDone={advance}
+      />
+    );
+    if (rtype === "lpg_gsc") return (
+      <LPGPDF key={k} formData={r.form} engineerData={r.engineerData}
+        onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={advance}
+      />
+    );
+    if (rtype === "cooling_off") return (
+      <CoolOffPDF key={k} formData={r.form} engineerData={r.engineerData}
+        onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={advance}
+      />
+    );
+    if (rtype === "benchmark") return (
+      <BenchmarkPDF key={k} formData={r.form} engineerData={r.engineerData}
+        onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={advance}
+      />
+    );
+    if (rtype === "commercial_gsc") return (
+      <CommercialGSCPDF key={k} formData={r.form} engineerData={r.engineerData}
+        onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={advance}
+      />
+    );
+    if (rtype === "gas_install_report") return (
+      <GasInstallReportPDF key={k} formData={r.form} engineerData={r.engineerData}
+        onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={advance}
+      />
+    );
+    if (rtype === "catering_inspection") return (
+      <CateringInspectionPDF key={k} formData={r.form} engineerData={r.engineerData}
+        onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={advance}
+      />
+    );
+    if (rtype === "gas_test_purge") return (
+      <GasTestPurgePDF key={k} formData={r.form} engineerData={r.engineerData}
+        onClose={()=>{}} onSave={()=>{}} autoDownload onDownloadDone={advance}
+      />
+    );
+    // Unknown — skip
+    advance();
+    return null;
+  };
+
+  // The off-screen container uses transform to contain fixed-position children
+  return (
+    <div style={{ position: "fixed", left: "-9999px", top: 0, width: "960px", minWidth: "960px", height: "100vh", overflow: "hidden", pointerEvents: "none", zIndex: -1, transform: "translateZ(0)" }}>
+      {renderCert()}
+    </div>
+  );
+}
+
 
 function App({ onLogout }) {
   const currentUser = getCurrentUser();
@@ -15721,6 +16041,10 @@ function App({ onLogout }) {
 
   // ── Renewal handler — pre-populates cert state from existing record ──────────
   const [renewInitData, setRenewInitData] = useState(null);
+
+  // ── Combined PDF source tracking ────────────────────────────────────────────
+  const [wnSourceRec, setWnSourceRec] = useState(null);
+  const [bsSourceRec, setBsSourceRec] = useState(null);
 
   // ── Warning Notice auto-trigger helpers ─────────────────────────────────────
 
@@ -15838,6 +16162,8 @@ function App({ onLogout }) {
         instAddr3:     preload.instAddr3    || "",
         instPostcode:  preload.instPostcode || "",
       }));
+      // Store the source cert so WN save can create a combined record
+      setWnSourceRec(rec);
       setScreen("warningNotice");
       setWnSubScreen("fileRef");
     }
@@ -15972,7 +16298,15 @@ function App({ onLogout }) {
       "The file reference, client details and appliance details will be auto-populated."
     )) {
       const preload = extractBSPreloadData(rec);
-      setServiceData(prev => ({ ...prev, ...preload }));
+      // Reset ALL BS state before navigating to prevent stale data / blank screen
+      setBsShowPDF(false);
+      setBsShowOptions(false);
+      setBsSigData({});
+      setBsAttachments([]);
+      setBsEngData(profileDefaults());
+      setServiceData({ certRef:"", clientName:"", clientAddr1:"", clientAddr2:"", clientAddr3:"", clientPostcode:"", clientTel:"", clientEmail:"", instName:"", instAddr1:"", instAddr2:"", instAddr3:"", instPostcode:"", instTel:"", typeOfWorkService:"N/A", typeOfWorkBreakdown:"N/A", boilerMake:"", boilerModel:"", boilerSerial:"", applianceMake:"", applianceModel:"", applianceSerial:"", coReading:"", co2Reading:"", flueType:"N/A", ventilationSize:"N/A", waterFuelSound:"N/A", electricallyFused:"N/A", correctValving:"N/A", isolationAvailable:"N/A", boilerPlantroom:"N/A", heatExchanger:"N/A", ignition:"N/A", gasValve:"N/A", fan:"N/A", safetyDevice:"N/A", controlBox:"N/A", burnersAndPilot:"N/A", fuelPressure:"N/A", burnerWashed:"N/A", pilotAssembly:"N/A", ignitionSystem:"N/A", burnerFan:"N/A", heatExchangerFlueways:"N/A", fuelElectrical:"N/A", additionalNotes:"", sparesRequired:"", coCo2Ratio:"", dataProtection:false, customerDeclaration:"", ...preload });
+      // Store the source cert so BS save can create a combined record
+      setBsSourceRec(rec);
       setScreen("bs");
       setBsSubScreen("fileRef");
     }
@@ -16435,9 +16769,17 @@ function App({ onLogout }) {
           onPreview={()=>{ setWnShowOptions(false); setWnShowPDF(true); }}
           onSave={()=>{
             const savedAt = new Date().toISOString();
-            setRecords(r=>[...r,{type:"wn",wnFormData,wnEngData,wnSigData,savedAt,attachments:wnAttachments}]);
+            const wnRec = {type:"wn",wnFormData,wnEngData,wnSigData,savedAt,attachments:wnAttachments};
+            setRecords(r=>[...r,wnRec]);
             setWnShowOptions(false);
-            alert("\u2705 Warning Notice saved to Records!");
+            if (wnSourceRec) {
+              const addrLabel = wnFormData.instAddr1 || wnFormData.clientName || "Warning Notice";
+              setRecords(r=>[...r, { type:"gsc_wn_combined", gscRec:wnSourceRec, secondRec:wnRec, label:addrLabel, savedAt }]);
+              setWnSourceRec(null);
+              alert("\u2705 Warning Notice saved! A combined GSC + Warning Notice PDF has been saved to the GSC + Warning Notice (Combined) folder in Records.");
+            } else {
+              alert("\u2705 Warning Notice saved to Records!");
+            }
             setScreen("home"); setWnSubScreen(null);
           }}
           onClose={()=>setWnShowOptions(false)}/>}
@@ -16464,25 +16806,35 @@ function App({ onLogout }) {
       <>
         <StepEngineerDetails data={engineerData} onChange={setEngineerData} onBack={()=>setSubScreen("signature")} onHome={goHome}
           onOptions={()=>setShowOptions(true)}/>
-        {showOptions && <OptionsMenu
-          onPreview={()=>{setShowOptions(false);setShowPDF(true);}}
-          onSave={async ()=>{
-            const savedAt = new Date().toISOString();
-            const _gscRec = {certData,appliances,faults,finalChecks,signatureData,engineerData,savedAt,attachments:gscAttachments};
-            setRecords(r=>[...r,_gscRec]);
-            setShowOptions(false);
-            alert("\u2705 Certificate saved to Records!");
-            checkAndTriggerWN(_gscRec);
-            checkAndTriggerBS(_gscRec);
-          }}
-          onCopyToInvoice={()=>{
-            const savedAt = new Date().toISOString();
-            const rec = {certData,appliances,faults,finalChecks,signatureData,engineerData,savedAt};
-            setRecords(r=>[...r,rec]);
-            setShowOptions(false);
-            setGscInvoiceSource(rec);
-          }}
-          onClose={()=>setShowOptions(false)}/>}
+        {showOptions && (() => {
+          const _needsWN = faults.some(f => f.warningNotice === "Yes");
+          const _needsBS = appliances.some(a => a.applianceServiced === "Yes");
+          const _blocked = _needsWN || _needsBS;
+          const _blockMsg = _needsWN && _needsBS
+            ? "This certificate has a Warning Notice and a serviced appliance. Please use SAVE to complete those certificates first."
+            : _needsWN
+            ? "This certificate has a Warning Notice raised. Please use SAVE — the Warning Notice must be completed before previewing."
+            : "This certificate has a serviced appliance. Please use SAVE — the Boiler Service record must be completed before previewing.";
+          return <OptionsMenu
+            onPreview={_blocked ? ()=>{ setShowOptions(false); alert(_blockMsg); } : ()=>{setShowOptions(false);setShowPDF(true);}}
+            onSave={async ()=>{
+              const savedAt = new Date().toISOString();
+              const _gscRec = {certData,appliances,faults,finalChecks,signatureData,engineerData,savedAt,attachments:gscAttachments};
+              setRecords(r=>[...r,_gscRec]);
+              setShowOptions(false);
+              alert("\u2705 Certificate saved to Records!");
+              checkAndTriggerWN(_gscRec);
+              checkAndTriggerBS(_gscRec);
+            }}
+            onCopyToInvoice={_blocked ? ()=>{ setShowOptions(false); alert(_blockMsg); } : ()=>{
+              const savedAt = new Date().toISOString();
+              const rec = {certData,appliances,faults,finalChecks,signatureData,engineerData,savedAt};
+              setRecords(r=>[...r,rec]);
+              setShowOptions(false);
+              setGscInvoiceSource(rec);
+            }}
+            onClose={()=>setShowOptions(false)}/>;
+        })()}
         {gscInvoiceSource && <InvoiceWizard sourceRecord={gscInvoiceSource} onSave={(invData)=>{ setInvoices(prev=>[...prev,invData]); alert("\u2705 Invoice saved!"); setGscInvoiceSource(null); goHome(); }} onClose={()=>setGscInvoiceSource(null)} invoiceRecords={invoices} profile={userProfile}/>}
       </>
     );
@@ -16506,9 +16858,17 @@ function App({ onLogout }) {
           onPreview={()=>{setBsShowOptions(false);setBsShowPDF(true);}}
           onSave={async ()=>{
             const savedAt = new Date().toISOString();
-            setRecords(r=>[...r,{type:"bs",serviceData,bsSigData,bsEngData,savedAt,attachments:bsAttachments}]);
+            const bsRec = {type:"bs",serviceData,bsSigData,bsEngData,savedAt,attachments:bsAttachments};
+            setRecords(r=>[...r,bsRec]);
             setBsShowOptions(false);
-            alert("\u2705 Service record saved to Records!");
+            if (bsSourceRec) {
+              const addrLabel = serviceData.instAddr1 || serviceData.clientName || "Boiler Service";
+              setRecords(r=>[...r, { type:"gsc_bs_combined", gscRec:bsSourceRec, secondRec:bsRec, label:addrLabel, savedAt }]);
+              setBsSourceRec(null);
+              alert("\u2705 Service record saved! A combined GSC + Boiler Service PDF has been saved to the GSC + Boiler Service (Combined) folder in Records.");
+            } else {
+              alert("\u2705 Service record saved to Records!");
+            }
           }}
           onCopyToInvoice={()=>{
             const savedAt = new Date().toISOString();
@@ -16866,7 +17226,7 @@ function GasIsolationForm({ data: initialData, onBack, onHome, onSave }) {
   );
 }
 
-function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone }) {
+function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone, onCombineCapture }) {
   const pdfRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const autoDownloadDoneRef = useRef(false);
@@ -16909,6 +17269,7 @@ function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone })
   };
 
   useEffect(() => {
+    if (onCombineCapture) { onCombineCapture(pdfRef, "portrait"); return; }
     if (autoDownload && !autoDownloadDoneRef.current) {
       autoDownloadDoneRef.current = true;
       setTimeout(() => { downloadPDF().then(() => { if (onDownloadDone) onDownloadDone(); }); }, 600);
