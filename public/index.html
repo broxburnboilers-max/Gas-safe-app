@@ -9,6 +9,25 @@
     <title>Gas Safety – West Lothian Gas Ltd</title>
   </head>
   <body>
+    <!-- Hidden Netlify form for bot detection (React submits via JS fetch) -->
+    <form name="support-ticket" netlify netlify-honeypot="bot-field" hidden>
+      <input name="bot-field" />
+      <input name="ticket_ref" />
+      <input name="ticket_type" />
+      <input name="screen" />
+      <input name="username" />
+      <input name="engineer_name" />
+      <input name="company_name" />
+      <input name="gas_safe_no" />
+      <input name="contact_name" />
+      <input name="contact_email" />
+      <input name="contact_phone" />
+      <textarea name="description"></textarea>
+      <textarea name="steps_to_reproduce"></textarea>
+      <textarea name="expected_behaviour"></textarea>
+      <input name="screenshot_count" />
+      <input name="date" />
+    </form>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

@@ -2831,52 +2831,39 @@ function HomeScreen({ onNew, onRecords, onGscEmail, onBsEmail, onReport, onLogou
     try {
       const profile = (() => { try { return JSON.parse(localStorage.getItem(sk("user_profile"))||"{}"); } catch { return {}; } })();
       const typeLbl = (TICKET_TYPES.find(t=>t.id===ticketType)||{}).label || ticketType;
-      const body = [
-        `SUPPORT TICKET: ${ref}`,
-        `Type: ${typeLbl}`,
-        `Screen: ${ticketScreen || "Not specified"}`,
-        `User: ${currentUser?.username || "unknown"}`,
-        `Engineer: ${profile.engineerName || "N/A"}`,
-        `Company: ${profile.companyName || "N/A"}`,
-        `Gas Safe No: ${profile.gasSafeNo || "N/A"}`,
-        `Contact Name: ${ticketName || "N/A"}`,
-        `Contact Email: ${ticketEmail || "N/A"}`,
-        `Contact Phone: ${ticketPhone || "N/A"}`,
-        `Date: ${new Date().toLocaleString("en-GB")}`,
-        ``,
-        `DESCRIPTION:`,
-        ticketDesc,
-        ``,
-        ticketSteps ? `STEPS TO REPRODUCE:\n${ticketSteps}` : "",
-        ticketExpected ? `EXPECTED BEHAVIOUR:\n${ticketExpected}` : "",
-        ticketScreenshots.length ? `SCREENSHOTS: ${ticketScreenshots.length} attached` : "",
-      ].filter(Boolean).join("\n");
 
-      // Send via EmailJS
-      const payload = {
-        service_id: EMAILJS_SERVICE_ID,
-        template_id: EMAILJS_TEMPLATE_ID,
-        user_id: EMAILJS_PUBLIC_KEY,
-        template_params: {
-          to_email: "broxburnboilers@gmail.com",
-          username: currentUser?.username || "",
-          engineer_name: profile.engineerName || "",
-          company_name: profile.companyName || "",
-          gas_safe_no: profile.gasSafeNo || "",
-          registered_at: new Date().toLocaleString("en-GB"),
-          subject: `[${ref}] Gas Safe App — ${typeLbl} — ${ticketScreen || "General"}`,
-          message: body,
-        }
-      };
-      await fetch("https://api.emailjs.com/api/v1.0/email/send", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) });
+      // Submit via Netlify Forms (no API keys needed)
+      const formData = new URLSearchParams();
+      formData.append("form-name", "support-ticket");
+      formData.append("ticket_ref", ref);
+      formData.append("ticket_type", typeLbl);
+      formData.append("screen", ticketScreen || "Not specified");
+      formData.append("username", currentUser?.username || "unknown");
+      formData.append("engineer_name", profile.engineerName || "N/A");
+      formData.append("company_name", profile.companyName || "N/A");
+      formData.append("gas_safe_no", profile.gasSafeNo || "N/A");
+      formData.append("contact_name", ticketName || "N/A");
+      formData.append("contact_email", ticketEmail || "N/A");
+      formData.append("contact_phone", ticketPhone || "N/A");
+      formData.append("description", ticketDesc);
+      formData.append("steps_to_reproduce", ticketSteps || "");
+      formData.append("expected_behaviour", ticketExpected || "");
+      formData.append("screenshot_count", String(ticketScreenshots.length));
+      formData.append("date", new Date().toLocaleString("en-GB"));
 
-      // Also save ticket locally for reference
+      await fetch("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData.toString(),
+      });
+
+      // Save ticket locally for reference
       try {
         const tickets = JSON.parse(localStorage.getItem(sk("support_tickets")) || "[]");
         tickets.push({ ref, type: typeLbl, screen: ticketScreen, desc: ticketDesc, email: ticketEmail, name: ticketName, date: new Date().toISOString(), status: "submitted" });
         localStorage.setItem(sk("support_tickets"), JSON.stringify(tickets));
       } catch(e) {}
-    } catch(e) { console.warn("Support ticket email failed:", e); }
+    } catch(e) { console.warn("Support ticket submission failed:", e); }
     setTicketSending(false);
     setTicketDone(true);
   }
