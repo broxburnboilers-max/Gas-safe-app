@@ -2638,10 +2638,11 @@ function ClientContactsScreen({ onBack, onHome }) {
     const cards = unfoldedText.split("BEGIN:VCARD").slice(1);
     return cards.map(card => {
       const get = (field) => {
-        const m = card.match(new RegExp(field + "[^:]*:([^\\r\\n]+)", "i"));
+        // Match field name (possibly with params like ;TYPE=HOME) then colon then value to end of line
+        const m = card.match(new RegExp(field + "[^:]*:([^\r\n]+)", "i"));
         if (!m) return "";
         // Decode quoted-printable if the property line indicates it
-        const propLine = card.match(new RegExp(field + "[^\\r\\n]*", "i"));
+        const propLine = card.match(new RegExp(field + "[^\r\n]*", "i"));
         const isQP = propLine && /ENCODING=QUOTED-PRINTABLE/i.test(propLine[0]);
         const val = m[1].trim();
         return isQP ? decodeQP(val) : val;
@@ -2656,7 +2657,13 @@ function ClientContactsScreen({ onBack, onHome }) {
       const phone = get("TEL");
       const email = get("EMAIL");
       const org = get("ORG");
-      const adr = decodeQP(get("ADR")).replace(/;/g, ", ").replace(/^,\s*/, "").replace(/,\s*,/g, ",").replace(/^,\s*/, "").trim();
+      // vCard ADR structure: PO Box;Extended;Street;City;Region;Postcode;Country
+      const rawAdr = decodeQP(get("ADR"));
+      const adrParts = rawAdr.split(";").map(p => p.trim()).filter(Boolean);
+      // Build a readable address: Street, City, Region, Postcode (skip PO Box/Extended if empty, skip Country)
+      const adr = adrParts.length > 0
+        ? adrParts.slice(0, Math.min(adrParts.length, 6)).filter(Boolean).join(", ")
+        : "";
       if (name || phone || email) {
         return { id: Date.now() + Math.random(), name, phone, email, company: org, addr: adr };
       }
@@ -2679,9 +2686,9 @@ function ClientContactsScreen({ onBack, onHome }) {
       for (; idx < end; idx++) {
         const card = rawCards[idx];
         const get = (field) => {
-          const m = card.match(new RegExp(field + "[^:]*:([^\\r\\n]+)", "i"));
+          const m = card.match(new RegExp(field + "[^:]*:([^\r\n]+)", "i"));
           if (!m) return "";
-          const propLine = card.match(new RegExp(field + "[^\\r\\n]*", "i"));
+          const propLine = card.match(new RegExp(field + "[^\r\n]*", "i"));
           const isQP = propLine && /ENCODING=QUOTED-PRINTABLE/i.test(propLine[0]);
           const val = m[1].trim();
           return isQP ? decodeQP(val) : val;
@@ -2696,7 +2703,12 @@ function ClientContactsScreen({ onBack, onHome }) {
         const phone = get("TEL");
         const email = get("EMAIL");
         const org = get("ORG");
-        const adr = decodeQP(get("ADR")).replace(/;/g, ", ").replace(/^,\s*/, "").replace(/,\s*,/g, ",").replace(/^,\s*/, "").trim();
+        // vCard ADR structure: PO Box;Extended;Street;City;Region;Postcode;Country
+        const rawAdr = decodeQP(get("ADR"));
+        const adrParts = rawAdr.split(";").map(p => p.trim()).filter(Boolean);
+        const adr = adrParts.length > 0
+          ? adrParts.slice(0, Math.min(adrParts.length, 6)).filter(Boolean).join(", ")
+          : "";
         if (name || phone || email) {
           results.push({ id: Date.now() + Math.random(), name, phone, email, company: org, addr: adr });
         }
