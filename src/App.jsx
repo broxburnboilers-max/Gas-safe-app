@@ -11867,7 +11867,7 @@ function BatchDownloader({ queue, onDone }) {
   const renderPreview = () => {
     const r = item.record;
     const key = `batch-${currentIdx}`;
-    if (item.type === "gsc") return <PDFPreview key={key} certData={r.certData} appliances={r.appliances} faults={r.faults} finalChecks={r.finalChecks} signatureData={r.signatureData} engineerData={r.engineerData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments||[]} gscWnData={r.gscWnData||null}/>;
+    if (item.type === "gsc") return <PDFPreview key={key} certData={r.certData} appliances={r.appliances} faults={r.faults} finalChecks={r.finalChecks} signatureData={r.signatureData} engineerData={r.engineerData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments||[]} gscWnData={r.gscWnData||null} gscBsData={r.gscBsData||null}/>;
     if (item.type === "bs")  return <BSPDFPreview key={key} serviceData={r.serviceData} engineerData={r.bsEngData} signatureData={r.bsSigData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments||[]}/>;
     if (item.type === "wn")  return <WNPDFPreview key={key} wnFormData={r.wnFormData} wnEngData={r.wnEngData} wnSigData={r.wnSigData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance} attachments={r.attachments||[]}/>;
     if (item.type === "gw")  return <GasWorksPDFPreview key={key} form={r.gwData} onClose={()=>{}} autoDownload onDownloadDone={stableAdvance}/>;
@@ -11908,12 +11908,14 @@ function BatchDownloader({ queue, onDone }) {
 }
 
 // PDF Preview
-function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, engineerData, onClose, autoDownload, onDownloadDone, attachments, onCombineCapture, gscWnData }) {
+function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, engineerData, onClose, autoDownload, onDownloadDone, attachments, onCombineCapture, gscWnData, gscBsData }) {
   const certRef = useRef(null);
   const wnRef = useRef(null);
+  const bsRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const autoDownloadDoneRef = useRef(false);
-  const hasWN = !!(gscWnData && (gscWnData.make || gscWnData.model || gscWnData.idGasEscape === "YES" || gscWnData.arReason));
+  const hasWN = !!gscWnData;
+  const hasBS = !!gscBsData;
   // Safely parse dates - they may be strings when loaded from localStorage
   const parseDate = (d) => {
     if (!d) return null;
@@ -11993,6 +11995,13 @@ function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, 
         pdf.addPage();
         const wnCanvas = await captureElement(wnRef.current, 1050);
         addCanvasToPage(pdf, wnCanvas, pdfW, pdfH);
+      }
+
+      // Page 3: Boiler Service (if applicable)
+      if (hasBS && bsRef.current) {
+        pdf.addPage();
+        const bsCanvas = await captureElement(bsRef.current, 1240);
+        addCanvasToPage(pdf, bsCanvas, pdfW, pdfH);
       }
 
       // Page 3+: Photos and imported PDFs
@@ -12451,6 +12460,161 @@ function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, 
             {/* WN Footer */}
             <div style={{ textAlign:"center", fontSize:7.5, color:"#666", borderTop:"1px solid #ddd", paddingTop:3 }}>
               This Gas Warning Notice was produced by {wnEng.companyName||""} · Gas Safe Reg: {wnEng.gasId||""} · Tel: {wnEng.companyTel||""}{wnEng.companyWeb ? ` · ${wnEng.companyWeb}` : ""}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Boiler Service page (page 3 when applicable) ── */}
+      {hasBS && (() => {
+        const bsD = gscBsData || {};
+        const bsEng = engineerData || {};
+        const bsTodayStr = new Date().toISOString().slice(0,10).split("-").reverse().join("/");
+        const bd = "1px solid #888";
+        const bd2 = "2px solid #1a3a8f";
+        const cellH = { padding:"3px 5px", border:bd, fontSize:9, fontFamily:"Arial,sans-serif", verticalAlign:"top", lineHeight:1.3 };
+        const hdr = { ...cellH, background:"#111111", color:"#fff", fontWeight:"bold", textAlign:"center", fontSize:8 };
+        const bsChecks = [["Flue:Atmospheric/Fan Assisted/Fan Dilution","flueType"],["Ventilation Size/HL","ventilationSize"],["Water/Fuel-Sound","waterFuelSound"],["Electrically Fused","electricallyFused"],["Correct Valving Arrangements","correctValving"],["Isolation available - electrical/fuel (Within 1 meter)","isolationAvailable"],["Boiler Plantroom Clean And Clear","boilerPlantroom"]];
+        const bsServiceChecks = [["Heat Exchanger","heatExchanger"],["Ignition","ignition"],["Gas Valve","gasValve"],["Fan","fan"],["Safety Device","safetyDevice"],["Control Box","controlBox"],["Burners And Pilot","burnersAndPilot"],["Fuel Pressure And Type","fuelPressure"]];
+        const bsServiceOps = [["Burner Washed And Cleaned","burnerWashed"],["Pilot Assembly Cleaned And Adjusted","pilotAssembly"],["Ignition System Cleaned And Adjusted","ignitionSystem"],["Burner Fan And Airways Cleaned","burnerFan"],["Heat Exchanger/Flueways Clean And Clear","heatExchangerFlueways"],["Fuel And Electrical Supply Connected And Sound","fuelElectrical"]];
+        const bsYnCell = (v) => ({ Yes:"✓", No:"✗", "N/A":"N/A" }[v] || "N/A");
+        const bsCheckRow = ([label, field]) => (
+          <tr key={field}>
+            <td style={{...cellH,fontSize:8}}>{label}</td>
+            <td style={{...cellH,textAlign:"center"}}>{bsD[field]==="Yes"?"✓":""}</td>
+            <td style={{...cellH,textAlign:"center"}}>{bsD[field]==="No"?"✗":""}</td>
+            <td style={{...cellH,textAlign:"center"}}>{(!bsD[field]||bsD[field]==="N/A")?"N/A":""}</td>
+          </tr>
+        );
+        return (
+          <div ref={bsRef} style={{ background:"#fff", margin:"24px auto", width:"100%", maxWidth:"min(1240px, calc(100vw - 32px))", padding:"10px 12px", boxShadow:"0 4px 24px rgba(0,0,0,0.4)", fontFamily:"Arial,Helvetica,sans-serif", fontSize:9, boxSizing:"border-box", color:"#111" }}>
+            {/* BS Header */}
+            <table style={{ width:"100%", borderCollapse:"collapse", marginBottom:4 }}>
+              <tbody><tr>
+                <td style={{ width:"18%", padding:"4px 6px", border:bd2, verticalAlign:"middle", textAlign:"center" }}>
+                  <img src={getCompanyLogo()} style={{ height:50, maxWidth:"100%", objectFit:"contain" }} alt="Company"/>
+                </td>
+                <td style={{ textAlign:"center", padding:"4px 8px", border:bd2, verticalAlign:"middle" }}>
+                  <div style={{ fontSize:16, fontWeight:"bold", color:"#111111", letterSpacing:1 }}>Gas Service/Breakdown Record</div>
+                  <div style={{ fontSize:10, color:"#666", marginTop:2 }}>{bsEng.companyName||""} · Gas Safe Reg. No. {bsEng.gasSafeNo||""}</div>
+                </td>
+                <td style={{ width:"18%", padding:"4px 8px", border:bd2, verticalAlign:"middle" }}>
+                  <div style={{ fontSize:9, color:"#888" }}>Certificate No.</div>
+                  <div style={{ fontSize:11, fontWeight:"bold" }}>{certData.certRef||"—"}</div>
+                  <div style={{ fontSize:9, color:"#888", marginTop:2 }}>Date</div>
+                  <div style={{ fontSize:11, fontWeight:"bold" }}>{bsTodayStr}</div>
+                </td>
+                <td style={{ width:"12%", padding:"4px 6px", border:bd2, verticalAlign:"middle", textAlign:"center" }}>
+                  <img src={GAS_SAFE_LOGO} style={{ height:50, maxWidth:"100%", objectFit:"contain" }} alt="Gas Safe"/>
+                </td>
+              </tr></tbody>
+            </table>
+            {/* Install + Client */}
+            <table style={{ width:"100%", borderCollapse:"collapse", marginBottom:4 }}>
+              <thead><tr>
+                <th style={{ ...hdr, width:"50%", fontSize:10 }}>Installation Address</th>
+                <th style={{ ...hdr, width:"50%", fontSize:10 }}>Client Details</th>
+              </tr></thead>
+              <tbody><tr>
+                <td style={{...cellH,verticalAlign:"top"}}>
+                  <div>{certData.instAddr1||""}</div><div>{certData.instAddr2||""}</div><div>{certData.instAddr3||""}</div>
+                  <div style={{fontWeight:"bold"}}>{certData.instPostcode||""}</div>
+                </td>
+                <td style={{...cellH,verticalAlign:"top"}}>
+                  <div>{certData.clientName||""}</div>
+                  <div>{certData.clientAddr1||""}</div><div>{certData.clientAddr2||""}</div><div>{certData.clientAddr3||""}</div>
+                  <div style={{fontWeight:"bold"}}>{certData.clientPostcode||""}</div>
+                  <div>Tel: {certData.clientTel||""}</div>
+                  <div>Email: {certData.clientEmail||""}</div>
+                </td>
+              </tr></tbody>
+            </table>
+            {/* Appliance Row */}
+            <table style={{ width:"100%", borderCollapse:"collapse", marginBottom:4 }}>
+              <thead><tr>
+                <th style={hdr}>CO/CO2 Ratio</th><th style={hdr}>Service</th><th style={hdr}>Breakdown</th>
+                <th style={hdr}>CO2 %</th><th style={hdr}>CO ppm</th><th style={hdr}>Boiler Make</th>
+                <th style={hdr}>Boiler Model</th><th style={hdr}>Boiler Serial</th><th style={hdr}>App. Make</th>
+                <th style={hdr}>App. Model</th><th style={hdr}>App. Serial</th>
+              </tr></thead>
+              <tbody><tr>
+                {[bsD.coCo2Ratio,bsYnCell(bsD.typeOfWorkService),bsYnCell(bsD.typeOfWorkBreakdown),bsD.co2Reading,bsD.coReading,bsD.boilerMake,bsD.boilerModel,bsD.boilerSerial,bsD.applianceMake,bsD.applianceModel,bsD.applianceSerial].map((v,i)=>(
+                  <td key={i} style={{...cellH,textAlign:"center"}}>{v||""}</td>
+                ))}
+              </tr></tbody>
+            </table>
+            {/* Checks + Notes */}
+            <table style={{ width:"100%", borderCollapse:"collapse", marginBottom:4 }}>
+              <tbody><tr style={{verticalAlign:"top"}}>
+                <td style={{width:"65%",padding:0,border:"none"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",marginBottom:4}}>
+                    <thead><tr><th style={{...hdr,textAlign:"left",width:"65%"}}>Preliminary Checks</th><th style={hdr}>YES</th><th style={hdr}>NO</th><th style={hdr}>N/A</th></tr></thead>
+                    <tbody>{bsChecks.map(bsCheckRow)}</tbody>
+                  </table>
+                  <table style={{width:"100%",borderCollapse:"collapse",marginBottom:4}}>
+                    <thead><tr><th style={{...hdr,textAlign:"left",width:"65%"}}>Service Checks</th><th style={hdr}>YES</th><th style={hdr}>NO</th><th style={hdr}>N/A</th></tr></thead>
+                    <tbody>{bsServiceChecks.map(bsCheckRow)}</tbody>
+                  </table>
+                  <table style={{width:"100%",borderCollapse:"collapse"}}>
+                    <thead><tr><th style={{...hdr,textAlign:"left",width:"65%"}}>Service Operations</th><th style={hdr}>YES</th><th style={hdr}>NO</th><th style={hdr}>N/A</th></tr></thead>
+                    <tbody>{bsServiceOps.map(bsCheckRow)}</tbody>
+                  </table>
+                </td>
+                <td style={{width:"35%",padding:0,border:"none",paddingLeft:4}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",marginBottom:4}}>
+                    <thead><tr><th style={{...hdr,textAlign:"left"}}>Additional Notes</th></tr></thead>
+                    <tbody><tr><td style={{...cellH,height:120,verticalAlign:"top"}}>{bsD.additionalNotes||""}</td></tr></tbody>
+                  </table>
+                  <table style={{width:"100%",borderCollapse:"collapse"}}>
+                    <thead><tr><th style={{...hdr,textAlign:"left"}}>Spares Required</th></tr></thead>
+                    <tbody><tr><td style={{...cellH,height:80,verticalAlign:"top"}}>{bsD.sparesRequired||""}</td></tr></tbody>
+                  </table>
+                </td>
+              </tr></tbody>
+            </table>
+            {/* Engineer Details */}
+            <table style={{width:"100%",borderCollapse:"collapse",marginBottom:4}}>
+              <thead>
+                <tr><th colSpan={7} style={{...hdr,textAlign:"left",fontSize:10}}>Engineers Details</th></tr>
+                <tr><th style={hdr}>Trading Title</th><th style={hdr}>Address</th><th style={hdr}>Gas Safe No</th><th style={hdr}>Gas ID No</th><th style={hdr}>Telephone</th><th style={hdr}>Time of Arrival</th><th style={hdr}>Time of Departure</th></tr>
+              </thead>
+              <tbody><tr>
+                <td style={cellH}>{bsEng.companyName||""}</td>
+                <td style={cellH}>{bsEng.companyAddr||""}{bsEng.companyPostcode?" "+bsEng.companyPostcode:""}</td>
+                <td style={{...cellH,textAlign:"center"}}>{bsEng.gasSafeNo||""}</td>
+                <td style={{...cellH,textAlign:"center"}}>{bsEng.gasId||""}</td>
+                <td style={cellH}>{bsEng.companyTel||""}</td>
+                <td style={{...cellH,textAlign:"center"}}>{bsD.timeArrival||""}</td>
+                <td style={{...cellH,textAlign:"center"}}>{bsD.timeDeparture||""}</td>
+              </tr></tbody>
+            </table>
+            {/* Signatures */}
+            <table style={{width:"100%",borderCollapse:"collapse",marginBottom:4}}>
+              <tbody><tr>
+                <td style={{width:"50%",border:bd,padding:"4px 8px"}}>
+                  <div style={{fontSize:9,color:"#111111",fontWeight:"bold",marginBottom:2}}>Report Issued By</div>
+                  <div style={{fontSize:10}}>{bsEng.engineerName||""}</div>
+                  <div style={{display:"flex",gap:16,marginTop:4}}>
+                    <div>
+                      <div style={{fontSize:8,color:"#888"}}>Signature</div>
+                      <span style={SIG_STYLE}>{bsEng.engineerName||""}</span>
+                    </div>
+                    <div><div style={{fontSize:8,color:"#888"}}>Date</div><div style={{fontSize:10,fontWeight:"bold"}}>{bsTodayStr}</div></div>
+                  </div>
+                </td>
+                <td style={{width:"50%",border:bd,padding:"4px 8px"}}>
+                  <div style={{fontSize:9,color:"#111111",fontWeight:"bold",marginBottom:2}}>Report Received By (Customer)</div>
+                  <div style={{fontSize:9,color:"#555",marginBottom:2}}>Customer Declaration: {bsD.customerDeclaration||""}</div>
+                  <div style={{display:"flex",gap:16,marginTop:4}}>
+                    <div><div style={{fontSize:8,color:"#888"}}>Signature</div><div style={{height:36,borderBottom:"1px solid #999",width:120}}/></div>
+                    <div><div style={{fontSize:8,color:"#888"}}>Date</div><div style={{height:36,borderBottom:"1px solid #999",width:80}}/></div>
+                  </div>
+                </td>
+              </tr></tbody>
+            </table>
+            {/* BS Footer */}
+            <div style={{fontSize:7.5,color:"#888",textAlign:"center",borderTop:"1px solid #ccc",paddingTop:3}}>
+              This gas service/breakdown record was produced by {bsEng.companyName||""} · Gas Safe Registration No. {bsEng.gasSafeNo||""} · {bsEng.companyAddr||""}{bsEng.companyPostcode?" "+bsEng.companyPostcode:""} · Tel: {bsEng.companyTel||""}
             </div>
           </div>
         );
@@ -14306,7 +14470,7 @@ function GasSafetyCertsScreen({ records, onBack, onHome, onDelete, onCreateInvoi
   }
   if (viewing !== null) {
     const r = viewRecords[viewing];
-    return <PDFPreview certData={r.certData} appliances={r.appliances} faults={r.faults} finalChecks={r.finalChecks} signatureData={r.signatureData} engineerData={r.engineerData} onClose={()=>setViewing(null)} attachments={r.attachments} gscWnData={r.gscWnData||null}/>;
+    return <PDFPreview certData={r.certData} appliances={r.appliances} faults={r.faults} finalChecks={r.finalChecks} signatureData={r.signatureData} engineerData={r.engineerData} onClose={()=>setViewing(null)} attachments={r.attachments} gscWnData={r.gscWnData||null} gscBsData={r.gscBsData||null}/>;
   }
 
   const toggleCheck = (i) => setCheckedItems(prev => prev.includes(i) ? prev.filter(x=>x!==i) : [...prev, i]);
@@ -17580,6 +17744,7 @@ function CombineRenderer({ items, onAllDone, onProgress }) {
         onCombineCapture={advance}
         attachments={[]}
         gscWnData={r.gscWnData||null}
+        gscBsData={r.gscBsData||null}
       />
     );
     if (rtype === "bs") return (
@@ -17890,6 +18055,7 @@ function CombineRunnerQueue({ items, onProgress, onDone }) {
         engineerData={r.engineerData} onClose={()=>{}}
         autoDownload onDownloadDone={advance} attachments={r.attachments||[]}
         gscWnData={r.gscWnData||null}
+        gscBsData={r.gscBsData||null}
       />
     );
     if (rtype === "bs") return (
@@ -17986,6 +18152,8 @@ function App({ onLogout }) {
   const [wnAttachments, setWnAttachments] = useState([]);
   // WN data embedded in GSC flow (when appliance has warning notice)
   const [gscWnData, setGscWnData] = useState({ make:"", model:"", type:"", serialNo:"", installationDetails:"", locationRoom:"", idGasEscape:"NO", idDisconnected:"NA", idRefused:"NO", gasEmergencyRef:"", arReason:"", arTurnedOff:"NO", arRefused:"NO", arTurningOffNoHelp:"NO", contactName:"", contactTel:"", riddor:"NO", remedialAction:"" });
+  // BS data embedded in GSC flow (when appliance is serviced)
+  const [gscBsData, setGscBsData] = useState({ certRef:"", clientName:"", clientAddr1:"", clientAddr2:"", clientAddr3:"", clientPostcode:"", clientTel:"", clientEmail:"", instName:"", instAddr1:"", instAddr2:"", instAddr3:"", instPostcode:"", instTel:"", typeOfWorkService:"N/A", typeOfWorkBreakdown:"N/A", boilerMake:"", boilerModel:"", boilerSerial:"", applianceMake:"", applianceModel:"", applianceSerial:"", coReading:"", co2Reading:"", flueType:"N/A", ventilationSize:"N/A", waterFuelSound:"N/A", electricallyFused:"N/A", correctValving:"N/A", isolationAvailable:"N/A", boilerPlantroom:"N/A", heatExchanger:"N/A", ignition:"N/A", gasValve:"N/A", fan:"N/A", safetyDevice:"N/A", controlBox:"N/A", burnersAndPilot:"N/A", fuelPressure:"N/A", burnerWashed:"N/A", pilotAssembly:"N/A", ignitionSystem:"N/A", burnerFan:"N/A", heatExchangerFlueways:"N/A", fuelElectrical:"N/A", additionalNotes:"", sparesRequired:"", coCo2Ratio:"", dataProtection:false, customerDeclaration:"" });
   const [editIndex, setEditIndex] = useState(null);
   const [showOptions, setShowOptions] = useState(false);
   const [showPDF, setShowPDF] = useState(false);
@@ -18516,7 +18684,7 @@ function App({ onLogout }) {
       onBack={() => { setSubScreen("faultList"); setEditIndex(null); }}/>;
   }
 
-  if (showPDF) return <PDFPreview certData={certData} appliances={appliances} faults={faults} finalChecks={finalChecks} signatureData={signatureData} engineerData={engineerData} onClose={()=>setShowPDF(false)} attachments={gscAttachments} gscWnData={faults.some(f => f.warningNotice === "Yes") ? gscWnData : null}/>;
+  if (showPDF) return <PDFPreview certData={certData} appliances={appliances} faults={faults} finalChecks={finalChecks} signatureData={signatureData} engineerData={engineerData} onClose={()=>setShowPDF(false)} attachments={gscAttachments} gscWnData={faults.some(f => f.warningNotice === "Yes") ? gscWnData : null} gscBsData={appliances.some(a => a.applianceServiced === "Yes") ? gscBsData : null}/>;
 
   if (screen === "login") return null; // handled by AppWithAuth wrapper
   if (screen === "records") return <RecordsScreen records={records} onBack={()=>setScreen("home")} onHome={goHome} onDelete={(i)=>setRecords(r=>r.filter((_,idx)=>idx!==i))} onImport={(imported)=>setRecords(prev=>{
@@ -18776,36 +18944,43 @@ function App({ onLogout }) {
     if (subScreen === "finalChecks") return <StepFinalChecks data={finalChecks} onChange={setFinalChecks} onNext={()=>setSubScreen("attachments")} onBack={()=>setSubScreen("faultList")} onHome={goHome}/>;
     if (subScreen === "attachments") {
       const _hasWN = faults.some(f => f.warningNotice === "Yes");
-      return <AttachmentsStep data={{attachments:gscAttachments}} onChange={d=>setGscAttachments(d.attachments||[])} onBack={()=>setSubScreen("finalChecks")} onHome={goHome} onNext={()=>setSubScreen(_hasWN ? "wnDetails" : "signature")} nextLabel={_hasWN ? "Next: Warning Notice" : "Next: Signatures"}/>;
+      const _hasBS = appliances.some(a => a.applianceServiced === "Yes");
+      return <AttachmentsStep data={{attachments:gscAttachments}} onChange={d=>setGscAttachments(d.attachments||[])} onBack={()=>setSubScreen("finalChecks")} onHome={goHome} onNext={()=>setSubScreen(_hasWN ? "wnDetails" : (_hasBS ? "bsApplianceDetails" : "signature"))} nextLabel={_hasWN ? "Next: Warning Notice" : (_hasBS ? "Next: Boiler Service" : "Next: Signatures")}/>;
     }
-    if (subScreen === "wnDetails") return <WNStepNoticeDetails data={gscWnData} onChange={setGscWnData} onNext={()=>setSubScreen("signature")} onBack={()=>setSubScreen("attachments")} onHome={goHome} embeddedMode={true}/>;
+    if (subScreen === "wnDetails") {
+      const _hasBS = appliances.some(a => a.applianceServiced === "Yes");
+      return <WNStepNoticeDetails data={gscWnData} onChange={setGscWnData} onNext={()=>setSubScreen(_hasBS ? "bsApplianceDetails" : "signature")} onBack={()=>setSubScreen("attachments")} onHome={goHome} embeddedMode={true}/>;
+    }
+    if (subScreen === "bsApplianceDetails") return <BSStepApplianceDetails data={gscBsData} onChange={setGscBsData} onBack={()=>{ const _hasWN = faults.some(f => f.warningNotice === "Yes"); setSubScreen(_hasWN ? "wnDetails" : "attachments"); }} onHome={goHome} onNext={()=>setSubScreen("bsPrelimChecks")}/>;
+    if (subScreen === "bsPrelimChecks") return <BSStepPrelimChecks data={gscBsData} onChange={setGscBsData} onBack={()=>setSubScreen("bsApplianceDetails")} onHome={goHome} onNext={()=>setSubScreen("bsNotes")}/>;
+    if (subScreen === "bsNotes") return <BSStepNotes data={gscBsData} onChange={setGscBsData} onBack={()=>setSubScreen("bsPrelimChecks")} onHome={goHome} onNext={()=>setSubScreen("signature")}/>;
     if (subScreen === "signature") {
       const _hasWN = faults.some(f => f.warningNotice === "Yes");
-      return <StepSignature data={signatureData} onChange={setSignatureData} onNext={()=>setSubScreen("engineerDetails")} onBack={()=>setSubScreen(_hasWN ? "wnDetails" : "attachments")} onHome={goHome}/>;
+      const _hasBS = appliances.some(a => a.applianceServiced === "Yes");
+      return <StepSignature data={signatureData} onChange={setSignatureData} onNext={()=>setSubScreen("engineerDetails")} onBack={()=>setSubScreen(_hasBS ? "bsNotes" : (_hasWN ? "wnDetails" : "attachments"))} onHome={goHome}/>;
     }
     if (subScreen === "engineerDetails") return (
       <>
         <StepEngineerDetails data={engineerData} onChange={setEngineerData} onBack={()=>setSubScreen("signature")} onHome={goHome}
           onOptions={()=>setShowOptions(true)}/>
         {showOptions && (() => {
-          const _needsBS = appliances.some(a => a.applianceServiced === "Yes");
-          const _blocked = _needsBS;
-          const _blockMsg = "This certificate has a serviced appliance. Please use SAVE — the Boiler Service record must be completed before previewing.";
+          const _blocked = false;
           return <OptionsMenu
-            onPreview={_blocked ? ()=>{ setShowOptions(false); alert(_blockMsg); } : ()=>{setShowOptions(false);setShowPDF(true);}}
+            onPreview={()=>{setShowOptions(false);setShowPDF(true);}}
             onSave={async ()=>{
               const savedAt = new Date().toISOString();
               const _hasWN = faults.some(f => f.warningNotice === "Yes");
-              const _gscRec = {certData,appliances,faults,finalChecks,signatureData,engineerData,savedAt,attachments:gscAttachments, ...(_hasWN ? {gscWnData} : {})};
+              const _hasBS = appliances.some(a => a.applianceServiced === "Yes");
+              const _gscRec = {certData,appliances,faults,finalChecks,signatureData,engineerData,savedAt,attachments:gscAttachments, ...(_hasWN ? {gscWnData} : {}), ...(_hasBS ? {gscBsData} : {})};
               setRecords(r=>[...r,_gscRec]);
               setShowOptions(false);
               alert("\u2705 Certificate saved to Records!");
-              checkAndTriggerBS(_gscRec);
             }}
-            onCopyToInvoice={_blocked ? ()=>{ setShowOptions(false); alert(_blockMsg); } : ()=>{
+            onCopyToInvoice={()=>{
               const savedAt = new Date().toISOString();
               const _hasWN = faults.some(f => f.warningNotice === "Yes");
-              const rec = {certData,appliances,faults,finalChecks,signatureData,engineerData,savedAt, ...(_hasWN ? {gscWnData} : {})};
+              const _hasBS = appliances.some(a => a.applianceServiced === "Yes");
+              const rec = {certData,appliances,faults,finalChecks,signatureData,engineerData,savedAt, ...(_hasWN ? {gscWnData} : {}), ...(_hasBS ? {gscBsData} : {})};
               setRecords(r=>[...r,rec]);
               setShowOptions(false);
               setGscInvoiceSource(rec);
