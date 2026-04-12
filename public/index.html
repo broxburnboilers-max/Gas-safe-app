@@ -10,7 +10,7 @@
   </head>
   <body>
     <!-- Hidden Netlify form for bot detection (React submits via JS fetch) -->
-    <form name="support-ticket" netlify netlify-honeypot="bot-field" hidden>
+    <form name="support-ticket" data-netlify="true" netlify-honeypot="bot-field" hidden>
       <input name="bot-field" />
       <input name="ticket_ref" />
       <input name="ticket_type" />
