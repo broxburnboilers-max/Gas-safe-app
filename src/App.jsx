@@ -165,8 +165,8 @@ function LandingScreen({ onLogin, onCreateProfile }) {
         </p>
         {/* Pricing pill */}
         <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(255,242,0,0.12)", border:"1.5px solid rgba(255,242,0,0.5)", borderRadius:50, padding:"8px 18px", margin:"0 0 14px" }}>
-          <span style={{ color:"#fff200", fontSize:18, fontWeight:900 }}>£4.99</span>
-          <span style={{ color:"rgba(255,255,255,0.8)", fontSize:12 }}>/ month · unlimited certificates</span>
+          <span style={{ color:"#fff200", fontSize:18, fontWeight:900 }}>From £7.50</span>
+          <span style={{ color:"rgba(255,255,255,0.8)", fontSize:12 }}>/ month · all certificate types</span>
         </div>
         <a href="/explainer" style={{ color:"rgba(255,255,255,0.65)", fontSize:12, margin:"0 0 18px", display:"block", textDecoration:"underline", textUnderlineOffset:3, cursor:"pointer" }}>Want to know how it works? →</a>
         <div style={{ display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
@@ -197,7 +197,7 @@ function LandingScreen({ onLogin, onCreateProfile }) {
           <div style={{ background:"#fffbeb", border:"1px solid #f5c400", borderRadius:10, padding:"12px 14px", marginBottom:16, display:"flex", gap:10, alignItems:"flex-start" }}>
             <span style={{ fontSize:16, flexShrink:0 }}>💡</span>
             <div style={{ fontSize:12, color:"#444", lineHeight:1.6 }}>
-              <strong>At just £4.99/month</strong> the app pays for itself the moment you skip your first box of paper certificates. Add the saving on your annual accountant bill and it's a no-brainer.
+              <strong>From just £7.50/month</strong> the app pays for itself the moment you skip your first box of paper certificates. Add the saving on your annual accountant bill and it's a no-brainer.
             </div>
           </div>
         </div>
@@ -2238,6 +2238,16 @@ function ProfileEditScreen({ profile, onSave, onBack, onHome }) {
 // ─── Payment Screen ───────────────────────────────────────────────────────────
 function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
   const [step, setStep] = useState("paywall"); // "paywall" | "form" | "done"
+  const [selectedPlan, setSelectedPlan] = useState("pro"); // "lite" | "pro" | "proplus"
+  const [billingCycle, setBillingCycle] = useState("monthly"); // "monthly" | "annual"
+  const PLANS = {
+    lite:    { name:"Lite",  monthly:7.50,   annual:75,    features:["All Certificate Types","Up to 20 Certificates / Month","Invoicing & Quotes","Gas Rate Calculator","Job Sheets","Photographic Evidence"], excluded:["Accounts Feature","Annual Reminders","Multiple Engineers"] },
+    pro:     { name:"Pro",   monthly:14.50,  annual:135,   features:["Everything in Lite","Unlimited Certificates","Accounts Feature","Annual Reminders","Business Analytics","Customer Database"], excluded:["Multiple Engineers"] },
+    proplus: { name:"Pro+",  monthly:118.50, annual:175,   features:["Everything in Pro","Multiple Engineers","Unlimited Everything","Priority Support"], excluded:[] },
+  };
+  const plan = PLANS[selectedPlan];
+  const price = billingCycle==="monthly" ? plan.monthly : plan.annual;
+  const priceLabel = billingCycle==="monthly" ? `\u00a3${price.toFixed(2)}/mo` : `\u00a3${price}/yr`;
   const [form, setForm] = useState({ accountName:"", sortCode:"", accountNumber:"", email:"" });
 
   useEffect(() => {
@@ -2288,7 +2298,7 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
           account_number: form.accountNumber.replace(/[^0-9]/g,""),
           contact_email: form.email,
           subject: "New Direct Debit Mandate — Gas Safe App",
-          message: `New payment mandate submitted:\n\nUser: ${currentUser?.username}\nEngineer: ${profile.engineerName}\nCompany: ${profile.companyName}\nGas Safe No: ${profile.gasSafeNo}\n\nBank Details:\nAccount Name: ${form.accountName}\nSort Code: ${form.sortCode.replace(/[^0-9]/g,"").replace(/(\d{2})(\d{2})(\d{2})/,"$1-$2-$3")}\nAccount Number: ${form.accountNumber.replace(/[^0-9]/g,"")}\nContact Email: ${form.email}\n\nPlease set up the £4.99/month Direct Debit and then run:\nunlockUser("${currentUser?.username}") in the user\'s browser console, or update their profile directly.`,
+          message: `New payment mandate submitted:\n\nUser: ${currentUser?.username}\nEngineer: ${profile.engineerName}\nCompany: ${profile.companyName}\nGas Safe No: ${profile.gasSafeNo}\nPlan: ${plan.name} (${billingCycle}) — ${priceLabel}\n\nBank Details:\nAccount Name: ${form.accountName}\nSort Code: ${form.sortCode.replace(/[^0-9]/g,"").replace(/(\d{2})(\d{2})(\d{2})/,"$1-$2-$3")}\nAccount Number: ${form.accountNumber.replace(/[^0-9]/g,"")}\nContact Email: ${form.email}\n\nPlease set up the Direct Debit and then run:\nunlockUser("${currentUser?.username}") in the user\'s browser console, or update their profile directly.`,
         }
       };
       const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) });
@@ -2307,7 +2317,7 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
         <div style={{ fontSize:56, marginBottom:16 }}>✅</div>
         <h2 style={{ fontSize:22, fontWeight:700, color:"#03180d", margin:"0 0 12px" }}>Payment details received</h2>
         <p style={{ fontSize:14, color:"#555", lineHeight:1.7, margin:"0 0 24px" }}>
-          Thank you! Your Direct Debit mandate details have been sent to us. We'll set up your £4.99/month subscription and restore full access within 24 hours.
+          Thank you! Your Direct Debit mandate details have been sent to us. We'll set up your {plan.name} ({priceLabel}) subscription and restore full access within 24 hours.
         </p>
         <p style={{ fontSize:13, color:"#888", margin:"0 0 24px" }}>If you have any questions email <strong>westlothiangas@gmail.com</strong></p>
         <button onClick={onLogout} style={{ width:"100%", padding:14, background:"#03180d", color:"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Sign Out</button>
@@ -2326,7 +2336,7 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
           <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"12px 16px", background:"#f0f9f0", borderRadius:10, border:"1px solid #c3e6cb" }}>
             <div style={{ fontSize:28 }}>🔒</div>
             <div>
-              <div style={{ fontWeight:700, fontSize:14, color:"#1d4a2e" }}>£4.99 / month</div>
+              <div style={{ fontWeight:700, fontSize:14, color:"#1d4a2e" }}>{plan.name} — {priceLabel}</div>
               <div style={{ fontSize:12, color:"#555", lineHeight:1.5 }}>Your bank details are sent directly to us to set up your Direct Debit. We never store card details.</div>
             </div>
           </div>
@@ -2341,7 +2351,7 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
           {inp("email","your@email.com","email")}
           {error && <div style={{ color:"#d32f2f", fontSize:13, marginBottom:12 }}>{error}</div>}
           <p style={{ fontSize:11, color:"#999", lineHeight:1.6, marginBottom:16 }}>
-            By submitting you authorise West Lothian Gas Ltd to collect £4.99/month by Direct Debit under the Direct Debit Guarantee. You can cancel at any time by contacting us.
+            By submitting you authorise West Lothian Gas Ltd to collect {priceLabel} by Direct Debit under the Direct Debit Guarantee. You can cancel at any time by contacting us.
           </p>
           {(()=>{ const ok = !!(form.accountName.trim() && form.sortCode.replace(/\D/g,"").length===6 && form.accountNumber.replace(/\D/g,"").length===8 && /\S+@\S+\.\S+/.test(form.email)); return (
             <button onClick={handleSubmit} disabled={submitting}
@@ -2360,6 +2370,20 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
 
   // Paywall / trial expired screen
   const isPending = trialStatus === "pending";
+  const planCard = (key, badge) => {
+    const p = PLANS[key];
+    const amt = billingCycle==="monthly" ? p.monthly : p.annual;
+    const cadence = billingCycle==="monthly" ? "/mo" : "/yr";
+    const sel = selectedPlan===key;
+    return (
+      <div onClick={()=>setSelectedPlan(key)} style={{ flex:1, cursor:"pointer", border:sel?"2.5px solid #fff200":"2px solid rgba(255,255,255,0.2)", borderRadius:14, padding:"14px 10px", background:sel?"rgba(255,242,0,0.08)":"rgba(255,255,255,0.04)", transition:"all 0.2s", position:"relative", textAlign:"center" }}>
+        {badge && <div style={{ position:"absolute", top:-10, left:"50%", transform:"translateX(-50%)", background:"#fff200", color:"#03180d", fontSize:9, fontWeight:800, padding:"3px 10px", borderRadius:20, whiteSpace:"nowrap" }}>{badge}</div>}
+        <div style={{ color:sel?"#fff200":"rgba(255,255,255,0.5)", fontSize:11, fontWeight:700, marginBottom:4, textTransform:"uppercase", letterSpacing:1 }}>{p.name}</div>
+        <div style={{ color:"#fff", fontSize:22, fontWeight:900 }}>£{amt%1===0?amt:amt.toFixed(2)}</div>
+        <div style={{ color:"rgba(255,255,255,0.5)", fontSize:11 }}>{cadence} + VAT</div>
+      </div>
+    );
+  };
   return (
     <div style={{ minHeight:"100dvh", background:`linear-gradient(135deg,${DARK_BLUE},${BLUE})`, display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
       <div style={{ padding:"20px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -2369,44 +2393,67 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
         </div>
         <button onClick={onLogout} style={{ background:"rgba(255,255,255,0.15)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:8, padding:"6px 14px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>Sign Out</button>
       </div>
-      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:"16px 24px 32px" }}>
-        <div style={{ background:"#fff", borderRadius:20, padding:"36px 28px", width:"100%", maxWidth:400, textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
-          {isPending ? (<>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 32px" }}>
+        {isPending ? (
+          <div style={{ background:"#fff", borderRadius:20, padding:"36px 28px", maxWidth:400, margin:"0 auto", textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
             <div style={{ fontSize:48, marginBottom:12 }}>⏳</div>
             <h2 style={{ fontSize:22, fontWeight:700, color:"#03180d", margin:"0 0 12px" }}>Awaiting approval</h2>
             <p style={{ fontSize:14, color:"#555", lineHeight:1.7, margin:"0 0 20px" }}>
               We've received your Direct Debit details. Your account will be fully unlocked within 24 hours once we've processed your setup. If you have any questions email <strong>westlothiangas@gmail.com</strong>
             </p>
-          </>) : (<>
-            <img src={GSR_LOGO} style={{ height:56, objectFit:"contain", marginBottom:16 }} alt="Gas Safe"/>
-            <h2 style={{ fontSize:22, fontWeight:700, color:"#03180d", margin:"0 0 10px" }}>Your free trial has ended</h2>
-            <p style={{ fontSize:14, color:"#555", lineHeight:1.7, margin:"0 0 6px" }}>
-              Thank you for trying the Gas Safe Engineer App.
-            </p>
-            <div style={{ background:"#f0f9f0", border:"1px solid #c3e6cb", borderRadius:12, padding:"14px 16px", margin:"16px 0", textAlign:"left" }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                <span style={{ fontSize:14, fontWeight:700, color:"#03180d" }}>Full access subscription</span>
-                <span style={{ fontSize:20, fontWeight:900, color:"#03180d" }}>£4.99<span style={{ fontSize:13, fontWeight:400, color:"#666" }}>/mo</span></span>
+            <button onClick={onLogout} style={{ background:"none", border:"none", color:"#999", fontSize:13, cursor:"pointer", textDecoration:"underline" }}>Sign out</button>
+          </div>
+        ) : (
+          <div style={{ maxWidth:440, margin:"0 auto" }}>
+            <div style={{ textAlign:"center", marginBottom:20 }}>
+              <img src={GSR_LOGO} style={{ height:48, objectFit:"contain", marginBottom:10 }} alt="Gas Safe"/>
+              <h2 style={{ fontSize:20, fontWeight:700, color:"#fff", margin:"0 0 6px" }}>Your free trial has ended</h2>
+              <p style={{ fontSize:13, color:"rgba(255,255,255,0.7)", margin:0 }}>Choose a plan to continue</p>
+            </div>
+
+            {/* Billing toggle */}
+            <div style={{ display:"flex", justifyContent:"center", gap:4, marginBottom:18, background:"rgba(255,255,255,0.1)", borderRadius:30, padding:3, maxWidth:240, margin:"0 auto 18px" }}>
+              {["monthly","annual"].map(c => (
+                <button key={c} onClick={()=>setBillingCycle(c)} style={{ flex:1, padding:"8px 0", border:"none", borderRadius:28, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background:billingCycle===c?"#fff200":"transparent", color:billingCycle===c?"#03180d":"rgba(255,255,255,0.6)", transition:"all 0.2s" }}>
+                  {c==="monthly"?"Monthly":"Annual"}
+                </button>
+              ))}
+            </div>
+
+            {/* Plan cards */}
+            <div style={{ display:"flex", gap:8, marginBottom:18 }}>
+              {planCard("lite")}
+              {planCard("pro","Most Popular")}
+              {planCard("proplus")}
+            </div>
+
+            {/* Selected plan features */}
+            <div style={{ background:"#fff", borderRadius:16, padding:"18px 16px", marginBottom:16 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                <span style={{ fontSize:15, fontWeight:700, color:"#03180d" }}>{plan.name}</span>
+                <span style={{ fontSize:18, fontWeight:900, color:"#03180d" }}>{priceLabel}</span>
               </div>
-              {[
-                "Unlimited Gas Safety Certificates",
-                "All certificate types included",
-                "Invoices, quotes & financial reports",
-                "Yearly tax report — no accountant needed",
-                "No paper certificate pads required",
-              ].map((f,i) => (
+              {plan.features.map((f,i) => (
                 <div key={i} style={{ fontSize:13, color:"#333", marginBottom:5, display:"flex", gap:8 }}>
                   <span style={{ color:"#1d4a2e", fontWeight:700 }}>✓</span>{f}
                 </div>
               ))}
+              {plan.excluded.map((f,i) => (
+                <div key={"x"+i} style={{ fontSize:13, color:"#bbb", marginBottom:5, display:"flex", gap:8 }}>
+                  <span style={{ fontWeight:700 }}>–</span>{f}
+                </div>
+              ))}
             </div>
+
             <button onClick={()=>setStep("form")}
               style={{ width:"100%", padding:16, background:"#03180d", color:"#fff200", border:"none", borderRadius:12, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:12 }}>
-              Set Up £4.99/month Direct Debit →
+              Set Up {priceLabel} Direct Debit →
             </button>
-          </>)}
-          <button onClick={onLogout} style={{ background:"none", border:"none", color:"#999", fontSize:13, cursor:"pointer", textDecoration:"underline" }}>Sign out</button>
-        </div>
+            <div style={{ textAlign:"center" }}>
+              <button onClick={onLogout} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.5)", fontSize:13, cursor:"pointer", textDecoration:"underline" }}>Sign out</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2957,7 +3004,7 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
           <span style={{ fontSize:18 }}>⏰</span>
           <div style={{ flex:1 }}>
             <div style={{ fontWeight:700, fontSize:13, color:"#92400e" }}>Trial ends in {daysLeft} day{daysLeft!==1?"s":""}</div>
-            <div style={{ fontSize:12, color:"#78350f" }}>Set up your £4.99/month Direct Debit before your trial expires to keep full access.</div>
+            <div style={{ fontSize:12, color:"#78350f" }}>Choose a plan before your trial expires to keep full access. Plans from £7.50/month.</div>
           </div>
         </div>
       )}
