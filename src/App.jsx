@@ -12876,8 +12876,10 @@ function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, 
               <div style={{ flex:1, border:"1px solid #aaa", padding:"4px 6px", fontSize:8.5 }}>
                 <strong>Gas User/Responsible Person Declaration:</strong> I confirm that I have received this Warning Notice concerning the safety of the gas installation. I understand that the use of the appliance/installation in case of an <strong>IMMEDIATELY DANGEROUS</strong> or <strong>AT RISK</strong> installation, could present a danger and could place me in breach of the Gas Safety (Installation and Use) Regulations.
                 <div style={{ marginTop:8, display:"flex", gap:6, alignItems:"flex-end" }}>
-                  <div style={{ flex:1 }}>Signed: <div style={{ borderBottom:"1px solid #555", marginTop:16 }}/></div>
-                  <div style={{ flex:1 }}>Print Name: <div style={{ borderBottom:"1px solid #555", marginTop:4, fontWeight:700, fontSize:8 }}>{certData.clientName||""}</div></div>
+                  <div style={{ flex:1 }}>Signed: <div style={{ borderBottom:"1px solid #555", marginTop:4, minHeight:22, display:"flex", alignItems:"flex-end" }}>
+                    {signatureData.customerSigImage ? <img src={signatureData.customerSigImage} style={{ height:22, maxWidth:"100%", objectFit:"contain" }}/> : null}
+                  </div></div>
+                  <div style={{ flex:1 }}>Print Name: <div style={{ borderBottom:"1px solid #555", marginTop:4, fontWeight:700, fontSize:8 }}>{signatureData.customerSigName||certData.clientName||""}</div></div>
                 </div>
                 <div style={{ marginTop:6 }}>Date: <span style={{ fontWeight:700 }}>{fmtShort(certDate)}</span></div>
               </div>
@@ -12890,7 +12892,7 @@ function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, 
                 <div style={{ marginTop:6, display:"flex", alignItems:"center", gap:6 }}>
                   <span style={{ minWidth:36, fontSize:8 }}>Signed:</span>
                   <span style={{ flex:1, borderBottom:"1px solid #555", minHeight:22, display:"flex", alignItems:"flex-end" }}>
-                    {(()=>{ try { const s=localStorage.getItem(sk("gsc_engineer_sig")); return s ? <img src={s} style={{ height:22, maxWidth:"100%", objectFit:"contain" }}/> : <span style={SIG_STYLE}>{wnEng.engineerName||""}</span>; } catch(e){ return <span style={SIG_STYLE}>{wnEng.engineerName||""}</span>; } })()}
+                    {(()=>{ const sigImg = signatureData.engineerSigImage || (() => { try { return localStorage.getItem(sk("gsc_engineer_sig")); } catch(e) { return null; } })(); return sigImg ? <img src={sigImg} style={{ height:22, maxWidth:"100%", objectFit:"contain" }}/> : <span style={SIG_STYLE}>{wnEng.engineerName||""}</span>; })()}
                   </span>
                 </div>
                 <div style={{ marginTop:6, display:"flex", gap:16 }}>
@@ -17528,7 +17530,7 @@ function WNStepClientDetails({ data, onChange, onNext, onBack, onHome, engData, 
 }
 
 // WN Step 3: Notice Details
-function WNStepNoticeDetails({ data, onChange, onNext, onBack, onHome, embeddedMode=false }) {
+function WNStepNoticeDetails({ data, onChange, onNext, onBack, onHome, embeddedMode=false, nextLabelOverride }) {
   const set = (k, v) => onChange({...data, [k]: v});
   const [wnPicker, setWnPicker] = useState(null);
 
@@ -17581,7 +17583,7 @@ function WNStepNoticeDetails({ data, onChange, onNext, onBack, onHome, embeddedM
         <FormInput placeholder="Describe remedial action taken..." value={data.remedialAction||""} onChange={v=>set("remedialAction",v)} multiline/>
         <div style={{ height:20 }}/>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext} nextLabel={embeddedMode ? "Next: Signatures" : "Next"}/>
+      <BottomBar onHome={onHome} onNext={onNext} nextLabel={nextLabelOverride || (embeddedMode ? "Next: Signatures" : "Next")}/>
     </div>
   );
 }
@@ -19500,11 +19502,25 @@ function App({ onLogout }) {
     if (subScreen === "attachments") {
       const _hasWN = faults.some(f => f.warningNotice === "Yes");
       const _hasBS = appliances.some(a => a.applianceServiced === "Yes");
-      return <AttachmentsStep data={{attachments:gscAttachments}} onChange={d=>setGscAttachments(d.attachments||[])} onBack={()=>setSubScreen("finalChecks")} onHome={goHome} onNext={()=>setSubScreen(_hasWN ? "wnDetails" : (_hasBS ? "bsApplianceDetails" : "signature"))} nextLabel={_hasWN ? "Next: Warning Notice" : (_hasBS ? "Next: Boiler Service" : "Next: Signatures")}/>;
+      const goToWnDetails = () => {
+        // Pre-populate gscWnData from first appliance (if fields are still blank)
+        if (appliances.length > 0 && !gscWnData.make && !gscWnData.model) {
+          const app = appliances[0];
+          setGscWnData(prev => ({
+            ...prev,
+            make: prev.make || app.make || "",
+            model: prev.model || app.model || "",
+            type: prev.type || app.type || "",
+            locationRoom: prev.locationRoom || app.location || "",
+          }));
+        }
+        setSubScreen("wnDetails");
+      };
+      return <AttachmentsStep data={{attachments:gscAttachments}} onChange={d=>setGscAttachments(d.attachments||[])} onBack={()=>setSubScreen("finalChecks")} onHome={goHome} onNext={()=>_hasWN ? goToWnDetails() : setSubScreen(_hasBS ? "bsApplianceDetails" : "signature")} nextLabel={_hasWN ? "Next: Warning Notice" : (_hasBS ? "Next: Boiler Service" : "Next: Signatures")}/>;
     }
     if (subScreen === "wnDetails") {
       const _hasBS = appliances.some(a => a.applianceServiced === "Yes");
-      return <WNStepNoticeDetails data={gscWnData} onChange={setGscWnData} onNext={()=>setSubScreen(_hasBS ? "bsApplianceDetails" : "signature")} onBack={()=>setSubScreen("attachments")} onHome={goHome} embeddedMode={true}/>;
+      return <WNStepNoticeDetails data={gscWnData} onChange={setGscWnData} onNext={()=>setSubScreen(_hasBS ? "bsApplianceDetails" : "signature")} onBack={()=>setSubScreen("attachments")} onHome={goHome} embeddedMode={true} nextLabelOverride={_hasBS ? "Next: Boiler Service" : undefined}/>;
     }
     if (subScreen === "bsApplianceDetails") return <BSStepApplianceDetails data={gscBsData} onChange={setGscBsData} onBack={()=>{ const _hasWN = faults.some(f => f.warningNotice === "Yes"); setSubScreen(_hasWN ? "wnDetails" : "attachments"); }} onHome={goHome} onNext={()=>setSubScreen("bsPrelimChecks")}/>;
     if (subScreen === "bsPrelimChecks") return <BSStepPrelimChecks data={gscBsData} onChange={setGscBsData} onBack={()=>setSubScreen("bsApplianceDetails")} onHome={goHome} onNext={()=>setSubScreen("bsNotes")}/>;
