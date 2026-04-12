@@ -143,7 +143,7 @@ function LandingScreen({ onLogin, onCreateProfile }) {
   return (
     <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
       {/* Header */}
-      <div style={{ background:"#03180d", padding:"0 24px", display:"flex", alignItems:"center", justifyContent:"space-between", height:64, flexShrink:0 }}>
+      <div style={{ background:"#0d1f2d", padding:"0 24px", display:"flex", alignItems:"center", justifyContent:"space-between", height:64, flexShrink:0 }}>
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           <img src={GSR_LOGO} style={{ height:36, width:36, objectFit:"contain", borderRadius:4 }} alt="Gas Safe Register"/>
           <div>
@@ -152,12 +152,12 @@ function LandingScreen({ onLogin, onCreateProfile }) {
           </div>
         </div>
         <button onClick={onLogin}
-          style={{ background:"#fff200", color:"#03180d", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"inherit" }}>
+          style={{ background:"#fff200", color:"#0d1f2d", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"inherit" }}>
           Sign In
         </button>
       </div>
       {/* Hero */}
-      <div style={{ background:"linear-gradient(135deg, #03180d 0%, #1d4a2e 60%, #35463d 100%)", padding:"40px 24px 36px", textAlign:"center", flexShrink:0 }}>
+      <div style={{ background:"linear-gradient(135deg, #0d1f2d 0%, #1a3a4a 60%, #35463d 100%)", padding:"40px 24px 36px", textAlign:"center", flexShrink:0 }}>
         <img src={GSR_LOGO} style={{ height:80, objectFit:"contain", marginBottom:12 }} alt="Gas Safe Register"/>
         <h1 style={{ color:"#fff200", fontSize:24, fontWeight:900, margin:"0 0 10px", lineHeight:1.2 }}>Gas Safety Engineer App</h1>
         <p style={{ color:"rgba(255,255,255,0.85)", fontSize:14, margin:"0 auto 10px", maxWidth:440, lineHeight:1.65 }}>
@@ -171,7 +171,7 @@ function LandingScreen({ onLogin, onCreateProfile }) {
         <a href="/explainer" style={{ color:"rgba(255,255,255,0.65)", fontSize:12, margin:"0 0 18px", display:"block", textDecoration:"underline", textUnderlineOffset:3, cursor:"pointer" }}>Want to know how it works? →</a>
         <div style={{ display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
           <button onClick={onCreateProfile}
-            style={{ background:"#fff200", color:"#03180d", border:"none", borderRadius:12, padding:"16px 32px", fontSize:16, fontWeight:800, cursor:"pointer", width:"100%", maxWidth:320, fontFamily:"inherit", boxShadow:"0 4px 20px rgba(255,242,0,0.25)" }}>
+            style={{ background:"#fff200", color:"#0d1f2d", border:"none", borderRadius:12, padding:"16px 32px", fontSize:16, fontWeight:800, cursor:"pointer", width:"100%", maxWidth:320, fontFamily:"inherit", boxShadow:"0 4px 20px rgba(255,242,0,0.25)" }}>
             Start Free — Create Your Profile →
           </button>
           <button onClick={onLogin}
@@ -185,12 +185,12 @@ function LandingScreen({ onLogin, onCreateProfile }) {
       <div style={{ background:"#fff", padding:"20px 16px 0", flexShrink:0 }}>
         <div style={{ maxWidth:460, margin:"0 auto" }}>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:16 }}>
-            <div style={{ background:"#f0f9f0", borderRadius:10, padding:"12px 14px", borderLeft:"3px solid #1d4a2e" }}>
-              <div style={{ fontSize:13, fontWeight:700, color:"#03180d", marginBottom:3 }}>No paper certificates</div>
+            <div style={{ background:"#f0f9f0", borderRadius:10, padding:"12px 14px", borderLeft:"3px solid #1a3a4a" }}>
+              <div style={{ fontSize:13, fontWeight:700, color:"#0d1f2d", marginBottom:3 }}>No paper certificates</div>
               <div style={{ fontSize:11, color:"#555", lineHeight:1.5 }}>Save money on paper certificate pads — generate and email professional PDFs instantly from your phone.</div>
             </div>
-            <div style={{ background:"#f0f9f0", borderRadius:10, padding:"12px 14px", borderLeft:"3px solid #1d4a2e" }}>
-              <div style={{ fontSize:13, fontWeight:700, color:"#03180d", marginBottom:3 }}>File your own tax return</div>
+            <div style={{ background:"#f0f9f0", borderRadius:10, padding:"12px 14px", borderLeft:"3px solid #1a3a4a" }}>
+              <div style={{ fontSize:13, fontWeight:700, color:"#0d1f2d", marginBottom:3 }}>File your own tax return</div>
               <div style={{ fontSize:11, color:"#555", lineHeight:1.5 }}>The yearly financial report gives you everything you need to complete your Self Assessment — saving hundreds on accountant fees.</div>
             </div>
           </div>
@@ -205,19 +205,19 @@ function LandingScreen({ onLogin, onCreateProfile }) {
 
       {/* Features */}
       <div style={{ padding:"16px 16px 16px", flex:1 }}>
-        <h2 style={{ textAlign:"center", color:"#03180d", fontSize:16, fontWeight:700, margin:"0 0 14px" }}>Everything you need on the job</h2>
+        <h2 style={{ textAlign:"center", color:"#0d1f2d", fontSize:16, fontWeight:700, margin:"0 0 14px" }}>Everything you need on the job</h2>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, maxWidth:460, margin:"0 auto" }}>
           {features.map((f, i) => (
-            <div key={i} style={{ background:"#fff", borderRadius:12, padding:"14px 12px", boxShadow:"0 2px 8px rgba(3,24,13,0.07)", borderLeft:"3px solid #1d4a2e" }}>
+            <div key={i} style={{ background:"#fff", borderRadius:12, padding:"14px 12px", boxShadow:"0 2px 8px rgba(3,24,13,0.07)", borderLeft:"3px solid #1a3a4a" }}>
               <div style={{ fontSize:22, marginBottom:5 }}>{f.icon}</div>
-              <div style={{ fontWeight:700, fontSize:12, color:"#03180d", marginBottom:3 }}>{f.title}</div>
+              <div style={{ fontWeight:700, fontSize:12, color:"#0d1f2d", marginBottom:3 }}>{f.title}</div>
               <div style={{ fontSize:11, color:"#555", lineHeight:1.4 }}>{f.desc}</div>
             </div>
           ))}
         </div>
       </div>
       {/* Footer */}
-      <div style={{ background:"#03180d", padding:"14px 24px", textAlign:"center", marginTop:16 }}>
+      <div style={{ background:"#0d1f2d", padding:"14px 24px", textAlign:"center", marginTop:16 }}>
         <p style={{ color:"rgba(255,255,255,0.45)", fontSize:11, margin:0 }}>For use by Gas Safe registered engineers only · UK Gas Safety (Installation and Use) Regulations 1998</p>
       </div>
     </div>
@@ -246,7 +246,7 @@ function LoginScreen({ onLogin, onBack }) {
   }
 
   return (
-    <div style={{ minHeight:"100dvh", background:"linear-gradient(135deg, #03180d 0%, #1d4a2e 60%, #35463d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(135deg, #0d1f2d 0%, #1a3a4a 60%, #35463d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
       <div style={{ padding:"16px 20px", display:"flex", alignItems:"center", gap:12 }}>
         <button onClick={onBack} style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:"50%", width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#fff", fontSize:20 }}>‹</button>
         <div style={{ color:"rgba(255,255,255,0.7)", fontSize:14 }}>Back to home</div>
@@ -255,7 +255,7 @@ function LoginScreen({ onLogin, onBack }) {
         <div style={{ background:"#fff", borderRadius:20, padding:"36px 28px 32px", width:"100%", maxWidth:380, boxShadow:"0 24px 60px rgba(0,0,0,0.3)" }}>
           <div style={{ textAlign:"center", marginBottom:24 }}>
             <img src={GSR_LOGO} style={{ height:52, width:52, objectFit:"contain", margin:"0 auto 12px", display:"block" }} alt="Gas Safe Register"/>
-            <h1 style={{ fontSize:22, fontWeight:800, color:"#03180d", margin:"0 0 4px" }}>Welcome back</h1>
+            <h1 style={{ fontSize:22, fontWeight:800, color:"#0d1f2d", margin:"0 0 4px" }}>Welcome back</h1>
             <p style={{ color:"#666", fontSize:14, margin:0 }}>Sign in with your email address</p>
           </div>
           <div style={{ marginBottom:12 }}>
@@ -273,13 +273,13 @@ function LoginScreen({ onLogin, onBack }) {
                 onChange={e=>{ setPassword(e.target.value); setError(""); }}
                 onKeyDown={e=>e.key==="Enter"&&handleLogin()}
                 autoComplete="current-password"
-                style={{ width:"100%", padding:"13px 46px 13px 14px", borderRadius:10, border:"2px solid #1d4a2e", fontSize:15, color:"#111", outline:"none", boxSizing:"border-box", fontFamily:"inherit" }}/>
+                style={{ width:"100%", padding:"13px 46px 13px 14px", borderRadius:10, border:"2px solid #1a3a4a", fontSize:15, color:"#111", outline:"none", boxSizing:"border-box", fontFamily:"inherit" }}/>
               <button onClick={()=>setShow(v=>!v)} style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:18, color:"#888", padding:0 }}>{show?"🙈":"👁️"}</button>
             </div>
           </div>
           {error && <p style={{ color:"#d32f2f", fontSize:13, margin:"8px 0 0" }}>{error}</p>}
           <button onClick={handleLogin} disabled={loading}
-            style={{ width:"100%", padding:15, background:loading?"#aaa":"#03180d", color:loading?"#fff":"#fff200", border:"none", borderRadius:10, fontSize:16, fontWeight:700, cursor:loading?"default":"pointer", marginTop:20, fontFamily:"inherit" }}>
+            style={{ width:"100%", padding:15, background:loading?"#aaa":"#0d1f2d", color:loading?"#fff":"#fff200", border:"none", borderRadius:10, fontSize:16, fontWeight:700, cursor:loading?"default":"pointer", marginTop:20, fontFamily:"inherit" }}>
             {loading ? "Signing in…" : "Sign In"}
           </button>
           <div style={{ borderTop:"1px solid #f0f0f0", marginTop:20, paddingTop:16, textAlign:"center" }}>
@@ -288,7 +288,7 @@ function LoginScreen({ onLogin, onBack }) {
               const body = encodeURIComponent(`Hi,\n\nI have forgotten my password for the Gas Safe App.\n\nEmail / Username: ${username || "(please enter your email above)"}\n\nPlease could you reset my account?\n\nThanks`);
               window.open(`mailto:westlothiangas@gmail.com?subject=${subject}&body=${body}`, "_blank");
             }}
-            style={{ color:"#1d4a2e", fontSize:14, cursor:"pointer", textDecoration:"underline", textUnderlineOffset:3, fontWeight:600 }}>
+            style={{ color:"#1a3a4a", fontSize:14, cursor:"pointer", textDecoration:"underline", textUnderlineOffset:3, fontWeight:600 }}>
               Forgot your password?
             </a>
           </div>
@@ -309,9 +309,9 @@ if (typeof document !== "undefined") {
 const SIG_STYLE = { fontFamily:"'Ms Madi', cursive", fontWeight:"bold", fontSize:13, color:"#1a1a2e", letterSpacing:1 };
 
 // v2 - Google Contacts integration
-const BLUE = "#1d4a2e";        // Gas Safe dark green
-const DARK_BLUE = "#03180d";   // Gas Safe near-black green
-const LIGHT_BG = "#f4f6f4";    // light green-tinted background
+const BLUE = "#1a3a4a";        // Deep teal-slate
+const DARK_BLUE = "#0d1f2d";   // Near-black navy
+const LIGHT_BG = "#f0f2f5";    // Cool grey background
 const GS_YELLOW = "#fff200";   // Gas Safe yellow
 const GS_MID = "#35463d";      // Gas Safe mid green
 
@@ -376,13 +376,13 @@ function getCompanyProfile() {
 
 function Header({ title, onBack, right }) {
   return (
-    <div style={{ background: `linear-gradient(135deg,${DARK_BLUE},${BLUE})`, padding:"16px 20px", display:"flex", alignItems:"center", gap:10, minHeight:56, flexShrink:0 }}>
+    <div style={{ background:`linear-gradient(160deg,${DARK_BLUE} 0%,${BLUE} 70%,#2a5a6a 100%)`, padding:"18px 20px 16px", display:"flex", alignItems:"center", gap:12, minHeight:56, flexShrink:0, borderRadius:"0 0 18px 18px", boxShadow:"0 4px 16px rgba(13,31,45,0.18)" }}>
       {onBack && (
-        <button onClick={onBack} style={{ background:"rgba(255,255,255,0.18)", border:"none", borderRadius:"50%", width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}>
+        <button onClick={onBack} style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:12, width:38, height:38, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0, backdropFilter:"blur(4px)" }}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
       )}
-      <span style={{ flex:1, color:"#fff", fontWeight:700, fontSize:16, fontFamily:"'Segoe UI',sans-serif" }}>{title}</span>
+      <span style={{ flex:1, color:"#fff", fontWeight:700, fontSize:17, fontFamily:"'Segoe UI',sans-serif", letterSpacing:0.2 }}>{title}</span>
       {right}
     </div>
   );
@@ -390,38 +390,40 @@ function Header({ title, onBack, right }) {
 
 function BottomBar({ onHome, onNext, onOptions, nextLabel="Next" }) {
   return (
-    <div style={{ display:"flex", borderTop:"1px solid #dde", background:"#f8f9fc", flexShrink:0, position:"sticky", bottom:0, zIndex:10 }}>
-      <button onClick={onHome} style={{ flex:1, padding:"12px 0", background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3, color:"#888", fontSize:11, fontFamily:"'Segoe UI',sans-serif" }}>
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 9.5L11 3L19 9.5V19H14V14H8V19H3V9.5Z" stroke="#999" strokeWidth="1.8" strokeLinejoin="round"/></svg>
-        Home
-      </button>
-      {onOptions ? (
-        <button onClick={onOptions} style={{ flex:1, padding:"12px 0", background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3, color:"#888", fontSize:11, fontFamily:"'Segoe UI',sans-serif" }}>
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="5" width="16" height="2" rx="1" fill="#999"/><rect x="3" y="10" width="16" height="2" rx="1" fill="#999"/><rect x="3" y="15" width="16" height="2" rx="1" fill="#999"/></svg>
-          Options
+    <div style={{ padding:"8px 16px 10px", background:"transparent", flexShrink:0, position:"sticky", bottom:0, zIndex:10 }}>
+      <div style={{ display:"flex", background:"#fff", borderRadius:16, boxShadow:"0 -2px 16px rgba(0,0,0,0.08)", overflow:"hidden", border:"1px solid rgba(0,0,0,0.04)" }}>
+        <button onClick={onHome} style={{ flex:1, padding:"12px 0", background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3, color:"#7a8a96", fontSize:11, fontWeight:600, fontFamily:"'Segoe UI',sans-serif" }}>
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 9.5L11 3L19 9.5V19H14V14H8V19H3V9.5Z" stroke="#7a8a96" strokeWidth="1.8" strokeLinejoin="round"/></svg>
+          Home
         </button>
-      ) : onNext ? (
-        <button onClick={onNext} style={{ flex:1, padding:"12px 0", background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3, color:"#888", fontSize:11, fontFamily:"'Segoe UI',sans-serif" }}>
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M5 11H17M12 6L17 11L12 16" stroke="#999" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          {nextLabel}
-        </button>
-      ) : null}
+        {onOptions ? (
+          <button onClick={onOptions} style={{ flex:1, padding:"12px 0", background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3, color:"#7a8a96", fontSize:11, fontWeight:600, fontFamily:"'Segoe UI',sans-serif" }}>
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="5" width="16" height="2" rx="1" fill="#7a8a96"/><rect x="3" y="10" width="16" height="2" rx="1" fill="#7a8a96"/><rect x="3" y="15" width="16" height="2" rx="1" fill="#7a8a96"/></svg>
+            Options
+          </button>
+        ) : onNext ? (
+          <button onClick={onNext} style={{ flex:1, padding:"12px 0", background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3, color:BLUE, fontSize:11, fontWeight:700, fontFamily:"'Segoe UI',sans-serif" }}>
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M5 11H17M12 6L17 11L12 16" stroke={BLUE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            {nextLabel}
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }
 
 function FormInput({ label, value, onChange, placeholder, type="text", multiline=false, maxLength }) {
   return (
-    <div style={{ marginBottom:2 }}>
-      {label && <div style={{ fontSize:13, color:"#888", padding:"8px 16px 2px", fontFamily:"'Segoe UI',sans-serif" }}>{label}</div>}
+    <div style={{ margin:"0 14px 8px", background:"#fff", borderRadius:10, border:"1px solid #e2e6ea", overflow:"hidden" }}>
+      {label && <div style={{ fontSize:12, color:"#6b7b8d", padding:"8px 14px 0", fontWeight:600, fontFamily:"'Segoe UI',sans-serif" }}>{label}</div>}
       {multiline ? (
         <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength}
-          style={{ width:"100%", boxSizing:"border-box", padding:"12px 16px", border:"none", borderBottom:"1px solid #e0e4ef", background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", resize:"none", height:100, outline:"none" }}/>
+          style={{ width:"100%", boxSizing:"border-box", padding:"8px 14px 10px", border:"none", background:"transparent", fontSize:15, fontFamily:"'Segoe UI',sans-serif", resize:"none", height:100, outline:"none", color:"#222" }}/>
       ) : (
         <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
-          style={{ width:"100%", boxSizing:"border-box", padding:"12px 16px", border:"none", borderBottom:"1px solid #e0e4ef", background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", outline:"none" }}/>
+          style={{ width:"100%", boxSizing:"border-box", padding: label ? "6px 14px 10px" : "12px 14px", border:"none", background:"transparent", fontSize:15, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#222" }}/>
       )}
-      {maxLength && <div style={{ fontSize:11, color:"#aaa", padding:"2px 16px", background:"#f8f9fc" }}>You Can Enter {maxLength} Characters</div>}
+      {maxLength && <div style={{ fontSize:11, color:"#aaa", padding:"0 14px 6px" }}>You Can Enter {maxLength} Characters</div>}
     </div>
   );
 }
@@ -443,9 +445,9 @@ function RadioGroup({ options, value, onChange }) {
 
 function SectionHeader({ title, actions }) {
   return (
-    <div style={{ background:"#03180d", padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-      <span style={{ color:"#fff", fontWeight:700, fontSize:14, fontFamily:"'Segoe UI',sans-serif" }}>{title}</span>
-      {actions && <div style={{ display:"flex", gap:10 }}>{actions}</div>}
+    <div style={{ margin:"14px 14px 8px", padding:"10px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", borderLeft:`4px solid ${BLUE}`, background:"#fff", borderRadius:"0 10px 10px 0", boxShadow:"0 1px 6px rgba(0,0,0,0.06)" }}>
+      <span style={{ color:BLUE, fontWeight:700, fontSize:14, fontFamily:"'Segoe UI',sans-serif" }}>{title}</span>
+      {actions && <div style={{ display:"flex", gap:8 }}>{actions}</div>}
     </div>
   );
 }
@@ -500,7 +502,7 @@ function PickerScreen({ title, options, onSelect, onBack, allowCustom=false, onS
             onMouseLeave={e=>e.currentTarget.style.background="#f0f9ff"}>
             <span style={{ fontSize:18 }}>✏️</span>
             <div>
-              <div style={{ fontWeight:700, color:"#1d4a2e" }}>Use "{trimmed}"</div>
+              <div style={{ fontWeight:700, color:"#1a3a4a" }}>Use "{trimmed}"</div>
               <div style={{ fontSize:12, color:"#666", marginTop:2 }}>Tap to use this custom value — it will be saved for future use</div>
             </div>
           </div>
@@ -1693,7 +1695,7 @@ function MonthlyReportScreen({ onBack, onHome, invoices, onSaveReport, userId })
 
   const BLUE_BTN = { padding:"13px 0", background:BLUE, color:"#fff", border:"none", borderRadius:10, fontWeight:700, fontSize:14, cursor:"pointer", width:"100%" };
   const OUTLINE_BTN = { padding:"13px 0", background:"#f5f5f5", color:BLUE, border:`2px solid ${BLUE}`, borderRadius:10, fontWeight:700, fontSize:14, cursor:"pointer", width:"100%" };
-  const SAVE_BTN = { padding:"13px 0", background:"#1d4a2e", color:"#fff", border:"none", borderRadius:10, fontWeight:700, fontSize:14, cursor:"pointer", width:"100%" };
+  const SAVE_BTN = { padding:"13px 0", background:"#1a3a4a", color:"#fff", border:"none", borderRadius:10, fontWeight:700, fontSize:14, cursor:"pointer", width:"100%" };
 
   if (step === "upload") return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
@@ -2029,7 +2031,7 @@ function ProfileForm({ initial, onSave, onBack, isSetup, onRegistered }) {
   );
 
   return (
-    <div style={{ minHeight:"100dvh", background:"linear-gradient(135deg, #03180d 0%, #1d4a2e 60%, #35463d 100%)", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(135deg, #0d1f2d 0%, #1a3a4a 60%, #35463d 100%)", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
       {/* Header */}
       <div style={{ padding:"20px 20px 12px", display:"flex", alignItems:"center", gap:12 }}>
         {onBack && (
@@ -2046,7 +2048,7 @@ function ProfileForm({ initial, onSave, onBack, isSetup, onRegistered }) {
         {/* Login credentials — setup only */}
         {isSetup && (
           <div style={{ background:"#fff", borderRadius:16, padding:20, marginBottom:14 }}>
-            <div style={{ fontWeight:700, fontSize:15, color:"#03180d", marginBottom:4, paddingBottom:10, borderBottom:"1px solid #f0f0f0" }}>🔐 Your Login Details</div>
+            <div style={{ fontWeight:700, fontSize:15, color:"#0d1f2d", marginBottom:4, paddingBottom:10, borderBottom:"1px solid #f0f0f0" }}>🔐 Your Login Details</div>
             <p style={{ fontSize:13, color:"#666", margin:"0 0 14px" }}>Your email address will be your username to sign in.</p>
             <div style={{ marginBottom:12 }}>
               <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4 }}>Email Address <span style={{ color:"#d32f2f" }}>*</span></div>
@@ -2080,14 +2082,14 @@ function ProfileForm({ initial, onSave, onBack, isSetup, onRegistered }) {
 
         {/* Logo */}
         <div style={{ background:"#fff", borderRadius:16, padding:20, marginBottom:14 }}>
-          <div style={{ fontWeight:700, fontSize:15, color:"#03180d", marginBottom:14, paddingBottom:10, borderBottom:"1px solid #f0f0f0" }}>🏢 Company Logo</div>
+          <div style={{ fontWeight:700, fontSize:15, color:"#0d1f2d", marginBottom:14, paddingBottom:10, borderBottom:"1px solid #f0f0f0" }}>🏢 Company Logo</div>
           <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:8 }}>
             {form.logoImage
               ? <img src={form.logoImage} style={{ height:64, maxWidth:140, objectFit:"contain", borderRadius:8, border:"1px solid #eee" }} alt="Logo"/>
               : <div style={{ width:100, height:64, background:"#f5f5f5", borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", color:"#aaa", fontSize:12, border:"2px dashed #ddd" }}>No logo</div>
             }
             <div>
-              <button onClick={()=>logoRef.current?.click()} style={{ background:"#1d4a2e", color:"#fff", border:"none", borderRadius:8, padding:"9px 18px", fontSize:14, fontWeight:600, cursor:"pointer", display:"block", marginBottom:6 }}>
+              <button onClick={()=>logoRef.current?.click()} style={{ background:"#1a3a4a", color:"#fff", border:"none", borderRadius:8, padding:"9px 18px", fontSize:14, fontWeight:600, cursor:"pointer", display:"block", marginBottom:6 }}>
                 {form.logoImage ? "Change Logo" : "Upload Logo"}
               </button>
               {form.logoImage && <button onClick={()=>setForm(f=>({...f,logoImage:null}))} style={{ background:"none", color:"#d32f2f", border:"none", fontSize:13, cursor:"pointer", padding:0 }}>Remove</button>}
@@ -2099,7 +2101,7 @@ function ProfileForm({ initial, onSave, onBack, isSetup, onRegistered }) {
 
         {/* Company details */}
         <div style={{ background:"#fff", borderRadius:16, padding:20, marginBottom:14 }}>
-          <div style={{ fontWeight:700, fontSize:15, color:"#03180d", marginBottom:14, paddingBottom:10, borderBottom:"1px solid #f0f0f0" }}>🏢 Company Details</div>
+          <div style={{ fontWeight:700, fontSize:15, color:"#0d1f2d", marginBottom:14, paddingBottom:10, borderBottom:"1px solid #f0f0f0" }}>🏢 Company Details</div>
           {inp("Company Name", "companyName", { required:true })}
           {inp("Company Type (e.g. Limited company, Sole trader)", "companyType")}
           {inp("Companies House Number (optional)", "companyNumber")}
@@ -2113,7 +2115,7 @@ function ProfileForm({ initial, onSave, onBack, isSetup, onRegistered }) {
 
         {/* Engineer details */}
         <div style={{ background:"#fff", borderRadius:16, padding:20, marginBottom:14 }}>
-          <div style={{ fontWeight:700, fontSize:15, color:"#03180d", marginBottom:14, paddingBottom:10, borderBottom:"1px solid #f0f0f0" }}>👷 Engineer Details</div>
+          <div style={{ fontWeight:700, fontSize:15, color:"#0d1f2d", marginBottom:14, paddingBottom:10, borderBottom:"1px solid #f0f0f0" }}>👷 Engineer Details</div>
           {inp("Engineer Name", "engineerName", { required:true })}
           {inp("Gas Safe Registration No.", "gasSafeNo", { required:true })}
           {inp("Engineer ID (Gas Safe ID number)", "gasId", { required:true })}
@@ -2121,7 +2123,7 @@ function ProfileForm({ initial, onSave, onBack, isSetup, onRegistered }) {
 
         {/* Engineer Signature */}
         <div style={{ background:"#fff", borderRadius:16, padding:20, marginBottom:14 }}>
-          <div style={{ fontWeight:700, fontSize:15, color:"#03180d", marginBottom:6, paddingBottom:10, borderBottom:"1px solid #f0f0f0" }}>✍️ My Signature</div>
+          <div style={{ fontWeight:700, fontSize:15, color:"#0d1f2d", marginBottom:6, paddingBottom:10, borderBottom:"1px solid #f0f0f0" }}>✍️ My Signature</div>
           <div style={{ fontSize:13, color:"#666", marginBottom:12, lineHeight:1.5 }}>
             Draw your signature once here — it will automatically appear on all certificates.
           </div>
@@ -2135,7 +2137,7 @@ function ProfileForm({ initial, onSave, onBack, isSetup, onRegistered }) {
         {error && <div style={{ background:"#fdecea", border:"1px solid #f5c6c6", borderRadius:8, padding:"10px 14px", color:"#d32f2f", fontSize:14, marginBottom:14 }}>{error}</div>}
 
         <button onClick={handleSave} disabled={saving}
-          style={{ width:"100%", padding:17, background:saving?"#aaa":"#03180d", color:saving?"#fff":"#fff200", border:"none", borderRadius:12, fontSize:17, fontWeight:700, cursor:saving?"default":"pointer", fontFamily:"inherit" }}>
+          style={{ width:"100%", padding:17, background:saving?"#aaa":"#0d1f2d", color:saving?"#fff":"#fff200", border:"none", borderRadius:12, fontSize:17, fontWeight:700, cursor:saving?"default":"pointer", fontFamily:"inherit" }}>
           {saving ? "Saving…" : isSetup ? "Create Account →" : "Save Changes"}
         </button>
       </div>
@@ -2197,7 +2199,7 @@ function PaymentDetailsScreen({ onBack, onHome }) {
 
       <div style={{ flex:1, overflowY:"auto", padding:"0 16px 88px" }}>
         <div style={{ background:"#fff", borderRadius:16, padding:20, marginBottom:14 }}>
-          <div style={{ fontWeight:700, fontSize:15, color:"#03180d", marginBottom:6, paddingBottom:10, borderBottom:"1px solid #f0f0f0" }}>💳 Bank Details</div>
+          <div style={{ fontWeight:700, fontSize:15, color:"#0d1f2d", marginBottom:6, paddingBottom:10, borderBottom:"1px solid #f0f0f0" }}>💳 Bank Details</div>
           <div style={{ fontSize:12, color:"#888", marginBottom:14, lineHeight:1.5 }}>
             These details will automatically appear in the Notes field on every invoice and quote you create.
           </div>
@@ -2237,7 +2239,7 @@ function PaymentDetailsScreen({ onBack, onHome }) {
         {saved && <div style={{ background:"#e8f5e9", border:"1px solid #a5d6a7", borderRadius:8, padding:"10px 14px", color:"#2e7d32", fontSize:14, marginBottom:14 }}>✅ Payment details saved!</div>}
 
         <button onClick={handleSave}
-          style={{ width:"100%", padding:17, background:"#03180d", color:"#fff200", border:"none", borderRadius:12, fontSize:17, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+          style={{ width:"100%", padding:17, background:"#0d1f2d", color:"#fff200", border:"none", borderRadius:12, fontSize:17, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
           Save Payment Details
         </button>
       </div>
@@ -2342,12 +2344,12 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
     <div style={{ minHeight:"100dvh", background:`linear-gradient(135deg,${DARK_BLUE},${BLUE})`, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'Segoe UI',sans-serif", padding:24 }}>
       <div style={{ background:"#fff", borderRadius:20, padding:"40px 28px", width:"100%", maxWidth:400, textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
         <div style={{ fontSize:56, marginBottom:16 }}>✅</div>
-        <h2 style={{ fontSize:22, fontWeight:700, color:"#03180d", margin:"0 0 12px" }}>Payment details received</h2>
+        <h2 style={{ fontSize:22, fontWeight:700, color:"#0d1f2d", margin:"0 0 12px" }}>Payment details received</h2>
         <p style={{ fontSize:14, color:"#555", lineHeight:1.7, margin:"0 0 24px" }}>
           Thank you! Your Direct Debit mandate details have been sent to us. We'll set up your {plan.name} ({priceLabel}) subscription and restore full access within 24 hours.
         </p>
         <p style={{ fontSize:13, color:"#888", margin:"0 0 24px" }}>If you have any questions email <strong>westlothiangas@gmail.com</strong></p>
-        <button onClick={onLogout} style={{ width:"100%", padding:14, background:"#03180d", color:"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Sign Out</button>
+        <button onClick={onLogout} style={{ width:"100%", padding:14, background:"#0d1f2d", color:"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Sign Out</button>
       </div>
     </div>
   );
@@ -2363,7 +2365,7 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
           <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"12px 16px", background:"#f0f9f0", borderRadius:10, border:"1px solid #c3e6cb" }}>
             <div style={{ fontSize:28 }}>🔒</div>
             <div>
-              <div style={{ fontWeight:700, fontSize:14, color:"#1d4a2e" }}>{plan.name} — {priceLabel}</div>
+              <div style={{ fontWeight:700, fontSize:14, color:"#1a3a4a" }}>{plan.name} — {priceLabel}</div>
               <div style={{ fontSize:12, color:"#555", lineHeight:1.5 }}>Your bank details are sent directly to us to set up your Direct Debit. We never store card details.</div>
             </div>
           </div>
@@ -2383,7 +2385,7 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
           {(()=>{ const ok = !!(form.accountName.trim() && form.sortCode.replace(/\D/g,"").length===6 && form.accountNumber.replace(/\D/g,"").length===8 && /\S+@\S+\.\S+/.test(form.email)); return (
             <button onClick={handleSubmit} disabled={submitting}
               className={ok&&!submitting?"wlg-pulse":""}
-              style={{ width:"100%", padding:16, background:submitting?"#aaa":ok?"#c62828":"#03180d", color:"#fff", border:"none", borderRadius:12, fontSize:16, fontWeight:700, cursor:submitting?"default":"pointer", fontFamily:"inherit", transition:"background 0.4s" }}>
+              style={{ width:"100%", padding:16, background:submitting?"#aaa":ok?"#c62828":"#0d1f2d", color:"#fff", border:"none", borderRadius:12, fontSize:16, fontWeight:700, cursor:submitting?"default":"pointer", fontFamily:"inherit", transition:"background 0.4s" }}>
               {submitting ? "Submitting…" : ok ? "✅ Submit Direct Debit Details →" : "Submit Direct Debit Details →"}
             </button>
           ); })()}
@@ -2404,7 +2406,7 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
     const sel = selectedPlan===key;
     return (
       <div onClick={()=>setSelectedPlan(key)} style={{ flex:1, cursor:"pointer", border:sel?"2.5px solid #fff200":"2px solid rgba(255,255,255,0.2)", borderRadius:14, padding:"14px 10px", background:sel?"rgba(255,242,0,0.08)":"rgba(255,255,255,0.04)", transition:"all 0.2s", position:"relative", textAlign:"center" }}>
-        {badge && <div style={{ position:"absolute", top:-10, left:"50%", transform:"translateX(-50%)", background:"#fff200", color:"#03180d", fontSize:9, fontWeight:800, padding:"3px 10px", borderRadius:20, whiteSpace:"nowrap" }}>{badge}</div>}
+        {badge && <div style={{ position:"absolute", top:-10, left:"50%", transform:"translateX(-50%)", background:"#fff200", color:"#0d1f2d", fontSize:9, fontWeight:800, padding:"3px 10px", borderRadius:20, whiteSpace:"nowrap" }}>{badge}</div>}
         <div style={{ color:sel?"#fff200":"rgba(255,255,255,0.5)", fontSize:11, fontWeight:700, marginBottom:4, textTransform:"uppercase", letterSpacing:1 }}>{p.name}</div>
         <div style={{ color:"#fff", fontSize:22, fontWeight:900 }}>£{amt%1===0?amt:amt.toFixed(2)}</div>
         <div style={{ color:"rgba(255,255,255,0.5)", fontSize:11 }}>{cadence} + VAT</div>
@@ -2424,7 +2426,7 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
         {isPending ? (
           <div style={{ background:"#fff", borderRadius:20, padding:"36px 28px", maxWidth:400, margin:"0 auto", textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
             <div style={{ fontSize:48, marginBottom:12 }}>⏳</div>
-            <h2 style={{ fontSize:22, fontWeight:700, color:"#03180d", margin:"0 0 12px" }}>Awaiting approval</h2>
+            <h2 style={{ fontSize:22, fontWeight:700, color:"#0d1f2d", margin:"0 0 12px" }}>Awaiting approval</h2>
             <p style={{ fontSize:14, color:"#555", lineHeight:1.7, margin:"0 0 20px" }}>
               We've received your Direct Debit details. Your account will be fully unlocked within 24 hours once we've processed your setup. If you have any questions email <strong>westlothiangas@gmail.com</strong>
             </p>
@@ -2441,7 +2443,7 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
             {/* Billing toggle */}
             <div style={{ display:"flex", justifyContent:"center", gap:4, marginBottom:18, background:"rgba(255,255,255,0.1)", borderRadius:30, padding:3, maxWidth:240, margin:"0 auto 18px" }}>
               {["monthly","annual"].map(c => (
-                <button key={c} onClick={()=>setBillingCycle(c)} style={{ flex:1, padding:"8px 0", border:"none", borderRadius:28, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background:billingCycle===c?"#fff200":"transparent", color:billingCycle===c?"#03180d":"rgba(255,255,255,0.6)", transition:"all 0.2s" }}>
+                <button key={c} onClick={()=>setBillingCycle(c)} style={{ flex:1, padding:"8px 0", border:"none", borderRadius:28, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background:billingCycle===c?"#fff200":"transparent", color:billingCycle===c?"#0d1f2d":"rgba(255,255,255,0.6)", transition:"all 0.2s" }}>
                   {c==="monthly"?"Monthly":"Annual"}
                 </button>
               ))}
@@ -2457,12 +2459,12 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
             {/* Selected plan features */}
             <div style={{ background:"#fff", borderRadius:16, padding:"18px 16px", marginBottom:16 }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-                <span style={{ fontSize:15, fontWeight:700, color:"#03180d" }}>{plan.name}</span>
-                <span style={{ fontSize:18, fontWeight:900, color:"#03180d" }}>{priceLabel}</span>
+                <span style={{ fontSize:15, fontWeight:700, color:"#0d1f2d" }}>{plan.name}</span>
+                <span style={{ fontSize:18, fontWeight:900, color:"#0d1f2d" }}>{priceLabel}</span>
               </div>
               {plan.features.map((f,i) => (
                 <div key={i} style={{ fontSize:13, color:"#333", marginBottom:5, display:"flex", gap:8 }}>
-                  <span style={{ color:"#1d4a2e", fontWeight:700 }}>✓</span>{f}
+                  <span style={{ color:"#1a3a4a", fontWeight:700 }}>✓</span>{f}
                 </div>
               ))}
               {plan.excluded.map((f,i) => (
@@ -2473,7 +2475,7 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
             </div>
 
             <button onClick={()=>setStep("form")}
-              style={{ width:"100%", padding:16, background:"#03180d", color:"#fff200", border:"none", borderRadius:12, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:12 }}>
+              style={{ width:"100%", padding:16, background:"#0d1f2d", color:"#fff200", border:"none", borderRadius:12, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:12 }}>
               Set Up {priceLabel} Direct Debit →
             </button>
             <div style={{ textAlign:"center" }}>
@@ -2681,8 +2683,8 @@ function ClientContactsScreen({ onBack, onHome }) {
   });
 
   const sec = (t, icon) => (
-    <div style={{ display:"flex", alignItems:"center", gap:8, fontWeight:700, fontSize:14, color:"#1d4a2e",
-      borderBottom:"2px solid #1d4a2e30", paddingBottom:6, marginBottom:12, marginTop:4 }}>
+    <div style={{ display:"flex", alignItems:"center", gap:8, fontWeight:700, fontSize:14, color:"#1a3a4a",
+      borderBottom:"2px solid #1a3a4a30", paddingBottom:6, marginBottom:12, marginTop:4 }}>
       <span style={{ fontSize:18 }}>{icon}</span>{t}
     </div>
   );
@@ -2698,8 +2700,8 @@ function ClientContactsScreen({ onBack, onHome }) {
 
         {/* Step 1 */}
         <div style={{ marginTop:16, marginBottom:12 }}>
-          <div style={{ fontWeight:700, fontSize:13, color:"#03180d", marginBottom:6, display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ background:"#1d4a2e", color:"#fff200", borderRadius:"50%", width:22, height:22, display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, flexShrink:0 }}>1</span>
+          <div style={{ fontWeight:700, fontSize:13, color:"#0d1f2d", marginBottom:6, display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ background:"#1a3a4a", color:"#fff200", borderRadius:"50%", width:22, height:22, display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, flexShrink:0 }}>1</span>
             Export from your iPhone (iOS)
           </div>
           <div style={{ fontSize:13, color:"#555", lineHeight:1.7, paddingLeft:30 }}>
@@ -2709,8 +2711,8 @@ function ClientContactsScreen({ onBack, onHome }) {
 
         {/* Step 2 */}
         <div style={{ marginBottom:12 }}>
-          <div style={{ fontWeight:700, fontSize:13, color:"#03180d", marginBottom:6, display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ background:"#1d4a2e", color:"#fff200", borderRadius:"50%", width:22, height:22, display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, flexShrink:0 }}>2</span>
+          <div style={{ fontWeight:700, fontSize:13, color:"#0d1f2d", marginBottom:6, display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ background:"#1a3a4a", color:"#fff200", borderRadius:"50%", width:22, height:22, display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, flexShrink:0 }}>2</span>
             Export from Android
           </div>
           <div style={{ fontSize:13, color:"#555", lineHeight:1.7, paddingLeft:30 }}>
@@ -2720,12 +2722,12 @@ function ClientContactsScreen({ onBack, onHome }) {
 
         {/* Step 3 */}
         <div style={{ marginBottom:4 }}>
-          <div style={{ fontWeight:700, fontSize:13, color:"#03180d", marginBottom:6, display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ background:"#1d4a2e", color:"#fff200", borderRadius:"50%", width:22, height:22, display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, flexShrink:0 }}>3</span>
+          <div style={{ fontWeight:700, fontSize:13, color:"#0d1f2d", marginBottom:6, display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ background:"#1a3a4a", color:"#fff200", borderRadius:"50%", width:22, height:22, display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, flexShrink:0 }}>3</span>
             Export from Google Contacts (any phone)
           </div>
           <div style={{ fontSize:13, color:"#555", lineHeight:1.7, paddingLeft:30 }}>
-            On your computer go to <strong style={{ color:"#1d4a2e" }}>contacts.google.com</strong> → on the left sidebar tap <strong>Export</strong> → choose <strong>Google CSV</strong> or <strong>vCard (for iOS Contacts)</strong> → click Export → upload the file below.
+            On your computer go to <strong style={{ color:"#1a3a4a" }}>contacts.google.com</strong> → on the left sidebar tap <strong>Export</strong> → choose <strong>Google CSV</strong> or <strong>vCard (for iOS Contacts)</strong> → click Export → upload the file below.
           </div>
         </div>
       </div>
@@ -2736,10 +2738,10 @@ function ClientContactsScreen({ onBack, onHome }) {
         <div style={{ fontSize:13, color:"#888", marginBottom:12, lineHeight:1.6 }}>
           Supported formats: <strong>.vcf</strong> (vCard — from iPhone, Android or Google) or <strong>.csv</strong> (Google Contacts export).
         </div>
-        <label style={{ display:"block", border:"2.5px dashed #1d4a2e", borderRadius:12, padding:"28px 20px",
+        <label style={{ display:"block", border:"2.5px dashed #1a3a4a", borderRadius:12, padding:"28px 20px",
           textAlign:"center", cursor:"pointer", background:"#f0f9f4", marginBottom:12 }}>
           <div style={{ fontSize:36, marginBottom:8 }}>📤</div>
-          <div style={{ fontWeight:700, fontSize:15, color:"#1d4a2e", marginBottom:4 }}>Tap to choose file</div>
+          <div style={{ fontWeight:700, fontSize:15, color:"#1a3a4a", marginBottom:4 }}>Tap to choose file</div>
           <div style={{ fontSize:12, color:"#888" }}>.vcf or .csv — from iPhone, Android or Google Contacts</div>
           <input type="file" accept=".vcf,.csv" onChange={handleFile} style={{ display:"none" }}/>
         </label>
@@ -2749,7 +2751,7 @@ function ClientContactsScreen({ onBack, onHome }) {
         )}
         {importCount !== null && (
           <div style={{ background:"#f0f9f0", border:"1px solid #c3e6cb", borderRadius:8, padding:"10px 14px",
-            color:"#1d4a2e", fontSize:13, fontWeight:600 }}>
+            color:"#1a3a4a", fontSize:13, fontWeight:600 }}>
             ✅ {importCount > 0 ? `${importCount} new contact${importCount!==1?"s":""} imported!` : "All contacts already in your list — no duplicates added."}
           </div>
         )}
@@ -2761,7 +2763,7 @@ function ClientContactsScreen({ onBack, onHome }) {
     <div style={{ padding:16, paddingBottom:80 }}>
       {importCount !== null && (
         <div style={{ background:"#f0f9f0", border:"1px solid #c3e6cb", borderRadius:8, padding:"10px 14px",
-          color:"#1d4a2e", fontSize:13, fontWeight:600, marginBottom:12 }}>
+          color:"#1a3a4a", fontSize:13, fontWeight:600, marginBottom:12 }}>
           ✅ {importCount} new contact{importCount!==1?"s":""} imported successfully!
         </div>
       )}
@@ -2773,7 +2775,7 @@ function ClientContactsScreen({ onBack, onHome }) {
             Import your business contacts from your phone to quickly fill in client details on certificates and invoices.
           </div>
           <button onClick={()=>setTab("import")}
-            style={{ padding:"13px 28px", background:"#1d4a2e", color:"#fff200", border:"none", borderRadius:12,
+            style={{ padding:"13px 28px", background:"#1a3a4a", color:"#fff200", border:"none", borderRadius:12,
               fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
             📤 Import Contacts
           </button>
@@ -2783,10 +2785,10 @@ function ClientContactsScreen({ onBack, onHome }) {
           <div style={{ display:"flex", gap:8, marginBottom:14, alignItems:"center" }}>
             <input value={search} onChange={e=>setSearch(e.target.value)}
               placeholder="🔍  Search contacts..."
-              style={{ flex:1, padding:"11px 14px", border:"2px solid #1d4a2e30", borderRadius:10,
+              style={{ flex:1, padding:"11px 14px", border:"2px solid #1a3a4a30", borderRadius:10,
                 fontSize:14, outline:"none", fontFamily:"inherit" }}/>
             <button onClick={()=>setTab("import")}
-              style={{ padding:"11px 14px", background:"#1d4a2e", color:"#fff200", border:"none",
+              style={{ padding:"11px 14px", background:"#1a3a4a", color:"#fff200", border:"none",
                 borderRadius:10, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap" }}>
               + Import
             </button>
@@ -2796,11 +2798,11 @@ function ClientContactsScreen({ onBack, onHome }) {
           </div>
           {filtered.map((c, i) => (
             <div key={c.id||i} style={{ background:"#fff", borderRadius:10, padding:"12px 14px", marginBottom:8,
-              boxShadow:"0 1px 4px rgba(0,0,0,0.06)", borderLeft:"4px solid #1d4a2e" }}>
+              boxShadow:"0 1px 4px rgba(0,0,0,0.06)", borderLeft:"4px solid #1a3a4a" }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:700, fontSize:15, color:"#222" }}>{c.name||"—"}</div>
-                  {c.company && <div style={{ fontSize:12, color:"#1d4a2e", fontWeight:600, marginTop:1 }}>{c.company}</div>}
+                  {c.company && <div style={{ fontSize:12, color:"#1a3a4a", fontWeight:600, marginTop:1 }}>{c.company}</div>}
                   {c.phone && (
                     <a href={"tel:"+c.phone.replace(/\s/g,"")} style={{ fontSize:13, color:"#444", marginTop:3, display:"block", textDecoration:"none" }}>
                       📞 {c.phone}
@@ -2829,8 +2831,8 @@ function ClientContactsScreen({ onBack, onHome }) {
           <button key={key} onClick={()=>setTab(key)}
             style={{ flex:1, padding:"12px 8px", border:"none", background:"none", cursor:"pointer",
               fontWeight:700, fontSize:14, fontFamily:"inherit",
-              color: tab===key ? "#1d4a2e" : "#999",
-              borderBottom: tab===key ? "3px solid #1d4a2e" : "3px solid transparent",
+              color: tab===key ? "#1a3a4a" : "#999",
+              borderBottom: tab===key ? "3px solid #1a3a4a" : "3px solid transparent",
               marginBottom:-2, transition:"all 0.15s" }}>
             {label}
           </button>
@@ -3109,9 +3111,9 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
         <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, marginBottom:4, textAlign:"center", letterSpacing:0.3, textTransform:"uppercase", fontWeight:600 }}>What would you like to do?</p>
 
         <PillBtn onClick={onNew} label="New Job" color="#fff200">
-          <svg width="28" height="28" viewBox="0 0 52 52" fill="none"><rect x="22" y="4" width="8" height="44" rx="4" fill="#03180d"/><rect x="4" y="22" width="44" height="8" rx="4" fill="#03180d"/></svg>
+          <svg width="28" height="28" viewBox="0 0 52 52" fill="none"><rect x="22" y="4" width="8" height="44" rx="4" fill="#0d1f2d"/><rect x="4" y="22" width="44" height="8" rx="4" fill="#0d1f2d"/></svg>
         </PillBtn>
-        <PillBtn onClick={onRecords} label="Records" color="#fff200" iconBg="#03180d">
+        <PillBtn onClick={onRecords} label="Records" color="#fff200" iconBg="#0d1f2d">
           <svg width="30" height="26" viewBox="0 0 56 48" fill="none"><rect x="2" y="10" width="52" height="36" rx="5" fill="white"/><rect x="2" y="6" width="22" height="14" rx="5" fill="white"/><rect x="8" y="18" width="40" height="24" rx="3" fill="rgba(3,105,161,0.3)"/></svg>
         </PillBtn>
 
@@ -3124,7 +3126,7 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
         <PillBtn onClick={onProfile} label="My Profile" color="#fff200" iconBg="#35463d">
           <img src={getCompanyLogo()} style={{ width:38, height:38, objectFit:"contain", borderRadius:6 }} alt="Company Logo"/>
         </PillBtn>
-        <PillBtn onClick={onPayment} label="Payment Details" color="#fff200" iconBg="#03180d">
+        <PillBtn onClick={onPayment} label="Payment Details" color="#fff200" iconBg="#0d1f2d">
           <span style={{ fontSize:26 }}>💳</span>
         </PillBtn>
         <div className={!hasContacts ? "wlg-contacts-pulse" : ""}
@@ -3158,7 +3160,7 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"flex-start", justifyContent:"center", zIndex:1000, padding:"20px 16px", overflowY:"auto" }}>
           <div style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:440, overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.3)", margin:"auto 0" }}>
             {/* Modal header */}
-            <div style={{ background:"#03180d", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <div style={{ background:"#0d1f2d", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
               <div>
                 <div style={{ color:"#fff200", fontWeight:700, fontSize:16 }}>Support Ticket</div>
                 <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginTop:2 }}>{ticketDone ? "Ticket submitted" : `Step ${ticketStep} of 3`}</div>
@@ -3173,11 +3175,11 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
               {ticketDone ? (
                 <div style={{ textAlign:"center", padding:"16px 0" }}>
                   <div style={{ fontSize:44, marginBottom:12 }}>✅</div>
-                  <div style={{ fontWeight:700, fontSize:16, color:"#03180d", marginBottom:4 }}>Ticket Submitted</div>
+                  <div style={{ fontWeight:700, fontSize:16, color:"#0d1f2d", marginBottom:4 }}>Ticket Submitted</div>
                   <div style={{ fontSize:13, color:"#888", marginBottom:12, fontFamily:"monospace", background:"#f5f5f5", padding:"6px 12px", borderRadius:8, display:"inline-block" }}>{ticketRef}</div>
                   <div style={{ fontSize:14, color:"#666", marginBottom:20, lineHeight:1.6 }}>We’ll review your ticket and get back to you{ticketEmail ? ` at ${ticketEmail}` : ""}. Keep your reference number for tracking.</div>
                   <button onClick={closeFeedback}
-                    style={{ background:"#03180d", color:"#fff200", border:"none", borderRadius:10, padding:"12px 28px", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                    style={{ background:"#0d1f2d", color:"#fff200", border:"none", borderRadius:10, padding:"12px 28px", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
                     Close
                   </button>
                 </div>
@@ -3187,10 +3189,10 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
                   <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
                     {TICKET_TYPES.map(t => (
                       <button key={t.id} onClick={()=>setTicketType(t.id)}
-                        style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", borderRadius:12, border:`2px solid ${ticketType===t.id?"#03180d":"#e5e7eb"}`, background:ticketType===t.id?"#f0fdf4":"#fff", cursor:"pointer", textAlign:"left", transition:"all 0.15s" }}>
+                        style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", borderRadius:12, border:`2px solid ${ticketType===t.id?"#0d1f2d":"#e5e7eb"}`, background:ticketType===t.id?"#f0fdf4":"#fff", cursor:"pointer", textAlign:"left", transition:"all 0.15s" }}>
                         <span style={{ fontSize:22, flexShrink:0 }}>{t.icon}</span>
                         <div>
-                          <div style={{ fontSize:14, fontWeight:600, color:ticketType===t.id?"#03180d":"#333" }}>{t.label}</div>
+                          <div style={{ fontSize:14, fontWeight:600, color:ticketType===t.id?"#0d1f2d":"#333" }}>{t.label}</div>
                           <div style={{ fontSize:12, color:"#888", marginTop:1 }}>{t.desc}</div>
                         </div>
                       </button>
@@ -3209,7 +3211,7 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
                   )}
 
                   <button onClick={()=>{ if(ticketType) setTicketStep(2); }} disabled={!ticketType}
-                    style={{ width:"100%", padding:14, background:!ticketType?"#ccc":"#03180d", color:!ticketType?"#999":"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:!ticketType?"default":"pointer", fontFamily:"inherit" }}>
+                    style={{ width:"100%", padding:14, background:!ticketType?"#ccc":"#0d1f2d", color:!ticketType?"#999":"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:!ticketType?"default":"pointer", fontFamily:"inherit" }}>
                     Next →
                   </button>
                 </>
@@ -3256,7 +3258,7 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
                       ← Back
                     </button>
                     <button onClick={()=>{ if(ticketDesc.trim()) setTicketStep(3); }} disabled={!ticketDesc.trim()}
-                      style={{ flex:2, padding:14, background:!ticketDesc.trim()?"#ccc":"#03180d", color:!ticketDesc.trim()?"#999":"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:!ticketDesc.trim()?"default":"pointer", fontFamily:"inherit" }}>
+                      style={{ flex:2, padding:14, background:!ticketDesc.trim()?"#ccc":"#0d1f2d", color:!ticketDesc.trim()?"#999":"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:!ticketDesc.trim()?"default":"pointer", fontFamily:"inherit" }}>
                       Next →
                     </button>
                   </div>
@@ -3303,7 +3305,7 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
                       ← Back
                     </button>
                     <button onClick={sendTicket} disabled={ticketSending || !ticketEmail.trim()}
-                      style={{ flex:2, padding:14, background:ticketSending||!ticketEmail.trim()?"#ccc":"#03180d", color:ticketSending||!ticketEmail.trim()?"#999":"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:ticketSending||!ticketEmail.trim()?"default":"pointer", fontFamily:"inherit" }}>
+                      style={{ flex:2, padding:14, background:ticketSending||!ticketEmail.trim()?"#ccc":"#0d1f2d", color:ticketSending||!ticketEmail.trim()?"#999":"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:ticketSending||!ticketEmail.trim()?"default":"pointer", fontFamily:"inherit" }}>
                       {ticketSending ? "Submitting…" : "Submit Ticket →"}
                     </button>
                   </div>
@@ -3618,8 +3620,8 @@ function LPGStepDetails({ data, onChange, onNext, onBack, onHome }) {
     _setPickerLPGStepDetails(null);
   };
   const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
-  const ContactBtn = ({target}) => <button onClick={()=>_setPickerLPGStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1d4a2e",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
-  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1d4a2e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerLPGStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1a3a4a",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1a3a4a",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
@@ -3900,7 +3902,7 @@ function LPGPDF({ formData, engineerData, onClose, onSave, autoDownload, onDownl
 
   return (
     <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
-      <div style={{ background:"#03180d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
+      <div style={{ background:"#0d1f2d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round"/></svg>
         </button>
@@ -4199,8 +4201,8 @@ function CoolOffStepDetails({ data, onChange, onNext, onBack, onHome }) {
     _setPickerCoolOffStepDetails(null);
   };
   const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
-  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCoolOffStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1d4a2e",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
-  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1d4a2e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCoolOffStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1a3a4a",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1a3a4a",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
@@ -4339,7 +4341,7 @@ function CoolOffPDF({ formData, engineerData, onClose, onSave, autoDownload, onD
   return (
     <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
       {/* Toolbar */}
-      <div style={{ background:"#03180d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
+      <div style={{ background:"#0d1f2d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round"/></svg>
         </button>
@@ -4585,12 +4587,12 @@ function BmkStepClientDetails({ data, onChange, onNext, onBack, onHome }) {
     _setPickerBmkStepClientDetails(null);
   };
   const ContactBtn = ({ target }) => (
-    <button onClick={() => _setPickerBmkStepClientDetails(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+    <button onClick={() => _setPickerBmkStepClientDetails(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1a3a4a", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
       👥 Add a Contact
     </button>
   );
   const CopyBtn = () => (
-    <button onClick={copy} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
+    <button onClick={copy} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1a3a4a", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
   );
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
@@ -5077,7 +5079,7 @@ function BenchmarkPDF({ formData, engineerData, onClose, onSave, autoDownload, o
   return (
     <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,sans-serif" }}>
       {/* Toolbar */}
-      <div style={{ background:"#03180d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
+      <div style={{ background:"#0d1f2d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round"/></svg>
         </button>
@@ -5547,8 +5549,8 @@ function CGSCStepDetails({ data, onChange, onNext, onBack, onHome }) {
     _setPickerCGSCStepDetails(null);
   };
   const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
-  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCGSCStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1d4a2e",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
-  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1d4a2e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCGSCStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1a3a4a",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1a3a4a",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
@@ -5819,7 +5821,7 @@ function CommercialGSCPDF({ formData, engineerData, onClose, onSave, autoDownloa
   return (
     <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
       {/* Toolbar */}
-      <div style={{ background:"#03180d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
+      <div style={{ background:"#0d1f2d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round"/></svg>
         </button>
@@ -6125,8 +6127,8 @@ function GISRStepDetails({ data, onChange, onNext, onBack, onHome }) {
     _setPickerGISRStepDetails(null);
   };
   const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
-  const ContactBtn = ({target}) => <button onClick={()=>_setPickerGISRStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1d4a2e",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
-  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1d4a2e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerGISRStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1a3a4a",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1a3a4a",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
@@ -6390,7 +6392,7 @@ function GasInstallReportPDF({ formData, engineerData, onClose, onSave, autoDown
   return (
     <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
       {/* Toolbar */}
-      <div style={{ background:"#03180d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
+      <div style={{ background:"#0d1f2d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round"/></svg>
         </button>
@@ -6720,8 +6722,8 @@ function CCIStepDetails({ data, onChange, onNext, onBack, onHome }) {
     _setPickerCCIStepDetails(null);
   };
   const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
-  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCCIStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1d4a2e",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
-  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1d4a2e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCCIStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1a3a4a",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1a3a4a",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
@@ -7426,7 +7428,7 @@ function CateringInspectionPDF({ formData, engineerData, onClose, onSave, autoDo
   return (
     <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
       {/* Toolbar */}
-      <div style={{ background:"#03180d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
+      <div style={{ background:"#0d1f2d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round"/></svg>
         </button>
@@ -7538,8 +7540,8 @@ function GTPStepDetails({ data, onChange, onNext, onBack, onHome }) {
     _setPickerGTPStepDetails(null);
   };
   const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
-  const ContactBtn = ({target}) => <button onClick={()=>_setPickerGTPStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1d4a2e",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
-  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1d4a2e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerGTPStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1a3a4a",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1a3a4a",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
@@ -7921,7 +7923,7 @@ function GasTestPurgePDF({ formData, engineerData, onClose, onSave, autoDownload
 
   return (
     <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
-      <div style={{ background:"#03180d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
+      <div style={{ background:"#0d1f2d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round"/></svg>
         </button>
@@ -8327,7 +8329,7 @@ function GenericCertPDF({ certLabel, config, form, engineerData, onClose, onSave
   return (
     <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
       {/* Top bar */}
-      <div style={{ background:"#03180d", padding:"12px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
+      <div style={{ background:"#0d1f2d", padding:"12px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round"/></svg>
         </button>
@@ -8707,7 +8709,7 @@ const GW_VISIT_2_TASKS = [
 
 // ─── ATTACHMENTS STEP (shared by all cert flows) ────────────────────────────
 
-function AttachmentsStep({ data, onChange, onNext, onBack, onHome, accentColor="#1d4a2e", nextLabel="Next: Signatures" }) {
+function AttachmentsStep({ data, onChange, onNext, onBack, onHome, accentColor="#1a3a4a", nextLabel="Next: Signatures" }) {
   const imgRef = useRef(null);
   const pdfRef = useRef(null);
   const attachments = data.attachments || [];
@@ -8969,7 +8971,7 @@ function SigPad({ value, onChange, storageKey }) {
 
 // ─── SHARED CUSTOMER SIGNATURE STEP (used by all cert types) ─────────────────
 
-function CustomerSigStep({ data, onChange, onNext, onBack, onHome, accentColor="#1d4a2e", nextLabel="Preview PDF", imgKeyOverride, nameKeyOverride, dateKeyOverride }) {
+function CustomerSigStep({ data, onChange, onNext, onBack, onHome, accentColor="#1a3a4a", nextLabel="Preview PDF", imgKeyOverride, nameKeyOverride, dateKeyOverride }) {
   const today = new Date().toISOString().slice(0,10);
 
   useEffect(() => {
@@ -9031,7 +9033,7 @@ function CustomerSigStep({ data, onChange, onNext, onBack, onHome, accentColor="
   );
 }
 
-function SharedSigStep({ data, onChange, onNext, onBack, onHome, accentColor="#1d4a2e", certTitle="Certificate" }) {
+function SharedSigStep({ data, onChange, onNext, onBack, onHome, accentColor="#1a3a4a", certTitle="Certificate" }) {
   const today = new Date().toISOString().slice(0,10);
 
   // Auto-populate dates on first render
@@ -9333,7 +9335,7 @@ function GasWorksPDFPreview({ form, onClose, autoDownload, onDownloadDone, onCom
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:"#1a1a2e", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ background:"#03180d", padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+      <div style={{ background:"#0d1f2d", padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:8, padding:"6px 14px", color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer" }}>← Back</button>
         <span style={{ color:"#fff", fontWeight:700, fontSize:15 }}>Gas Works Record</span>
         <button onClick={downloadPDF} disabled={downloading} style={{ background:"#fff200", color:"#111", border:"none", borderRadius:20, padding:"8px 18px", fontWeight:700, fontSize:13, cursor:"pointer" }}>
@@ -9521,7 +9523,7 @@ function ContactPickerModal({ onSelect, onClose, title="Choose a contact" }) {
       <div style={{ flex:1, display:"flex", flexDirection:"column", margin:"48px 0 0",
         background:LIGHT_BG, borderRadius:"20px 20px 0 0", overflow:"hidden", boxShadow:"0 -8px 40px rgba(0,0,0,0.3)" }}>
         {/* Header */}
-        <div style={{ background:"#1d4a2e", padding:"14px 16px", display:"flex", alignItems:"center", gap:12 }}>
+        <div style={{ background:"#1a3a4a", padding:"14px 16px", display:"flex", alignItems:"center", gap:12 }}>
           <span style={{ color:"#fff200", fontWeight:700, fontSize:16, flex:1 }}>👥 {title}</span>
           <button onClick={onClose}
             style={{ background:"rgba(255,255,255,0.18)", border:"none", borderRadius:"50%", width:32, height:32,
@@ -9532,7 +9534,7 @@ function ContactPickerModal({ onSelect, onClose, title="Choose a contact" }) {
           <input value={search} onChange={e=>setSearch(e.target.value)}
             placeholder="🔍  Search by name, company or phone..."
             autoFocus
-            style={{ width:"100%", boxSizing:"border-box", padding:"10px 13px", border:"2px solid #1d4a2e30",
+            style={{ width:"100%", boxSizing:"border-box", padding:"10px 13px", border:"2px solid #1a3a4a30",
               borderRadius:10, fontSize:14, outline:"none", fontFamily:"inherit" }}/>
         </div>
         {/* List */}
@@ -9552,17 +9554,17 @@ function ContactPickerModal({ onSelect, onClose, title="Choose a contact" }) {
           ) : filtered.map((c, i) => (
             <div key={c.id||i} onClick={()=>onSelect(c)}
               style={{ background:"#fff", borderRadius:10, padding:"12px 14px", marginBottom:8, cursor:"pointer",
-                boxShadow:"0 1px 4px rgba(0,0,0,0.06)", borderLeft:"4px solid #1d4a2e",
+                boxShadow:"0 1px 4px rgba(0,0,0,0.06)", borderLeft:"4px solid #1a3a4a",
                 display:"flex", alignItems:"center", gap:12, transition:"background 0.12s" }}
               onMouseEnter={e=>e.currentTarget.style.background="#f0f9f4"}
               onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-              <div style={{ width:40, height:40, borderRadius:"50%", background:"#1d4a2e18",
+              <div style={{ width:40, height:40, borderRadius:"50%", background:"#1a3a4a18",
                 display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>
                 👤
               </div>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontWeight:700, fontSize:15, color:"#222", marginBottom:1 }}>{c.name||"—"}</div>
-                {c.company && <div style={{ fontSize:12, color:"#1d4a2e", fontWeight:600, marginBottom:1 }}>{c.company}</div>}
+                {c.company && <div style={{ fontSize:12, color:"#1a3a4a", fontWeight:600, marginBottom:1 }}>{c.company}</div>}
                 {c.phone  && <div style={{ fontSize:12, color:"#555" }}>📞 {c.phone}</div>}
                 {c.addr   && <div style={{ fontSize:11, color:"#aaa", marginTop:1, overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis" }}>{c.addr}</div>}
               </div>
@@ -9704,13 +9706,13 @@ function StepClientDetails({ data, onChange, onNext, onBack, onHome, engData, on
   };
 
   const ContactBtn = ({ target }) => (
-    <button onClick={() => setPickerTarget(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+    <button onClick={() => setPickerTarget(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1a3a4a", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
       👥 Add a Contact
     </button>
   );
 
   const CopyBtn = () => (
-    <button onClick={copy} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
+    <button onClick={copy} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1a3a4a", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
   );
 
   return (
@@ -12294,7 +12296,7 @@ function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, 
   return (
     <div style={{ position:"fixed", inset:0, background:"#666", zIndex:2000, overflowY:"auto", overflowX:"hidden", fontFamily:"Arial,Helvetica,sans-serif" }}>
       {/* Sticky top bar */}
-      <div style={{ background:"#03180d", padding:"12px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
+      <div style={{ background:"#0d1f2d", padding:"12px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
@@ -12960,8 +12962,8 @@ function InvoiceLineItemEditor({ item, editingIndex, onSave, onBack }) {
 }
 
 // ─── Invoice Wizard ───────────────────────────────────────────────────────────
-const INV_GREEN = "#1d4a2e";
-const INV_GREEN_DARK = "#03180d";
+const INV_GREEN = "#1a3a4a";
+const INV_GREEN_DARK = "#0d1f2d";
 const INV_BLUE = "#2a52d4";
 
 function InvoiceWizard({ sourceRecord, onSave, onClose, invoiceRecords, profile }) {
@@ -13162,7 +13164,7 @@ function InvoiceWizard({ sourceRecord, onSave, onClose, invoiceRecords, profile 
   };
 
   const InvContactBtn = ({ target }) => (
-    <button onClick={() => handleInvContactBtn(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+    <button onClick={() => handleInvContactBtn(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1a3a4a", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
       👥 Add a Contact
     </button>
   );
@@ -13239,7 +13241,7 @@ function InvoiceWizard({ sourceRecord, onSave, onClose, invoiceRecords, profile 
         <FormInput placeholder="Telephone" value={clientTel} onChange={v=>setClientTel(v)}/>
         <FormInput placeholder="Email" value={clientEmail} onChange={v=>setClientEmail(v)}/>
         <SectionHeader title="Installation Details" actions={[
-          <button key="copy" onClick={copyClientToInst} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>,
+          <button key="copy" onClick={copyClientToInst} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1a3a4a", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>,
           <InvContactBtn key="cp" target="inst"/>
         ]}/>
         <FormInput placeholder="Name" value={instName} onChange={v=>setInstName(v)}/>
@@ -13704,7 +13706,7 @@ function QuoteWizard({ sourceRecord, onSave, onClose, profile }) {
   };
 
   const ContactBtn = ({ target }) => (
-    <button onClick={() => _setQtPicker(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+    <button onClick={() => _setQtPicker(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1a3a4a", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
       👥 Add a Contact
     </button>
   );
@@ -13769,7 +13771,7 @@ function QuoteWizard({ sourceRecord, onSave, onClose, profile }) {
         <FormInput placeholder="Telephone" value={clientTel} onChange={v=>setClientTel(v)}/>
         <FormInput placeholder="Email" value={clientEmail} onChange={v=>setClientEmail(v)}/>
         <SectionHeader title="Installation Details" actions={[
-          <button key="copy" onClick={()=>{setInstName(clientName);setInstAddr1(clientAddr1);setInstAddr2(clientAddr2);setInstAddr3(clientAddr3);setInstPostcode(clientPostcode);setInstTel(clientTel);}} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>,
+          <button key="copy" onClick={()=>{setInstName(clientName);setInstAddr1(clientAddr1);setInstAddr2(clientAddr2);setInstAddr3(clientAddr3);setInstPostcode(clientPostcode);setInstTel(clientTel);}} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1a3a4a", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>,
           <ContactBtn key="cp" target="inst"/>
         ]}/>
         <FormInput placeholder="Name" value={instName} onChange={v=>setInstName(v)}/>
@@ -13990,7 +13992,7 @@ function QuotePDFPreview({ quoteData: q, onClose, onSave }) {
 
   return (
     <div style={{ position:"fixed", inset:0, background:"#555", zIndex:4000, overflowY:"auto", overflowX:"hidden", fontFamily:"Arial,Helvetica,sans-serif" }}>
-      <div style={{ background:"#03180d", padding:"12px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
+      <div style={{ background:"#0d1f2d", padding:"12px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
@@ -14628,7 +14630,7 @@ function RecordActionSheet({ title, onClose, onPreview, onDownload, onEdit, onDe
     { label:"⬇ Download PDF", fn: onDownload, color:"#222" },
     { label:"📄 Copy to Invoice", fn: onCopyToInvoice, color: INV_GREEN_DARK },
     ...(onPinReminder ? [{ label: isPinned ? "🔕 Remove from Reminders" : "📬 Add to Reminders", fn: onPinReminder, color: isPinned ? "#888" : "#c00" }] : []),
-    ...(onRenew ? [{ label: "🔄 Renew Certificate", fn: onRenew, color: "#1d4a2e" }] : []),
+    ...(onRenew ? [{ label: "🔄 Renew Certificate", fn: onRenew, color: "#1a3a4a" }] : []),
     ...(onEdit ? [{ label:"✏️ Edit", fn: onEdit, color:BLUE }] : []),
     { label:"🗑 Delete", fn: onDelete, color:"#c00" },
   ];
@@ -15637,7 +15639,7 @@ function RemindersScreen({ records, onBack, onHome, engineerData, onRenew }) {
         {r.tel && <a href={`tel:${r.tel.replace(/\s/g,'')}`} style={{ display:"block", fontSize:13, color:BLUE, marginTop:8, textAlign:"center", fontWeight:700, textDecoration:"none", padding:"8px 0", background:"#f0f4ff", borderRadius:8 }}>📞 {r.tel}</a>}
         {onRenew && r._record && (
           <button onClick={()=>onRenew(r._record)}
-            style={{ width:"100%", padding:"10px 0", marginTop:8, background:"#1d4a2e", color:"#fff200", border:"none", borderRadius:8, fontWeight:700, fontSize:13, cursor:"pointer", letterSpacing:0.3 }}>
+            style={{ width:"100%", padding:"10px 0", marginTop:8, background:"#1a3a4a", color:"#fff200", border:"none", borderRadius:8, fontWeight:700, fontSize:13, cursor:"pointer", letterSpacing:0.3 }}>
             🔄 Renew Certificate
           </button>
         )}
@@ -16940,12 +16942,12 @@ function BSStepClientDetails({ data, onChange, onNext, onBack, onHome, engData, 
     setBsPickerTarget(null);
   };
   const contactBtn = (onClick) => (
-    <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:6, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+    <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:6, background:"#1a3a4a", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
       👥 Add a Contact
     </button>
   );
   const copyBtn = (
-    <button onClick={copyClientToInst} style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+    <button onClick={copyClientToInst} style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1a3a4a", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
       ✓ Copy
     </button>
   );
@@ -17264,13 +17266,13 @@ function WNStepClientDetails({ data, onChange, onNext, onBack, onHome, engData, 
   };
 
   const ContactBtn = ({ target }) => (
-    <button onClick={() => setWnPickerTarget(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+    <button onClick={() => setWnPickerTarget(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1a3a4a", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
       👥 Add a Contact
     </button>
   );
 
   const CopyBtn = () => (
-    <button onClick={copy} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1d4a2e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
+    <button onClick={copy} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1a3a4a", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
   );
 
   return (
@@ -18193,7 +18195,7 @@ function CombineCertsScreen({ records, onBack, onHome }) {
     <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#f0f4f8", fontFamily: "'Segoe UI', sans-serif" }}>
       <Header title="Combine Certs / Reports" onBack={combining ? undefined : onBack} />
 
-      <div style={{ background: "#03180d", padding: "10px 16px", color: "rgba(255,255,255,0.85)", fontSize: 13 }}>
+      <div style={{ background: "#0d1f2d", padding: "10px 16px", color: "rgba(255,255,255,0.85)", fontSize: 13 }}>
         Select certificates below, then tap <strong style={{ color: "#fff200" }}>Generate Combined PDF</strong>.
       </div>
 
@@ -18238,12 +18240,12 @@ function CombineCertsScreen({ records, onBack, onHome }) {
       </div>
 
       {/* Bottom action bar */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#03180d", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 -4px 20px rgba(0,0,0,0.3)", zIndex: 100 }}>
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#0d1f2d", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 -4px 20px rgba(0,0,0,0.3)", zIndex: 100 }}>
         <div style={{ flex: 1, color: "rgba(255,255,255,0.8)", fontSize: 13 }}>
           {selectedCount === 0 ? "No certificates selected" : `${selectedCount} selected`}
         </div>
         <button onClick={startCombine} disabled={selectedCount === 0 || combining}
-          style={{ background: selectedCount === 0 || combining ? "#555" : "#fff200", color: selectedCount === 0 || combining ? "#999" : "#03180d", border: "none", borderRadius: 10, padding: "12px 20px", fontWeight: 800, fontSize: 14, cursor: selectedCount === 0 || combining ? "default" : "pointer", whiteSpace: "nowrap" }}>
+          style={{ background: selectedCount === 0 || combining ? "#555" : "#fff200", color: selectedCount === 0 || combining ? "#999" : "#0d1f2d", border: "none", borderRadius: 10, padding: "12px 20px", fontWeight: 800, fontSize: 14, cursor: selectedCount === 0 || combining ? "default" : "pointer", whiteSpace: "nowrap" }}>
           Generate Combined PDF
         </button>
       </div>
@@ -18258,7 +18260,7 @@ function CombineCertsScreen({ records, onBack, onHome }) {
               Downloading {progress.current} of {progress.total}…
             </div>
             <div style={{ background: "#f0f2f8", borderRadius: 99, height: 8, overflow: "hidden" }}>
-              <div style={{ background: "#03180d", height: "100%", width: progress.total > 0 ? Math.round((progress.current / progress.total) * 100) + "%" : "0%", transition: "width 0.4s ease", borderRadius: 99 }} />
+              <div style={{ background: "#0d1f2d", height: "100%", width: progress.total > 0 ? Math.round((progress.current / progress.total) * 100) + "%" : "0%", transition: "width 0.4s ease", borderRadius: 99 }} />
             </div>
           </div>
         </div>
