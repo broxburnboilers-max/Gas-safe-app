@@ -13596,7 +13596,7 @@ function QuoteWizard({ sourceRecord, onSave, onClose, profile }) {
   };
 
   const ContactBtn = ({ target }) => (
-    <button onClick={() => setWnPickerTarget(target)} title="Import from Contacts"
+    <button onClick={() => _setQtPicker(target)} title="Import from Contacts"
       style={{ background:"rgba(255,255,255,0.25)", border:"2px solid rgba(255,255,255,0.8)", borderRadius:8, cursor:"pointer", padding:"4px 10px", display:"flex", alignItems:"center", gap:6 }}>
       <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
         <circle cx="14" cy="10" r="5" stroke="white" strokeWidth="1.8"/>
