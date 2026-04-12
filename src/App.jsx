@@ -3561,14 +3561,14 @@ function LPGStepDetails({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Gas ID Number (Engineer ID)")}<input value={data.gasId} onChange={e=>onChange({...data,gasId:e.target.value})} placeholder="Engineer ID card number" style={inp}/>
         </div>
         <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Installation Details")}
+          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Installation Details")}</div><button onClick={{()=>_setPickerLPGStepDetails("inst")}} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
           {lbl("Installation Address",true)}<input value={data.instAddr} onChange={e=>onChange({...data,instAddr:e.target.value})} placeholder="Street address" style={inp}/>
           {lbl("Town / City")}<input value={data.instCity} onChange={e=>onChange({...data,instCity:e.target.value})} placeholder="Town or city" style={inp}/>
           {lbl("Post Code")}<input value={data.instPostcode} onChange={e=>onChange({...data,instPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
           {lbl("Telephone No")}<input value={data.instTel} onChange={e=>onChange({...data,instTel:e.target.value})} placeholder="Telephone" style={inp}/>
         </div>
         <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerLPGStepDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:8, padding:"5px 12px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Contacts</button></div>
+          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerLPGStepDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
           {lbl("Client Address",true)}<input value={data.clientAddr} onChange={e=>onChange({...data,clientAddr:e.target.value})} placeholder="Client name / address" style={inp}/>
           {lbl("Town / City")}<input value={data.clientCity} onChange={e=>onChange({...data,clientCity:e.target.value})} placeholder="Town or city" style={inp}/>
           {lbl("Post Code")}<input value={data.clientPostcode} onChange={e=>onChange({...data,clientPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
@@ -4131,7 +4131,7 @@ function CoolOffStepDetails({ data, onChange, onNext, onBack, onHome }) {
       <Header title="Installation & Client Details" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
         <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Installation Details")}
+          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Installation Details")}</div><button onClick={{()=>_setPickerCoolOffStepDetails("inst")}} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
           {lbl("Installation Name / Address", true)}<input value={data.instName} onChange={e=>onChange({...data,instName:e.target.value})} placeholder="Name / address line 1" style={inp}/>
           {lbl("Address line 2")}<input value={data.instAddr2} onChange={e=>onChange({...data,instAddr2:e.target.value})} placeholder="Town or city" style={inp}/>
           {lbl("Email Address")}<input value={data.instEmail} onChange={e=>onChange({...data,instEmail:e.target.value})} placeholder="email@example.com" style={inp}/>
@@ -4139,7 +4139,7 @@ function CoolOffStepDetails({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Telephone No")}<input value={data.instTel} onChange={e=>onChange({...data,instTel:e.target.value})} placeholder="Telephone" style={inp}/>
         </div>
         <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>onChange({...data, clientName:data.instName||"", clientAddr2:data.instAddr2||"", clientEmail:data.instEmail||"", clientPostcode:data.instPostcode||"", clientTel:data.instTel||""})} style={{ marginLeft:8, flexShrink:0, background:"#fff", border:`2px solid ${COOL_COLOR}`, borderRadius:8, padding:"5px 12px", color:COOL_COLOR, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Copy from Installation</button><button onClick={()=>_setPickerCoolOffStepDetails("client")} style={{ marginLeft:6, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:8, padding:"5px 12px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Contacts</button></div>
+          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>onChange({...data, clientName:data.instName||"", clientAddr2:data.instAddr2||"", clientEmail:data.instEmail||"", clientPostcode:data.instPostcode||"", clientTel:data.instTel||""})} style={{ marginLeft:8, flexShrink:0, background:"#fff", border:`2px solid ${COOL_COLOR}`, borderRadius:8, padding:"5px 12px", color:COOL_COLOR, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Copy from Installation</button><button onClick={()=>_setPickerCoolOffStepDetails("client")} style={{ marginLeft:6, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
           {lbl("Client Name / Address", true)}<input value={data.clientName} onChange={e=>onChange({...data,clientName:e.target.value})} placeholder="Name / address line 1" style={inp}/>
           {lbl("Address line 2")}<input value={data.clientAddr2} onChange={e=>onChange({...data,clientAddr2:e.target.value})} placeholder="Town or city" style={inp}/>
           {lbl("Email Address")}<input value={data.clientEmail} onChange={e=>onChange({...data,clientEmail:e.target.value})} placeholder="email@example.com" style={inp}/>
@@ -4500,7 +4500,7 @@ function BmkStepClientDetails({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Boiler Serial Number")}{inp("boilerSerial","Boiler serial number")}
         </div>
         <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerBmkStepClientDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:8, padding:"5px 12px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Contacts</button></div>
+          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerBmkStepClientDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
           {lbl("Customer Name")}{inp("clientName","Full name")}
           {lbl("Telephone No")}{inp("clientTel","Phone","tel")}
           {lbl("Address Line 1")}{inp("clientAddr1","Address line 1")}
@@ -5463,14 +5463,14 @@ function CGSCStepDetails({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Gas ID Number (Engineer ID)")}<input value={data.gasId} onChange={e=>onChange({...data,gasId:e.target.value})} placeholder="Engineer ID card number" style={inp}/>
         </div>
         <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Installation Details")}
+          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Installation Details")}</div><button onClick={{()=>_setPickerCGSCStepDetails("inst")}} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
           {lbl("Installation Address",true)}<input value={data.instAddr} onChange={e=>onChange({...data,instAddr:e.target.value})} placeholder="Street address" style={inp}/>
           {lbl("Town / City")}<input value={data.instCity} onChange={e=>onChange({...data,instCity:e.target.value})} placeholder="Town or city" style={inp}/>
           {lbl("Post Code")}<input value={data.instPostcode} onChange={e=>onChange({...data,instPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
           {lbl("Telephone No")}<input value={data.instTel} onChange={e=>onChange({...data,instTel:e.target.value})} placeholder="Telephone" style={inp}/>
         </div>
         <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerCGSCStepDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:8, padding:"5px 12px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Contacts</button></div>
+          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerCGSCStepDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
           {lbl("Client Name / Address",true)}<input value={data.clientAddr} onChange={e=>onChange({...data,clientAddr:e.target.value})} placeholder="Client name / address" style={inp}/>
           {lbl("Town / City")}<input value={data.clientCity} onChange={e=>onChange({...data,clientCity:e.target.value})} placeholder="Town or city" style={inp}/>
           {lbl("Post Code")}<input value={data.clientPostcode} onChange={e=>onChange({...data,clientPostcode:e.target.value})} placeholder="Postcode" style={inp}/>
@@ -6042,7 +6042,7 @@ function GISRStepDetails({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Print Name")}<input value={data.printName} onChange={e=>onChange({...data,printName:e.target.value})} placeholder="Printed name" style={inp}/>
         </div>
         <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerGISRStepDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:8, padding:"5px 12px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Contacts</button></div>
+          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerGISRStepDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
           {lbl("Client Name",true)}<input value={data.clientName} onChange={e=>onChange({...data,clientName:e.target.value})} placeholder="Client / customer name" style={inp}/>
           {lbl("Address")}<input value={data.clientAddr} onChange={e=>onChange({...data,clientAddr:e.target.value})} placeholder="Street address" style={inp}/>
           {lbl("Town / City")}<input value={data.clientCity} onChange={e=>onChange({...data,clientCity:e.target.value})} placeholder="Town or city" style={inp}/>
@@ -6051,7 +6051,7 @@ function GISRStepDetails({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Received by (Signature name)")}<input value={data.receivedBy} onChange={e=>onChange({...data,receivedBy:e.target.value})} placeholder="Customer signature name" style={inp}/>
         </div>
         <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Installation Details")}
+          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Installation Details")}</div><button onClick={{()=>_setPickerGISRStepDetails("inst")}} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
           {lbl("Name")}<input value={data.instName} onChange={e=>onChange({...data,instName:e.target.value})} placeholder="Name" style={inp}/>
           {lbl("Address")}<input value={data.instAddr} onChange={e=>onChange({...data,instAddr:e.target.value})} placeholder="Street address" style={inp}/>
           {lbl("Town / City")}<input value={data.instCity} onChange={e=>onChange({...data,instCity:e.target.value})} placeholder="Town or city" style={inp}/>
@@ -6641,7 +6641,7 @@ function CCIStepBusiness({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Email Address")}<input value={data.bizEmail} onChange={e=>onChange({...data,bizEmail:e.target.value})} placeholder="Email" style={inp}/>
         </div>
         <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Installation Details")}
+          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Installation Details")}</div><button onClick={{()=>_setPickerCCIStepBusiness("inst")}} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
           {lbl("Name")}<input value={data.instName} onChange={e=>onChange({...data,instName:e.target.value})} placeholder="Name" style={inp}/>
           {lbl("Address")}<input value={data.instAddr} onChange={e=>onChange({...data,instAddr:e.target.value})} placeholder="Street address" style={inp}/>
           {lbl("Town / City")}<input value={data.instCity} onChange={e=>onChange({...data,instCity:e.target.value})} placeholder="Town or city" style={inp}/>
@@ -6650,7 +6650,7 @@ function CCIStepBusiness({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Email address")}<input value={data.instEmail} onChange={e=>onChange({...data,instEmail:e.target.value})} placeholder="Email" style={inp}/>
         </div>
         <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerCCIStepBusiness("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:8, padding:"5px 12px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Contacts</button></div>
+          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerCCIStepBusiness("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
           {lbl("Client Name",true)}<input value={data.clientName} onChange={e=>onChange({...data,clientName:e.target.value})} placeholder="Client name" style={inp}/>
           {lbl("Address")}<input value={data.clientAddr} onChange={e=>onChange({...data,clientAddr:e.target.value})} placeholder="Street address" style={inp}/>
           {lbl("Town / City")}<input value={data.clientCity} onChange={e=>onChange({...data,clientCity:e.target.value})} placeholder="Town or city" style={inp}/>
@@ -7463,7 +7463,7 @@ function GTPStepDetails({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Issued by")}<input value={data.issuedBy} onChange={e=>onChange({...data,issuedBy:e.target.value})} placeholder="Engineer name" style={inp}/>
         </div>
         <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerGTPStepDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:8, padding:"5px 12px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Contacts</button></div>
+          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Client Details")}</div><button onClick={()=>_setPickerGTPStepDetails("client")} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
           {lbl("Client Name", true)}<input value={data.clientName} onChange={e=>onChange({...data,clientName:e.target.value})} placeholder="Client / customer name" style={inp}/>
           {lbl("Address")}<input value={data.clientAddr} onChange={e=>onChange({...data,clientAddr:e.target.value})} placeholder="Street address" style={inp}/>
           {lbl("Town / City")}<input value={data.clientCity} onChange={e=>onChange({...data,clientCity:e.target.value})} placeholder="Town or city" style={inp}/>
@@ -7471,7 +7471,7 @@ function GTPStepDetails({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Tel No")}<input value={data.clientTel} onChange={e=>onChange({...data,clientTel:e.target.value})} placeholder="Telephone number" style={inp}/>
         </div>
         <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Installation Details")}
+          <div style={{ display:"flex", alignItems:"center", marginBottom:4, marginTop:14 }}><div style={{ flex:1 }}>{sec("Installation Details")}</div><button onClick={{()=>_setPickerGTPStepDetails("inst")}} style={{ marginLeft:8, flexShrink:0, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>👥 Add a Contact</button></div>
           {lbl("Installation Name")}<input value={data.instName} onChange={e=>onChange({...data,instName:e.target.value})} placeholder="Name" style={inp}/>
           {lbl("Address")}<input value={data.instAddr} onChange={e=>onChange({...data,instAddr:e.target.value})} placeholder="Street address" style={inp}/>
           {lbl("Town / City")}<input value={data.instCity} onChange={e=>onChange({...data,instCity:e.target.value})} placeholder="Town or city" style={inp}/>
@@ -9613,15 +9613,8 @@ function StepClientDetails({ data, onChange, onNext, onBack, onHome }) {
   };
 
   const ContactBtn = ({ target }) => (
-    <button onClick={() => setPickerTarget(target)} title="Import from Contacts"
-      style={{ background:"rgba(255,255,255,0.25)", border:"2px solid rgba(255,255,255,0.8)", borderRadius:8, cursor:"pointer", padding:"4px 10px", display:"flex", alignItems:"center", gap:6 }}>
-      <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
-        <circle cx="14" cy="10" r="5" stroke="white" strokeWidth="1.8"/>
-        <path d="M5 24c0-5 4-8 9-8s9 3 9 8" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-        <circle cx="22" cy="22" r="5" fill="white"/>
-        <path d="M22 19.5v5M19.5 22h5" stroke={BLUE} strokeWidth="1.8" strokeLinecap="round"/>
-      </svg>
-      <span style={{ color:"#fff", fontSize:12, fontWeight:600 }}>Contacts</span>
+    <button onClick={() => setPickerTarget(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+      👥 Add a Contact
     </button>
   );
 
@@ -13063,15 +13056,8 @@ function InvoiceWizard({ sourceRecord, onSave, onClose, invoiceRecords, profile 
   };
 
   const InvContactBtn = ({ target }) => (
-    <button onClick={() => handleInvContactBtn(target)} title="Import from Contacts"
-      style={{ background:"rgba(255,255,255,0.25)", border:"2px solid rgba(255,255,255,0.8)", borderRadius:8, cursor:"pointer", padding:"4px 10px", display:"flex", alignItems:"center", gap:6 }}>
-      <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
-        <circle cx="14" cy="10" r="5" stroke="white" strokeWidth="1.8"/>
-        <path d="M5 24c0-5 4-8 9-8s9 3 9 8" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-        <circle cx="22" cy="22" r="5" fill="white"/>
-        <path d="M22 19.5v5M19.5 22h5" stroke={BLUE} strokeWidth="1.8" strokeLinecap="round"/>
-      </svg>
-      <span style={{ color:"#fff", fontSize:12, fontWeight:600 }}>Contacts</span>
+    <button onClick={() => handleInvContactBtn(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+      👥 Add a Contact
     </button>
   );
 
@@ -13596,15 +13582,8 @@ function QuoteWizard({ sourceRecord, onSave, onClose, profile }) {
   };
 
   const ContactBtn = ({ target }) => (
-    <button onClick={() => _setQtPicker(target)} title="Import from Contacts"
-      style={{ background:"rgba(255,255,255,0.25)", border:"2px solid rgba(255,255,255,0.8)", borderRadius:8, cursor:"pointer", padding:"4px 10px", display:"flex", alignItems:"center", gap:6 }}>
-      <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
-        <circle cx="14" cy="10" r="5" stroke="white" strokeWidth="1.8"/>
-        <path d="M5 24c0-5 4-8 9-8s9 3 9 8" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-        <circle cx="22" cy="22" r="5" fill="white"/>
-        <path d="M22 19.5v5M19.5 22h5" stroke={BLUE} strokeWidth="1.8" strokeLinecap="round"/>
-      </svg>
-      <span style={{ color:"#fff", fontSize:12, fontWeight:600 }}>Contacts</span>
+    <button onClick={() => _setQtPicker(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+      👥 Add a Contact
     </button>
   );
 
@@ -16821,9 +16800,8 @@ function BSStepClientDetails({ data, onChange, onNext, onBack, onHome }) {
     setBsPickerTarget(null);
   };
   const contactBtn = (onClick) => (
-    <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.18)", border:"1.5px solid rgba(255,255,255,0.6)", borderRadius:20, padding:"5px 14px", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="white" strokeWidth="2"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="white" strokeWidth="2" strokeLinecap="round"/><circle cx="18" cy="6" r="2" fill="white"/><path d="M21 4l-1.5 1.5M18 3v2M15 4l1.5 1.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
-      Contacts
+    <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:6, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+      👥 Add a Contact
     </button>
   );
   const copyBtn = (
@@ -17135,15 +17113,8 @@ function WNStepClientDetails({ data, onChange, onNext, onBack, onHome }) {
   };
 
   const ContactBtn = ({ target }) => (
-    <button onClick={() => setWnPickerTarget(target)} title="Import from Contacts"
-      style={{ background:"rgba(255,255,255,0.25)", border:"2px solid rgba(255,255,255,0.8)", borderRadius:8, cursor:"pointer", padding:"4px 10px", display:"flex", alignItems:"center", gap:6 }}>
-      <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
-        <circle cx="14" cy="10" r="5" stroke="white" strokeWidth="1.8"/>
-        <path d="M5 24c0-5 4-8 9-8s9 3 9 8" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-        <circle cx="22" cy="22" r="5" fill="white"/>
-        <path d="M22 19.5v5M19.5 22h5" stroke={BLUE} strokeWidth="1.8" strokeLinecap="round"/>
-      </svg>
-      <span style={{ color:"#fff", fontSize:12, fontWeight:600 }}>Contacts</span>
+    <button onClick={() => setWnPickerTarget(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1d4a2e", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+      👥 Add a Contact
     </button>
   );
 
