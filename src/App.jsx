@@ -342,6 +342,40 @@ const STRIPE_LINKS = {
   proplus_monthly: "https://buy.stripe.com/test_00w00cagr7jV8nK8uRcEw03",
   proplus_annual:  "https://buy.stripe.com/test_28EbIU60b5bNbzW8uRcEw05",
 };
+
+// Build a Stripe payment link with the user's username as client_reference_id
+function getStripeLink(key) {
+  const base = STRIPE_LINKS[key];
+  if (!base) return "#";
+  const u = getCurrentUser();
+  const username = u?.username || "";
+  return username ? `${base}?client_reference_id=${encodeURIComponent(username)}` : base;
+}
+
+// Check Stripe subscription status for a user — called on login
+async function checkStripeSubscription(username) {
+  try {
+    const res = await fetch(`/.netlify/functions/check-subscription?username=${encodeURIComponent(username)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.active && data.plan) {
+      // Auto-unlock: update local profile with plan and subscription status
+      const key = `${username}_user_profile`;
+      const p = JSON.parse(localStorage.getItem(key) || "{}");
+      p.subscriptionActive = true;
+      p.plan = data.plan;
+      p.stripeSubscriptionId = data.subscriptionId;
+      p.stripeCurrentPeriodEnd = data.currentPeriodEnd;
+      localStorage.setItem(key, JSON.stringify(p));
+      console.log(`✅ Stripe subscription active: ${data.plan} (until ${data.currentPeriodEnd})`);
+      return data;
+    }
+    return data;
+  } catch (err) {
+    console.warn("Stripe subscription check failed:", err.message);
+    return null;
+  }
+}
 const LIGHT_BG = "#f0f2f5";    // Cool grey background
 const GS_YELLOW = "#fff200";   // Gas Safe yellow
 const GS_MID = "#35463d";      // Gas Safe mid green
@@ -2507,7 +2541,7 @@ function PaywallScreen({ onLogout, onPaymentSubmitted, currentUser }) {
               ))}
             </div>
 
-            <button onClick={()=>{ const stripeKey = `${selectedPlan}_${billingCycle}`; window.open(STRIPE_LINKS[stripeKey], '_blank'); }}
+            <button onClick={()=>{ const stripeKey = `${selectedPlan}_${billingCycle}`; try { const pk = sk("user_profile"); const pp = JSON.parse(localStorage.getItem(pk)||"{}"); pp.plan = selectedPlan; pp.paymentPending = true; localStorage.setItem(pk, JSON.stringify(pp)); } catch {} window.open(getStripeLink(stripeKey), '_blank'); }}
               style={{ width:"100%", padding:16, background:"#fff200", color:"#0d1f2d", border:"none", borderRadius:12, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:12, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
               <span style={{ fontSize:20 }}>💳</span> Subscribe Now — {priceLabel}
             </button>
@@ -3392,7 +3426,7 @@ function UpgradeLimitScreen({ currentPlan, certCount, certLimit, onBack, onUpgra
         <p style={{ fontSize:14, color:"#555", lineHeight:1.7, margin:"0 0 24px" }}>
           Upgrade to <strong>Pro</strong> for unlimited certificates.
         </p>
-        <button onClick={()=>window.open(STRIPE_LINKS[`${upgradePlan}_monthly`], '_blank')} style={{ width:"100%", padding:14, background:"#fff200", color:"#0d1f2d", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:10, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+        <button onClick={()=>window.open(getStripeLink(`${upgradePlan}_monthly`), '_blank')} style={{ width:"100%", padding:14, background:"#fff200", color:"#0d1f2d", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:10, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
           <span style={{ fontSize:18 }}>💳</span> Upgrade Plan
         </button>
         <button onClick={onBack} style={{ width:"100%", padding:14, background:"#f5f5f5", color:"#555", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
@@ -3416,7 +3450,7 @@ function FeatureLockedScreen({ feature, requiredPlan, onBack, onHome }) {
         <p style={{ fontSize:14, color:"#555", lineHeight:1.7, margin:"0 0 24px" }}>
           Upgrade to unlock this feature.
         </p>
-        <button onClick={()=>window.open(STRIPE_LINKS[`${planKey}_monthly`], '_blank')} style={{ width:"100%", padding:14, background:"#fff200", color:"#0d1f2d", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:10, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+        <button onClick={()=>window.open(getStripeLink(`${planKey}_monthly`), '_blank')} style={{ width:"100%", padding:14, background:"#fff200", color:"#0d1f2d", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:10, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
           <span style={{ fontSize:18 }}>💳</span> Upgrade Plan
         </button>
         <button onClick={onBack} style={{ width:"100%", padding:14, background:"#f5f5f5", color:"#555", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
@@ -20122,12 +20156,24 @@ function AppWithAuth() {
   // "landing" | "login" | "profileSetup"
   const [screen, setScreen] = useState(window.location.hash === "#signin" ? "login" : "landing");
 
+  // On mount: check Stripe subscription for existing sessions (background, non-blocking)
+  useEffect(() => {
+    const u = getCurrentUser();
+    if (u?.username && !USERS.some(x => x.username === u.username)) {
+      checkStripeSubscription(u.username).catch(() => {});
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   function handleLogin(user) {
     setCurrentUser(user);
     setAuthed(true);
     // Request persistent storage so the browser won't evict localStorage data
     if (navigator.storage && navigator.storage.persist) {
       navigator.storage.persist().catch(() => {});
+    }
+    // Check Stripe subscription status in background (auto-unlocks if active)
+    if (user?.username && !USERS.some(u => u.username === user.username)) {
+      checkStripeSubscription(user.username).catch(() => {});
     }
   }
 
