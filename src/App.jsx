@@ -21769,7 +21769,7 @@ function ComplianceHub({ onBack, currentUser }) {
         </div>
       </div>
 
-      <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 88px", display:"flex", flexDirection:"column", alignItems:"center" }}>
+      <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 88px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
         <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, marginBottom:4, textAlign:"center", letterSpacing:0.3, textTransform:"uppercase", fontWeight:600 }}>Compliance Overview</p>
 
         {/* Attention items at top */}
@@ -21783,7 +21783,7 @@ function ComplianceHub({ onBack, currentUser }) {
 
         {/* Upload Document button */}
         <div onClick={() => setShowUpload(true)}
-          style={{ display:"flex", alignItems:"center", cursor:"pointer", borderRadius:999, overflow:"hidden", background:"linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, #a855f7 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), #a855f7", boxShadow:"0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)", width:"100%", maxWidth:360, height:76, margin:"0 auto 12px" }}>
+          style={{ display:"flex", alignItems:"center", cursor:"pointer", borderRadius:999, overflow:"hidden", background:"linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, #a855f7 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), #a855f7", boxShadow:"0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)", width:"100%", maxWidth:360, height:76 }}>
           <div style={{ width:58, height:58, borderRadius:"50%", flexShrink:0, background:"linear-gradient(180deg, rgba(255,255,255,0.22) 0%, #7c3aed 50%, rgba(0,0,0,0.22) 100%)", border:"2.5px solid rgba(255,255,255,0.45)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 0 0 9px", boxShadow:"0 3px 10px rgba(0,0,0,0.30), inset 0 1px 3px rgba(255,255,255,0.25)", boxSizing:"border-box" }}>
             <span style={{ fontSize:26, color:"#fff", fontWeight:700 }}>+</span>
           </div>
@@ -21796,9 +21796,9 @@ function ComplianceHub({ onBack, currentUser }) {
           const catDocs = docs.filter(cat.filter);
           const catIcons = { gas_safe:"🛡️", acs:"📋", pli:"🔒", eli:"🏢", qualifications:"🎓", registrations:"🏛️" };
           return (
-            <div key={cat.key}>
+            <div key={cat.key} style={{ width:"100%", maxWidth:360 }}>
               <div onClick={() => setExpandedCat(expandedCat === cat.key ? null : cat.key)}
-                style={{ display:"flex", alignItems:"center", cursor:"pointer", borderRadius:999, overflow:"hidden", background:"linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, #fff200 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), #fff200", boxShadow:"0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)", width:"100%", maxWidth:360, height:76, margin:"0 auto 12px" }}>
+                style={{ display:"flex", alignItems:"center", cursor:"pointer", borderRadius:999, overflow:"hidden", background:"linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, #fff200 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), #fff200", boxShadow:"0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)", width:"100%", height:76 }}>
                 <div style={{ width:58, height:58, borderRadius:"50%", flexShrink:0, background:"linear-gradient(180deg, rgba(255,255,255,0.22) 0%, #0d3320 50%, rgba(0,0,0,0.22) 100%)", border:"2.5px solid rgba(255,255,255,0.45)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 0 0 9px", boxShadow:"0 3px 10px rgba(0,0,0,0.30), inset 0 1px 3px rgba(255,255,255,0.25)", boxSizing:"border-box" }}>
                   <span style={{ fontSize:24 }}>{catIcons[cat.key]||"📄"}</span>
                 </div>
