@@ -23889,22 +23889,19 @@ function OnboardingPlanScreen({ onPlanSelected, currentUser }) {
 // ─── Onboarding Contact Import Screen ──────────────────────────────────────
 function ContactImportScreen({ onDone, onClientDetails }) {
   return (
-    <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
-      <div style={{ background:"#0d1f2d", padding:"14px 20px", textAlign:"center" }}>
-        <h1 style={{ color:"#fff200", fontSize:18, fontWeight:900, margin:"0 0 4px" }}>Import Your Contacts</h1>
-        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:12, margin:0 }}>Add your existing clients to get started faster</p>
-      </div>
-      <div style={{ flex:1, padding:"20px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:12, maxWidth:360, margin:"0 auto", width:"100%" }}>
-        <div style={{ fontSize:36, marginBottom:4 }}>&#x1F4C7;</div>
-        <p style={{ fontSize:13, color:"#555", textAlign:"center", lineHeight:1.5, marginBottom:4 }}>
-          Import your existing contacts so you can quickly auto-fill client details on certificates, invoices and quotes.
+    <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ padding:"0 24px", maxWidth:300, width:"100%", textAlign:"center" }}>
+        <div style={{ fontSize:28, marginBottom:6 }}>&#x1F4C7;</div>
+        <h2 style={{ fontSize:16, fontWeight:800, color:"#0d1f2d", margin:"0 0 6px" }}>Import Your Contacts</h2>
+        <p style={{ fontSize:12, color:"#666", lineHeight:1.4, margin:"0 0 16px" }}>
+          Add your existing clients to auto-fill details on certificates, invoices and quotes.
         </p>
         <button onClick={() => { if (onClientDetails) onClientDetails(); onDone(); }}
-          style={{ width:"100%", padding:12, background:"#0d1f2d", color:"#fff200", border:"none", borderRadius:10, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+          style={{ width:"100%", padding:10, background:"#0d1f2d", color:"#fff200", border:"none", borderRadius:8, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", marginBottom:8 }}>
           Add Manually
         </button>
         <button onClick={onDone}
-          style={{ width:"100%", padding:12, background:"#e5e7eb", color:"#555", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+          style={{ width:"100%", padding:10, background:"#e5e7eb", color:"#555", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
           Skip for Now
         </button>
       </div>
