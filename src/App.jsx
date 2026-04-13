@@ -5332,7 +5332,7 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
             </div>
             <div style={{color:nl?"rgba(255,255,255,0.45)":up?"#4ade80":"#f87171",fontSize:9,fontWeight:600}}>{ch===0?"0% from last month":`${Math.abs(ch)}% ${up?"▲":"▼"} last month`}</div>
           </div>);};
-        return(<div className="wlg-dashboard-widgets" style={{width:"100%",maxWidth:440,display:"flex",gap:8,marginBottom:8,padding:"0 16px"}}>
+        return(<div className="wlg-dashboard-widgets" style={{width:"100%",display:"flex",gap:6,marginBottom:8,padding:"0 12px",boxSizing:"border-box"}}>
           <Card label="Reports Created" count={rT} prev={rL}/>
           <Card label="Invoices Created" count={iT} prev={iL}/>
           <Card label="Quotes Created" count={qT} prev={qL}/>
@@ -5346,8 +5346,8 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
         const maxVal=months.reduce((m,r)=>Math.max(m,parseFloat(r.totalIncome||0),parseFloat(r.totalExpenses||0)),1);
         const barH=70;
         const ml=r=>{try{if(r.period){const p=r.period.split("/");if(p.length>=3){const d=new Date(parseInt(p[2].slice(0,4)),parseInt(p[1])-1,1);return d.toLocaleString("en-GB",{month:"short",year:"2-digit"});}}return new Date(r.createdAt).toLocaleString("en-GB",{month:"short"});}catch{return "";}};
-        return(<div className="wlg-dashboard-widgets" style={{width:"100%",maxWidth:440,display:"flex",gap:10,marginBottom:4,marginTop:4,padding:"0 16px"}}>
-          <div style={{flex:1.2,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 10px 8px",backdropFilter:"blur(4px)"}}>
+        return(<div className="wlg-dashboard-widgets" style={{width:"100%",display:"flex",gap:6,marginBottom:4,marginTop:4,padding:"0 12px",boxSizing:"border-box"}}>
+          <div style={{flex:1.2,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 10px 8px",backdropFilter:"blur(4px)",minWidth:0}}>
             <div style={{color:"rgba(255,255,255,0.6)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Monthly Overview</div>
             {months.length===0
               ?<div style={{color:"rgba(255,255,255,0.35)",fontSize:11,textAlign:"center",padding:"12px 4px",lineHeight:1.6}}>No reports yet.<br/>Import bank statements<br/>to see your chart.</div>
@@ -5366,7 +5366,7 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
               <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,background:"#f87171",borderRadius:2}}/><span style={{fontSize:9,color:"rgba(255,255,255,0.55)"}}>Expenses</span></div>
             </div>
           </div>
-          <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 12px",backdropFilter:"blur(4px)",display:"flex",flexDirection:"column"}}>
+          <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 12px",backdropFilter:"blur(4px)",display:"flex",flexDirection:"column",minWidth:0}}>
             <div style={{color:"rgba(255,255,255,0.6)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Annual Turnover</div>
             {!yr
               ?<div style={{color:"rgba(255,255,255,0.35)",fontSize:11,textAlign:"center",flex:1,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1.6}}>No yearly report yet.<br/>Import bank statements<br/>to see your company turnover.</div>
@@ -21747,7 +21747,7 @@ function ComplianceHub({ onBack, currentUser }) {
       </div>
 
       {/* Stats row */}
-      <div style={{ display:"flex", gap:8, padding:"0 16px 12px", width:"100%", maxWidth:440 }}>
+      <div style={{ display:"flex", gap:6, padding:"0 12px 12px", width:"100%", boxSizing:"border-box" }}>
         <div style={{ flex:1, background:"rgba(255,255,255,0.10)", borderRadius:14, padding:"10px 10px 8px", backdropFilter:"blur(4px)", minWidth:0 }}>
           <div style={{ color:"rgba(255,255,255,0.55)", fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6, marginBottom:6, lineHeight:1.3 }}>Docs on File</div>
           <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:4 }}>
@@ -21964,15 +21964,15 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
       </div>
 
       {/* Finance widgets */}
-      <div style={{width:"100%",maxWidth:440,display:"flex",gap:8,marginBottom:8,padding:"0 16px"}}>
+      <div style={{width:"100%",display:"flex",gap:6,marginBottom:8,padding:"0 12px",boxSizing:"border-box"}}>
         <FinCard label="Reports Created" count={rT} prev={rL}/>
         <FinCard label="Invoices Created" count={iT} prev={iL}/>
         <FinCard label="Quotes Created" count={qT} prev={qL}/>
       </div>
 
       {/* Charts row */}
-      <div style={{width:"100%",maxWidth:440,display:"flex",gap:10,marginBottom:4,marginTop:4,padding:"0 16px"}}>
-        <div style={{flex:1.2,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 10px 8px",backdropFilter:"blur(4px)"}}>
+      <div style={{width:"100%",display:"flex",gap:6,marginBottom:4,marginTop:4,padding:"0 12px",boxSizing:"border-box"}}>
+        <div style={{flex:1.2,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 10px 8px",backdropFilter:"blur(4px)",minWidth:0}}>
           <div style={{color:"rgba(255,255,255,0.6)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Monthly Overview</div>
           <div style={{color:"rgba(255,255,255,0.35)",fontSize:11,textAlign:"center",padding:"12px 4px",lineHeight:1.6}}>No reports yet.<br/>Import bank statements<br/>to see your chart.</div>
           <div style={{display:"flex",gap:8,marginTop:4}}>
@@ -21980,7 +21980,7 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
             <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,background:"#f87171",borderRadius:2}}/><span style={{fontSize:9,color:"rgba(255,255,255,0.55)"}}>Expenses</span></div>
           </div>
         </div>
-        <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 12px",backdropFilter:"blur(4px)",display:"flex",flexDirection:"column"}}>
+        <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 12px",backdropFilter:"blur(4px)",display:"flex",flexDirection:"column",minWidth:0}}>
           <div style={{color:"rgba(255,255,255,0.6)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Annual Turnover</div>
           <div style={{color:"rgba(255,255,255,0.35)",fontSize:11,textAlign:"center",flex:1,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1.6}}>No yearly report yet.<br/>Import bank statements<br/>to see your company turnover.</div>
         </div>
