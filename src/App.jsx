@@ -21661,6 +21661,7 @@ function ComplianceHub({ onBack, currentUser }) {
     { key: "eli", label: "Employers' Liability", filter: d => d.subtype === "eli" },
     { key: "qualifications", label: "Qualifications", filter: d => d.type === "qualification" },
     { key: "registrations", label: "Trade Registrations", filter: d => d.type === "registration" },
+    { key: "calibration", label: "Equipment Calibration", filter: d => d.subtype === "equipment_cal" },
   ];
 
   // Upload modal
@@ -21794,7 +21795,7 @@ function ComplianceHub({ onBack, currentUser }) {
         {/* Category buttons */}
         {categories.map(cat => {
           const catDocs = docs.filter(cat.filter);
-          const catIcons = { gas_safe:"🛡️", acs:"📋", pli:"🔒", eli:"🏢", qualifications:"🎓", registrations:"🏛️" };
+          const catIcons = { gas_safe:"🛡️", acs:"📋", pli:"🔒", eli:"🏢", qualifications:"🎓", registrations:"🏛️", calibration:"🔧" };
           return (
             <div key={cat.key} style={{ width:"100%", maxWidth:360 }}>
               <div onClick={() => setExpandedCat(expandedCat === cat.key ? null : cat.key)}
