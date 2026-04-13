@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { isSupabaseEnabled } from './supabaseClient';
 import { pushAll, pushProfile, pushContacts, pullAll, mergeRecords, flushSyncQueue, getSession, signIn as supabaseSignIn, signUp as supabaseSignUp, signOut as supabaseSignOut } from './syncEngine';
 
@@ -22083,7 +22083,7 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
 
 function FireSafetyPDFPreview({ certData, certType, certTitle, onClose }) {
   const [downloading, setDownloading] = useState(false);
-  const certRef = React.useRef(null);
+  const certRef = useRef(null);
 
   const downloadPDF = async () => {
     setDownloading(true);
@@ -22351,10 +22351,10 @@ function FireRiskAssessmentForm({ onBack, onSave, currentUser }) {
     signatureData: null,
   });
   const [showPDF, setShowPDF] = useState(false);
-  const sigCanvasRef = React.useRef(null);
+  const sigCanvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     try {
       const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
       setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", bafeNumber: p.bafeNumber || "" }));
@@ -22514,10 +22514,10 @@ function FireExtinguisherForm({ onBack, onSave, currentUser }) {
     signatureData: null,
   });
   const [showPDF, setShowPDF] = useState(false);
-  const sigCanvasRef = React.useRef(null);
+  const sigCanvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     try {
       const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
       setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", bafeNumber: p.bafeNumber || "", companyBafeReg: p.companyBafeReg || "" }));
@@ -22625,10 +22625,10 @@ function EmergencyLightingForm({ onBack, onSave, currentUser }) {
     signatureData: null,
   });
   const [showPDF, setShowPDF] = useState(false);
-  const sigCanvasRef = React.useRef(null);
+  const sigCanvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     try {
       const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
       setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "" }));
@@ -22745,10 +22745,10 @@ function FireAlarmServiceForm({ onBack, onSave, currentUser }) {
     signatureData: null,
   });
   const [showPDF, setShowPDF] = useState(false);
-  const sigCanvasRef = React.useRef(null);
+  const sigCanvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     try {
       const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
       setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", bafeNumber: p.bafeNumber || "" }));
@@ -22871,10 +22871,10 @@ function FireDoorInspectionForm({ onBack, onSave, currentUser }) {
     signatureData: null,
   });
   const [showPDF, setShowPDF] = useState(false);
-  const sigCanvasRef = React.useRef(null);
+  const sigCanvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     try {
       const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
       setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "" }));
@@ -24668,8 +24668,8 @@ function OilCertForm({ certType, certTitle, onBack, currentUser }) {
 
   // Simple inline signature pad
   const SigPad = () => {
-    const canvasRef = React.useRef(null);
-    const drawing = React.useRef(false);
+    const canvasRef = useRef(null);
+    const drawing = useRef(false);
     const onStart = (e) => { drawing.current = true; const c = canvasRef.current, ctx = c.getContext("2d"), rect = c.getBoundingClientRect(); const pt = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(pt.clientX - rect.left, pt.clientY - rect.top); };
     const onMove = (e) => { if (!drawing.current) return; e.preventDefault(); const c = canvasRef.current, ctx = c.getContext("2d"), rect = c.getBoundingClientRect(); const pt = e.touches ? e.touches[0] : e; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#222"; ctx.lineTo(pt.clientX - rect.left, pt.clientY - rect.top); ctx.stroke(); };
     const onEnd = () => { drawing.current = false; };
