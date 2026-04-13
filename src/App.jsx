@@ -21737,8 +21737,9 @@ function ComplianceHub({ onBack, currentUser }) {
           style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Gas Safety App"/>
         <div style={{ flex:1 }}>
-          <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", lineHeight:1.2 }}>Compliance Hub</h2>
+          <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", lineHeight:1.2, margin:0 }}>Compliance Hub</h2>
           <span style={{ fontSize:11, color:"#8b9db0" }}>{attentionCount > 0 ? `${attentionCount} item${attentionCount!==1?"s":""} need${attentionCount===1?"s":""} attention` : "All documents up to date"}</span>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
@@ -21953,6 +21954,7 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
           style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Gas Safety App"/>
         <div style={{ flex:1 }}>
           <div style={{ color:"#fff", fontWeight:800, fontSize:18 }}>Electrical</div>
           <div style={{ color:"rgba(255,255,255,0.7)", fontSize:12 }}>NICEIC Registered</div>
