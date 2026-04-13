@@ -2696,11 +2696,9 @@ function ClientContactsScreen({ onBack, onHome }) {
         // Match field name (possibly with params like ;TYPE=HOME) then colon then value to end of line
         const m = card.match(new RegExp(field + "[^:]*:([^\r\n]+)", "i"));
         if (!m) return "";
-        // Decode quoted-printable if the property line indicates it
-        const propLine = card.match(new RegExp(field + "[^\r\n]*", "i"));
-        const isQP = propLine && /ENCODING=QUOTED-PRINTABLE/i.test(propLine[0]);
         const val = m[1].trim();
-        return isQP ? decodeQP(val) : val;
+        // Always decode quoted-printable — some exporters don't include ENCODING param
+        return decodeQP(val);
       };
       const fnVal = get("FN");
       const nameVal = get("N");
@@ -2713,14 +2711,17 @@ function ClientContactsScreen({ onBack, onHome }) {
       const email = get("EMAIL");
       const org = get("ORG");
       // vCard ADR structure: PO Box;Extended;Street;City;Region;Postcode;Country
-      const rawAdr = decodeQP(get("ADR"));
-      const adrParts = rawAdr.split(";").map(p => p.trim()).filter(Boolean);
-      // Build a readable address: Street, City, Region, Postcode (skip PO Box/Extended if empty, skip Country)
-      const adr = adrParts.length > 0
-        ? adrParts.slice(0, Math.min(adrParts.length, 6)).filter(Boolean).join(", ")
-        : "";
+      const rawAdr = get("ADR");
+      const adrParts = rawAdr.split(";").map(p => p.trim());
+      // Positional extraction: [0]=PO Box, [1]=Extended, [2]=Street, [3]=City, [4]=Region, [5]=Postcode, [6]=Country
+      const street = adrParts[2] || "";
+      const city = adrParts[3] || "";
+      const region = adrParts[4] || "";
+      const postcode = adrParts[5] || "";
+      // Build a readable address from non-empty parts (Street, City, Region, Postcode)
+      const adr = [street, city, region, postcode].filter(Boolean).join(", ");
       if (name || phone || email) {
-        return { id: Date.now() + Math.random(), name, phone, email, company: org, addr: adr };
+        return { id: Date.now() + Math.random(), name, phone, email, company: org, addr: adr, postcode };
       }
       return null;
     }).filter(Boolean);
@@ -2743,10 +2744,9 @@ function ClientContactsScreen({ onBack, onHome }) {
         const get = (field) => {
           const m = card.match(new RegExp(field + "[^:]*:([^\r\n]+)", "i"));
           if (!m) return "";
-          const propLine = card.match(new RegExp(field + "[^\r\n]*", "i"));
-          const isQP = propLine && /ENCODING=QUOTED-PRINTABLE/i.test(propLine[0]);
           const val = m[1].trim();
-          return isQP ? decodeQP(val) : val;
+          // Always decode quoted-printable — some exporters don't include ENCODING param
+          return decodeQP(val);
         };
         const fnVal = get("FN");
         const nameVal = get("N");
@@ -2759,13 +2759,16 @@ function ClientContactsScreen({ onBack, onHome }) {
         const email = get("EMAIL");
         const org = get("ORG");
         // vCard ADR structure: PO Box;Extended;Street;City;Region;Postcode;Country
-        const rawAdr = decodeQP(get("ADR"));
-        const adrParts = rawAdr.split(";").map(p => p.trim()).filter(Boolean);
-        const adr = adrParts.length > 0
-          ? adrParts.slice(0, Math.min(adrParts.length, 6)).filter(Boolean).join(", ")
-          : "";
+        const rawAdr = get("ADR");
+        const adrParts = rawAdr.split(";").map(p => p.trim());
+        // Positional extraction: [0]=PO Box, [1]=Extended, [2]=Street, [3]=City, [4]=Region, [5]=Postcode, [6]=Country
+        const street = adrParts[2] || "";
+        const city = adrParts[3] || "";
+        const region = adrParts[4] || "";
+        const postcode = adrParts[5] || "";
+        const adr = [street, city, region, postcode].filter(Boolean).join(", ");
         if (name || phone || email) {
-          results.push({ id: Date.now() + Math.random(), name, phone, email, company: org, addr: adr });
+          results.push({ id: Date.now() + Math.random(), name, phone, email, company: org, addr: adr, postcode });
         }
       }
       onProgress(idx, total);
@@ -9974,6 +9977,14 @@ function ContactPickerModal({ onSelect, onClose, title="Choose a contact" }) {
 
 // Helper: parse an in-app contact into the standard address fields
 function contactToFields(c) {
+  // If the contact already has a postcode field (e.g. from VCF ADR parsing), use it directly
+  if (c.postcode) {
+    const parts = (c.addr || "").split(",").map(p => p.trim()).filter(Boolean);
+    // Remove the postcode from addr parts if it appears there
+    const remaining = parts.filter(p => p !== c.postcode);
+    return { name: c.name||"", phone: c.phone||"", email: c.email||"", company: c.company||"",
+             addr1: remaining[0] || "", addr2: remaining[1] || "", addr3: remaining[2] || "", postcode: c.postcode };
+  }
   // Try to split c.addr into addr1 / addr2 / addr3 / postcode
   const parts = (c.addr || "").split(",").map(p => p.trim()).filter(Boolean);
   // Last part that looks like a postcode
@@ -20481,10 +20492,143 @@ function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone, o
   );
 }
 
+// ─── Install Prompt Modal (shown once after registration) ────────────────────
+function InstallPromptModal({ onDismiss }) {
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:"#fff", borderRadius:16, maxWidth:420, width:"100%", overflow:"hidden", boxShadow:"0 8px 40px rgba(0,0,0,0.3)" }}>
+        <div style={{ background:"#1a3a4a", padding:"20px 24px", textAlign:"center" }}>
+          <div style={{ fontSize:32, marginBottom:6 }}>📲</div>
+          <h2 style={{ color:"#fff200", fontSize:20, fontWeight:800, margin:0 }}>Install Gas Safe App</h2>
+        </div>
+        <div style={{ padding:"20px 24px 24px" }}>
+          <p style={{ fontSize:14, color:"#333", margin:"0 0 16px", lineHeight:1.6 }}>
+            For the best experience, install this app on your device:
+          </p>
+          <div style={{ marginBottom:14 }}>
+            <div style={{ fontWeight:700, fontSize:13, color:"#0d1f2d", marginBottom:4 }}>📱 Android / Chrome:</div>
+            <div style={{ fontSize:13, color:"#555", lineHeight:1.5, paddingLeft:8 }}>
+              Tap the <strong>⋮ menu</strong> → "<strong>Install app</strong>" or "<strong>Add to Home Screen</strong>"
+            </div>
+          </div>
+          <div style={{ marginBottom:14 }}>
+            <div style={{ fontWeight:700, fontSize:13, color:"#0d1f2d", marginBottom:4 }}>🍎 iPhone / Safari:</div>
+            <div style={{ fontSize:13, color:"#555", lineHeight:1.5, paddingLeft:8 }}>
+              Tap the <strong>Share button</strong> → "<strong>Add to Home Screen</strong>"
+            </div>
+          </div>
+          <div style={{ marginBottom:20 }}>
+            <div style={{ fontWeight:700, fontSize:13, color:"#0d1f2d", marginBottom:4 }}>💻 Desktop / Chrome:</div>
+            <div style={{ fontSize:13, color:"#555", lineHeight:1.5, paddingLeft:8 }}>
+              Click the <strong>install icon</strong> in the address bar
+            </div>
+          </div>
+          <button onClick={onDismiss}
+            style={{ width:"100%", padding:16, background:"#1a3a4a", color:"#fff200", border:"none", borderRadius:12, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+            Got it, Continue →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Onboarding Plan Selection Screen (shown until subscription confirmed) ───
+function OnboardingPlanScreen({ onPlanSelected, currentUser }) {
+  const [billingCycle, setBillingCycle] = useState("monthly");
+  const plans = [
+    { key:"lite", name:"Lite", monthly:7.50, annual:75, features:["All Certificate Types","Up to 20 Certificates / Month","Invoicing & Quotes","Gas Rate Calculator"], color:"#1a3a4a" },
+    { key:"pro", name:"Pro", monthly:14.50, annual:135, features:["Everything in Lite","Unlimited Certificates","Accounts Feature","Annual Reminders","Business Analytics"], color:"#0d1f2d", popular:true },
+    { key:"proplus", name:"Pro+", monthly:18.50, annual:175, features:["Everything in Pro","Multiple Engineers","Unlimited Everything","Priority Support"], color:"#35463d" },
+  ];
+  return (
+    <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <div style={{ background:"#0d1f2d", padding:"20px 24px", textAlign:"center" }}>
+        <h1 style={{ color:"#fff200", fontSize:22, fontWeight:900, margin:"0 0 6px" }}>Choose Your Plan</h1>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, margin:0 }}>Select a plan to get started</p>
+      </div>
+      <div style={{ padding:"16px 16px 8px", textAlign:"center" }}>
+        <div style={{ display:"inline-flex", background:"#e0e0e0", borderRadius:8, overflow:"hidden" }}>
+          <button onClick={()=>setBillingCycle("monthly")}
+            style={{ padding:"10px 20px", fontSize:13, fontWeight:600, border:"none", cursor:"pointer", fontFamily:"inherit",
+              background: billingCycle==="monthly" ? "#1a3a4a" : "transparent", color: billingCycle==="monthly" ? "#fff" : "#333" }}>
+            Monthly
+          </button>
+          <button onClick={()=>setBillingCycle("annual")}
+            style={{ padding:"10px 20px", fontSize:13, fontWeight:600, border:"none", cursor:"pointer", fontFamily:"inherit",
+              background: billingCycle==="annual" ? "#1a3a4a" : "transparent", color: billingCycle==="annual" ? "#fff" : "#333" }}>
+            Annual <span style={{ fontSize:11, opacity:0.8 }}>(save ~17%)</span>
+          </button>
+        </div>
+      </div>
+      <div style={{ padding:"8px 16px 24px", flex:1 }}>
+        <div style={{ display:"flex", flexDirection:"column", gap:14, maxWidth:420, margin:"0 auto" }}>
+          {plans.map(plan => {
+            const price = billingCycle === "monthly" ? plan.monthly : plan.annual;
+            const priceLabel = billingCycle === "monthly" ? `\u00a3${price.toFixed(2)}/mo` : `\u00a3${price}/yr`;
+            const stripeKey = `${plan.key}_${billingCycle}`;
+            const stripeUrl = getStripeLink(stripeKey);
+            return (
+              <div key={plan.key} style={{ background:"#fff", borderRadius:14, overflow:"hidden", boxShadow: plan.popular ? "0 4px 20px rgba(26,58,74,0.2)" : "0 2px 8px rgba(0,0,0,0.08)", border: plan.popular ? "2px solid #fff200" : "1px solid #e0e0e0" }}>
+                {plan.popular && <div style={{ background:"#fff200", textAlign:"center", padding:"4px 0", fontSize:11, fontWeight:800, color:"#0d1f2d" }}>MOST POPULAR</div>}
+                <div style={{ padding:"16px 18px" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:10 }}>
+                    <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:plan.color }}>{plan.name}</h3>
+                    <div style={{ fontSize:20, fontWeight:900, color:"#0d1f2d" }}>{priceLabel}</div>
+                  </div>
+                  <ul style={{ margin:"0 0 14px", padding:"0 0 0 18px", listStyle:"none" }}>
+                    {plan.features.map((f, i) => (
+                      <li key={i} style={{ fontSize:12, color:"#555", lineHeight:1.8, position:"relative" }}>
+                        <span style={{ position:"absolute", left:-16, color:"#2e7d32" }}>✓</span>{f}
+                      </li>
+                    ))}
+                  </ul>
+                  <a href={stripeUrl} onClick={(e) => {
+                      e.preventDefault();
+                      // Save selected plan locally
+                      try { const pk = `${currentUser.username}_user_profile`; const pp = JSON.parse(localStorage.getItem(pk)||"{}"); pp.plan = plan.key; pp.paymentPending = true; localStorage.setItem(pk, JSON.stringify(pp)); } catch {}
+                      window.open(stripeUrl, '_blank');
+                      if (onPlanSelected) onPlanSelected(plan.key);
+                    }}
+                    style={{ display:"block", width:"100%", padding:14, background: plan.popular ? "#fff200" : "#1a3a4a", color: plan.popular ? "#0d1f2d" : "#fff", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", textAlign:"center", textDecoration:"none", boxSizing:"border-box" }}>
+                    Select {plan.name}
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <p style={{ textAlign:"center", fontSize:11, color:"#999", marginTop:16 }}>
+          You'll be redirected to Stripe for secure payment. Your account will be activated automatically after payment.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Helper: check if user needs onboarding plan selection ───────────────────
+function userNeedsPlanSelection(user) {
+  if (!user) return false;
+  // Hardcoded accounts always bypass
+  if (USERS.some(u => u.username === user.username)) return false;
+  try {
+    const p = JSON.parse(localStorage.getItem(`${user.username}_user_profile`) || "{}");
+    // If subscription is active or payment was submitted, they don't need the plan screen
+    if (p.subscriptionActive === true) return false;
+    if (p.paymentSubmitted === true) return false;
+    if (p.paymentPending === true) return false;
+    // If they have a real plan set (not "none" or "free"), they're good
+    if (p.plan && p.plan !== "none" && p.plan !== "free") return false;
+    return true;
+  } catch { return false; }
+}
+
 function AppWithAuth() {
   const [authed, setAuthed] = useState(() => !!getCurrentUser());
   // "landing" | "login" | "profileSetup"
   const [screen, setScreen] = useState(window.location.hash === "#signin" ? "login" : "landing");
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [showPlanSelection, setShowPlanSelection] = useState(false);
 
   // On mount: check Stripe subscription for existing sessions (background, non-blocking)
   useEffect(() => {
@@ -20554,6 +20698,31 @@ function AppWithAuth() {
     setScreen("landing");
   }
 
+  // Install prompt modal overlay (shown once after registration)
+  if (authed && showInstallPrompt) {
+    return (
+      <>
+        <App onLogout={handleLogout}/>
+        <InstallPromptModal onDismiss={() => {
+          try { localStorage.setItem("installPromptShown", "true"); } catch {}
+          setShowInstallPrompt(false);
+          // After dismissing install prompt, check if plan selection is needed
+          const u = getCurrentUser();
+          if (u && userNeedsPlanSelection(u)) {
+            setShowPlanSelection(true);
+          }
+        }}/>
+      </>
+    );
+  }
+
+  // Plan selection screen (blocks access until subscription confirmed)
+  if (authed && (showPlanSelection || userNeedsPlanSelection(getCurrentUser()))) {
+    return <OnboardingPlanScreen currentUser={getCurrentUser()} onPlanSelected={(planKey) => {
+      setShowPlanSelection(false);
+    }}/>;
+  }
+
   if (authed) return <App onLogout={handleLogout}/>;
 
   if (screen === "login") return <LoginScreen onLogin={handleLogin} onBack={()=>setScreen("landing")}/>;
@@ -20568,8 +20737,15 @@ function AppWithAuth() {
       if (isSupabaseEnabled() && userEntry.isSupabaseUser) {
         pushProfile({ ...profileWithDate, username: userEntry.username }).catch(() => {});
       }
-      // Auto-login
+      // Auto-login — show install prompt if not shown before
       setAuthed(true);
+      try {
+        if (!localStorage.getItem("installPromptShown")) {
+          setShowInstallPrompt(true);
+        } else if (userNeedsPlanSelection(userEntry)) {
+          setShowPlanSelection(true);
+        }
+      } catch {}
     }}
     onBack={()=>setScreen("landing")}
   />;
