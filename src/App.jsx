@@ -5102,6 +5102,7 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
   const trialStatus = getTrialStatus();
   const daysLeft = getTrialDaysLeft();
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showFeatureSuggest, setShowFeatureSuggest] = useState(false);
 
   // Contacts pulse — show pulsing button until user has imported at least one contact
   const hasContacts = (() => { try { return JSON.parse(localStorage.getItem(sk("client_contacts")) || "[]").length > 0; } catch { return false; } })();
@@ -5111,7 +5112,7 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
     if (document.getElementById("wlg-contacts-pulse-style")) return;
     const s = document.createElement("style");
     s.id = "wlg-contacts-pulse-style";
-    s.textContent = "@keyframes wlgContactsPulse{0%{box-shadow:0 0 0 0 rgba(211,47,47,0.8);}60%{box-shadow:0 0 0 18px rgba(211,47,47,0);}100%{box-shadow:0 0 0 0 rgba(211,47,47,0);}} .wlg-contacts-pulse{animation:wlgContactsPulse 1.1s ease-in-out infinite;}";
+    s.textContent = "";
     document.head.appendChild(s);
     if (!document.getElementById("wlg-desktop-widgets-style")) {
       const d = document.createElement("style");
@@ -5331,7 +5332,7 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
             </div>
             <div style={{color:nl?"rgba(255,255,255,0.45)":up?"#4ade80":"#f87171",fontSize:9,fontWeight:600}}>{ch===0?"0% from last month":`${Math.abs(ch)}% ${up?"▲":"▼"} last month`}</div>
           </div>);};
-        return(<div className="wlg-dashboard-widgets" style={{width:"100%",maxWidth:440,display:"flex",gap:8,marginBottom:8}}>
+        return(<div className="wlg-dashboard-widgets" style={{width:"100%",maxWidth:440,display:"flex",gap:8,marginBottom:8,padding:"0 16px"}}>
           <Card label="Reports Created" count={rT} prev={rL}/>
           <Card label="Invoices Created" count={iT} prev={iL}/>
           <Card label="Quotes Created" count={qT} prev={qL}/>
@@ -5345,7 +5346,7 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
         const maxVal=months.reduce((m,r)=>Math.max(m,parseFloat(r.totalIncome||0),parseFloat(r.totalExpenses||0)),1);
         const barH=70;
         const ml=r=>{try{if(r.period){const p=r.period.split("/");if(p.length>=3){const d=new Date(parseInt(p[2].slice(0,4)),parseInt(p[1])-1,1);return d.toLocaleString("en-GB",{month:"short",year:"2-digit"});}}return new Date(r.createdAt).toLocaleString("en-GB",{month:"short"});}catch{return "";}};
-        return(<div className="wlg-dashboard-widgets" style={{width:"100%",maxWidth:440,display:"flex",gap:10,marginBottom:4,marginTop:4}}>
+        return(<div className="wlg-dashboard-widgets" style={{width:"100%",maxWidth:440,display:"flex",gap:10,marginBottom:4,marginTop:4,padding:"0 16px"}}>
           <div style={{flex:1.2,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 10px 8px",backdropFilter:"blur(4px)"}}>
             <div style={{color:"rgba(255,255,255,0.6)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Monthly Overview</div>
             {months.length===0
@@ -5414,12 +5415,9 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
         <PillBtn onClick={onPayment} label="Payment Details" color="#fff200" iconBg="#0d1f2d">
           <span style={{ fontSize:26 }}>💳</span>
         </PillBtn>
-        <div className={!hasContacts ? "wlg-contacts-pulse" : ""}
-          style={{ width:"100%", maxWidth:360, borderRadius:999, overflow:"visible" }}>
-          <PillBtn onClick={onClientDetails} label="Client Details" color="#fff200" iconBg={!hasContacts ? "#b91c1c" : "#1a3a5c"}>
-            <span style={{ fontSize:26 }}>👥</span>
-          </PillBtn>
-        </div>
+        <PillBtn onClick={onClientDetails} label="Client Details" color="#fff200" iconBg="#1a3a5c">
+          <span style={{ fontSize:26 }}>👥</span>
+        </PillBtn>
         {getUserPlan() === "proplus" && (
           <PillBtn onClick={onEngineerManagement} label="My Engineers" color="#fff200" iconBg="#1a3a5c">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="3" stroke="white" strokeWidth="1.8"/><circle cx="17" cy="9" r="2.5" stroke="white" strokeWidth="1.5"/><path d="M2 20c0-3.31 2.69-6 6-6h2c3.31 0 6 2.69 6 6" stroke="white" strokeWidth="1.8" strokeLinecap="round"/><path d="M17 14c2.21 0 4 1.79 4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
@@ -5447,14 +5445,20 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
       </div>
 
       {/* Support / feedback strip */}
-      <div style={{ padding:"14px 20px 20px", display:"flex", alignItems:"center", justifyContent:"center", gap:16 }}>
+      <div style={{ padding:"14px 20px 20px", display:"flex", alignItems:"center", justifyContent:"center", gap:10, flexWrap:"wrap" }}>
         <p style={{ color:"rgba(255,255,255,0.5)", fontSize:12, margin:0 }}>West Lothian Gas Ltd · Gas Safe Register</p>
         <button onClick={()=>setShowFeedback(true)}
           style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:20, padding:"6px 16px", color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="white" strokeWidth="1.5"/><rect x="6.25" y="6" width="1.5" height="4.5" rx=".75" fill="white"/><circle cx="7" cy="4" r=".85" fill="white"/></svg>
           Support
         </button>
+        <button onClick={()=>setShowFeatureSuggest(true)}
+          style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:20, padding:"6px 16px", color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#fff200" strokeWidth="1.5"/><path d="M7 4v3M7 9v.5" stroke="#fff200" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          Suggest a Feature
+        </button>
       </div>
+      {showFeatureSuggest && <SuggestFeatureModal onClose={() => setShowFeatureSuggest(false)} />}
 
       {/* Support Ticket Modal */}
       {showFeedback && (
@@ -21284,6 +21288,7 @@ function CombineRunnerQueue({ items, onProgress, onDone }) {
 
 function TradeHomeScreen({ currentUser, onSelectTrade, onLogout }) {
   const [lockedTrade, setLockedTrade] = useState(null);
+  const [showFeatureSuggest, setShowFeatureSuggest] = useState(false);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -21394,14 +21399,70 @@ function TradeHomeScreen({ currentUser, onSelectTrade, onLogout }) {
         </div>
       </div>
 
-      <div style={{ textAlign:"center", padding:"16px 0 24px", fontSize:11, color:"#5a7088" }}>
+      <div style={{ textAlign:"center", padding:"16px 0 8px", fontSize:11, color:"#5a7088" }}>
         Gas Safety App &middot; Multi-Trade Platform
       </div>
+      <div style={{ display:"flex", justifyContent:"center", padding:"0 0 24px", gap:10 }}>
+        <button onClick={() => setShowFeatureSuggest(true)}
+          style={{ background:"rgba(255,255,255,0.08)", border:"1px solid #2a4058", borderRadius:20, padding:"6px 16px", color:"#8b9db0", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#fff200" strokeWidth="1.5"/><path d="M7 4v3M7 9v.5" stroke="#fff200" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          Suggest a Feature
+        </button>
+      </div>
+      {showFeatureSuggest && <SuggestFeatureModal onClose={() => setShowFeatureSuggest(false)} />}
 
       {/* Locked trade modal */}
       {lockedTrade && TRADE_INFO[lockedTrade] && (
         <LockedTradeModal trade={TRADE_INFO[lockedTrade]} onClose={() => setLockedTrade(null)} />
       )}
+    </div>
+  );
+}
+
+// ─── Suggest a Feature Modal ────────────────────────────────────────────────
+function SuggestFeatureModal({ onClose }) {
+  const [suggestion, setSuggestion] = useState("");
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  function handleSubmit() {
+    if (!suggestion.trim()) return;
+    try {
+      const existing = JSON.parse(localStorage.getItem("feature_suggestions") || "[]");
+      existing.push({ suggestion: suggestion.trim(), email: email.trim() || null, timestamp: new Date().toISOString() });
+      localStorage.setItem("feature_suggestions", JSON.stringify(existing));
+    } catch {}
+    setSubmitted(true);
+    setTimeout(() => onClose(), 2000);
+  }
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", backdropFilter:"blur(6px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20 }} onClick={onClose}>
+      <div style={{ background:"#fff", borderRadius:16, padding:24, width:"100%", maxWidth:360, boxShadow:"0 8px 32px rgba(0,0,0,0.2)" }} onClick={e => e.stopPropagation()}>
+        {submitted ? (
+          <div style={{ textAlign:"center", padding:"20px 0" }}>
+            <div style={{ fontSize:32, marginBottom:12 }}>&#x2728;</div>
+            <div style={{ fontSize:16, fontWeight:700, color:"#0d1f2d", marginBottom:6 }}>Thanks!</div>
+            <div style={{ fontSize:14, color:"#666" }}>We'll review your suggestion.</div>
+          </div>
+        ) : (
+          <>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+              <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:"#0d1f2d" }}>Suggest a Feature</h3>
+              <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#999", padding:0 }}>&times;</button>
+            </div>
+            <div style={{ fontSize:13, fontWeight:600, color:"#555", marginBottom:6 }}>What feature would you like to see?</div>
+            <textarea value={suggestion} onChange={e => setSuggestion(e.target.value)} rows={4}
+              placeholder="Describe the feature you'd like..."
+              style={{ width:"100%", padding:"12px 14px", border:"2px solid #e5e7eb", borderRadius:10, fontSize:14, boxSizing:"border-box", fontFamily:"inherit", resize:"vertical", outline:"none", marginBottom:12 }}/>
+            <div style={{ fontSize:13, fontWeight:600, color:"#555", marginBottom:6 }}>Your email (optional)</div>
+            <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="you@example.com"
+              style={{ width:"100%", padding:"10px 14px", border:"2px solid #e5e7eb", borderRadius:10, fontSize:14, boxSizing:"border-box", fontFamily:"inherit", outline:"none", marginBottom:16 }}/>
+            <button onClick={handleSubmit} disabled={!suggestion.trim()}
+              style={{ width:"100%", padding:14, background: suggestion.trim() ? "#0d1f2d" : "#ccc", color: suggestion.trim() ? "#fff200" : "#999", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor: suggestion.trim() ? "pointer" : "default", fontFamily:"inherit" }}>
+              Submit
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -21474,6 +21535,7 @@ function ComplianceHub({ onBack, currentUser }) {
   });
   const [showUpload, setShowUpload] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showFeatureSuggest, setShowFeatureSuggest] = useState(false);
   const [uploadStep, setUploadStep] = useState(1);
   const [uploadType, setUploadType] = useState("");
   const [uploadSubtype, setUploadSubtype] = useState("");
@@ -21685,18 +21747,24 @@ function ComplianceHub({ onBack, currentUser }) {
       </div>
 
       {/* Stats row */}
-      <div style={{ display:"flex", gap:8, padding:"0 16px 12px" }}>
-        <div style={{ flex:1, background:"rgba(255,255,255,0.10)", borderRadius:14, padding:"10px 10px 8px", backdropFilter:"blur(4px)" }}>
-          <div style={{ color:"rgba(255,255,255,0.55)", fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6, marginBottom:4 }}>Docs on File</div>
-          <div style={{ color:"#fff", fontWeight:800, fontSize:22 }}>{docs.length}</div>
+      <div style={{ display:"flex", gap:8, padding:"0 16px 12px", width:"100%", maxWidth:440 }}>
+        <div style={{ flex:1, background:"rgba(255,255,255,0.10)", borderRadius:14, padding:"10px 10px 8px", backdropFilter:"blur(4px)", minWidth:0 }}>
+          <div style={{ color:"rgba(255,255,255,0.55)", fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6, marginBottom:6, lineHeight:1.3 }}>Docs on File</div>
+          <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:4 }}>
+            <span style={{ color:"#fff", fontWeight:800, fontSize:22, lineHeight:1 }}>{docs.length}</span>
+          </div>
         </div>
-        <div style={{ flex:1, background:"rgba(255,255,255,0.10)", borderRadius:14, padding:"10px 10px 8px", backdropFilter:"blur(4px)" }}>
-          <div style={{ color:"rgba(255,255,255,0.55)", fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6, marginBottom:4 }}>Expiring Soon</div>
-          <div style={{ color: expiringCount > 0 ? "#f97316" : "#fff", fontWeight:800, fontSize:22 }}>{expiringCount}</div>
+        <div style={{ flex:1, background:"rgba(255,255,255,0.10)", borderRadius:14, padding:"10px 10px 8px", backdropFilter:"blur(4px)", minWidth:0 }}>
+          <div style={{ color:"rgba(255,255,255,0.55)", fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6, marginBottom:6, lineHeight:1.3 }}>Expiring Soon</div>
+          <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:4 }}>
+            <span style={{ color: expiringCount > 0 ? "#f97316" : "#fff", fontWeight:800, fontSize:22, lineHeight:1 }}>{expiringCount}</span>
+          </div>
         </div>
-        <div style={{ flex:1, background:"rgba(255,255,255,0.10)", borderRadius:14, padding:"10px 10px 8px", backdropFilter:"blur(4px)" }}>
-          <div style={{ color:"rgba(255,255,255,0.55)", fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6, marginBottom:4 }}>Status</div>
-          <div style={{ color: isCompliant ? "#22c55e" : "#ef4444", fontWeight:800, fontSize:14, marginTop:4 }}>{isCompliant ? "Compliant" : "Non-Compliant"}</div>
+        <div style={{ flex:1, background:"rgba(255,255,255,0.10)", borderRadius:14, padding:"10px 10px 8px", backdropFilter:"blur(4px)", minWidth:0 }}>
+          <div style={{ color:"rgba(255,255,255,0.55)", fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6, marginBottom:6, lineHeight:1.3 }}>Status</div>
+          <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:4 }}>
+            <span style={{ color: isCompliant ? "#22c55e" : "#ef4444", fontWeight:800, fontSize:14 }}>{isCompliant ? "Compliant" : "Non-Compliant"}</span>
+          </div>
         </div>
       </div>
 
@@ -21762,14 +21830,20 @@ function ComplianceHub({ onBack, currentUser }) {
       </div>
 
       {/* Footer */}
-      <div style={{ padding:"14px 20px 20px", display:"flex", alignItems:"center", justifyContent:"center", gap:16 }}>
+      <div style={{ padding:"14px 20px 20px", display:"flex", alignItems:"center", justifyContent:"center", gap:10, flexWrap:"wrap" }}>
         <p style={{ color:"rgba(255,255,255,0.5)", fontSize:12, margin:0 }}>Compliance Hub · Document Management</p>
         <button onClick={() => setShowFeedback(true)}
           style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:20, padding:"6px 16px", color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="white" strokeWidth="1.5"/><rect x="6.25" y="6" width="1.5" height="4.5" rx=".75" fill="white"/><circle cx="7" cy="4" r=".85" fill="white"/></svg>
           Support
         </button>
+        <button onClick={() => setShowFeatureSuggest(true)}
+          style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:20, padding:"6px 16px", color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#fff200" strokeWidth="1.5"/><path d="M7 4v3M7 9v.5" stroke="#fff200" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          Suggest a Feature
+        </button>
       </div>
+      {showFeatureSuggest && <SuggestFeatureModal onClose={() => setShowFeatureSuggest(false)} />}
     </div>
   );
 }
@@ -21804,6 +21878,7 @@ function ElectricalPlaceholderScreen({ certName, onBack }) {
 function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onReport, onProfile, onPayment, onClientDetails, onBankStatements, onJobSheets, onEngineerManagement, onCombine, records, invoices, quotes, accountReports, yearlyReports }) {
   const [elecScreen, setElecScreen] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showFeatureSuggest, setShowFeatureSuggest] = useState(false);
 
   if (elecScreen) {
     return <ElectricalPlaceholderScreen certName={elecScreen} onBack={() => setElecScreen(null)} />;
@@ -21967,14 +22042,20 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
       </div>
 
       {/* Footer */}
-      <div style={{ padding:"14px 20px 20px", display:"flex", alignItems:"center", justifyContent:"center", gap:16 }}>
+      <div style={{ padding:"14px 20px 20px", display:"flex", alignItems:"center", justifyContent:"center", gap:10, flexWrap:"wrap" }}>
         <p style={{ color:"rgba(255,255,255,0.5)", fontSize:12, margin:0 }}>NICEIC Registered · Electrical Safety</p>
         <button onClick={() => setShowFeedback(true)}
           style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:20, padding:"6px 16px", color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="white" strokeWidth="1.5"/><rect x="6.25" y="6" width="1.5" height="4.5" rx=".75" fill="white"/><circle cx="7" cy="4" r=".85" fill="white"/></svg>
           Support
         </button>
+        <button onClick={() => setShowFeatureSuggest(true)}
+          style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:20, padding:"6px 16px", color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#fff200" strokeWidth="1.5"/><path d="M7 4v3M7 9v.5" stroke="#fff200" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          Suggest a Feature
+        </button>
       </div>
+      {showFeatureSuggest && <SuggestFeatureModal onClose={() => setShowFeatureSuggest(false)} />}
     </div>
   );
 }
@@ -23745,7 +23826,11 @@ function OnboardingPlanScreen({ onPlanSelected, currentUser }) {
     <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
       <div style={{ background:"#0d1f2d", padding:"20px 24px", textAlign:"center" }}>
         <h1 style={{ color:"#fff200", fontSize:22, fontWeight:900, margin:"0 0 6px" }}>Choose Your Plan</h1>
-        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, margin:0 }}>Select a plan to get started</p>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, margin:0 }}>Start your 7-day free trial — no card required</p>
+      </div>
+      <div style={{ margin:"12px 16px 0", background:"#e8f5e9", border:"1.5px solid #a5d6a7", borderRadius:12, padding:"10px 16px", textAlign:"center" }}>
+        <span style={{ fontSize:15 }}>&#x1F389;</span>
+        <span style={{ fontWeight:700, fontSize:13, color:"#2e7d32", marginLeft:6 }}>7-day free trial on all plans — cancel anytime</span>
       </div>
       <div style={{ padding:"16px 16px 8px", textAlign:"center" }}>
         <div style={{ display:"inline-flex", background:"#e0e0e0", borderRadius:8, overflow:"hidden" }}>
@@ -23766,8 +23851,6 @@ function OnboardingPlanScreen({ onPlanSelected, currentUser }) {
           {plans.map(plan => {
             const price = billingCycle === "monthly" ? plan.monthly : plan.annual;
             const priceLabel = billingCycle === "monthly" ? `\u00a3${price.toFixed(2)}/mo` : `\u00a3${price}/yr`;
-            const stripeKey = `${plan.key}_${billingCycle}`;
-            const stripeUrl = getStripeLink(stripeKey);
             return (
               <div key={plan.key} style={{ background:"#fff", borderRadius:14, overflow:"hidden", boxShadow: plan.popular ? "0 4px 20px rgba(26,58,74,0.2)" : "0 2px 8px rgba(0,0,0,0.08)", border: plan.popular ? "2px solid #fff200" : "1px solid #e0e0e0" }}>
                 {plan.popular && <div style={{ background:"#fff200", textAlign:"center", padding:"4px 0", fontSize:11, fontWeight:800, color:"#0d1f2d" }}>MOST POPULAR</div>}
@@ -23779,28 +23862,51 @@ function OnboardingPlanScreen({ onPlanSelected, currentUser }) {
                   <ul style={{ margin:"0 0 14px", padding:"0 0 0 18px", listStyle:"none" }}>
                     {plan.features.map((f, i) => (
                       <li key={i} style={{ fontSize:12, color:"#555", lineHeight:1.8, position:"relative" }}>
-                        <span style={{ position:"absolute", left:-16, color:"#2e7d32" }}>✓</span>{f}
+                        <span style={{ position:"absolute", left:-16, color:"#2e7d32" }}>&#x2713;</span>{f}
                       </li>
                     ))}
                   </ul>
-                  <a href={stripeUrl} onClick={(e) => {
-                      e.preventDefault();
-                      // Save selected plan locally
-                      try { const pk = `${currentUser.username}_user_profile`; const pp = JSON.parse(localStorage.getItem(pk)||"{}"); pp.plan = plan.key; pp.paymentPending = true; localStorage.setItem(pk, JSON.stringify(pp)); } catch {}
-                      window.open(stripeUrl, '_blank');
+                  <button onClick={() => {
+                      try { const pk = `${currentUser.username}_user_profile`; const pp = JSON.parse(localStorage.getItem(pk)||"{}"); pp.plan = plan.key; pp.billingCycle = billingCycle; localStorage.setItem(pk, JSON.stringify(pp)); } catch {}
                       if (onPlanSelected) onPlanSelected(plan.key);
                     }}
                     style={{ display:"block", width:"100%", padding:14, background: plan.popular ? "#fff200" : "#1a3a4a", color: plan.popular ? "#0d1f2d" : "#fff", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", textAlign:"center", textDecoration:"none", boxSizing:"border-box" }}>
-                    Select {plan.name}
-                  </a>
+                    Start Free Trial
+                  </button>
                 </div>
               </div>
             );
           })}
         </div>
         <p style={{ textAlign:"center", fontSize:11, color:"#999", marginTop:16 }}>
-          You'll be redirected to Stripe for secure payment. Your account will be activated automatically after payment.
+          Your 7-day free trial starts now. You won't be charged until the trial ends.
         </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Onboarding Contact Import Screen ──────────────────────────────────────
+function ContactImportScreen({ onDone, onClientDetails }) {
+  return (
+    <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <div style={{ background:"#0d1f2d", padding:"20px 24px", textAlign:"center" }}>
+        <h1 style={{ color:"#fff200", fontSize:22, fontWeight:900, margin:"0 0 6px" }}>Import Your Contacts</h1>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, margin:0 }}>Add your existing clients to get started faster</p>
+      </div>
+      <div style={{ flex:1, padding:"32px 24px", display:"flex", flexDirection:"column", alignItems:"center", gap:16, maxWidth:400, margin:"0 auto", width:"100%" }}>
+        <div style={{ fontSize:48, marginBottom:8 }}>&#x1F4C7;</div>
+        <p style={{ fontSize:15, color:"#555", textAlign:"center", lineHeight:1.6, marginBottom:8 }}>
+          Import your existing contacts so you can quickly auto-fill client details on certificates, invoices and quotes.
+        </p>
+        <button onClick={() => { if (onClientDetails) onClientDetails(); onDone(); }}
+          style={{ width:"100%", padding:16, background:"#0d1f2d", color:"#fff200", border:"none", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+          Add Manually
+        </button>
+        <button onClick={onDone}
+          style={{ width:"100%", padding:16, background:"#e5e7eb", color:"#555", border:"none", borderRadius:12, fontSize:15, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+          Skip for Now
+        </button>
       </div>
     </div>
   );
@@ -23819,6 +23925,7 @@ function AppWithAuth() {
   const [screen, setScreen] = useState(window.location.hash === "#signin" ? "login" : "landing");
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [showPlanSelection, setShowPlanSelection] = useState(false);
+  const [showContactImport, setShowContactImport] = useState(false);
 
   // On mount: check Stripe subscription for existing sessions (background, non-blocking)
   useEffect(() => {
@@ -23896,13 +24003,29 @@ function AppWithAuth() {
         <InstallPromptModal onDismiss={() => {
           try { localStorage.setItem("installPromptShown", "true"); } catch {}
           setShowInstallPrompt(false);
+          // After install prompt, show plan selection for new users
+          const u = getCurrentUser();
+          if (u) {
+            try { const pp = JSON.parse(localStorage.getItem(`${u.username}_user_profile`)||"{}"); if (!pp.plan) { setShowPlanSelection(true); } } catch {}
+          }
         }}/>
       </>
     );
   }
 
-  // Plan selection is no longer forced — users get a 7-day free trial first.
-  // After trial expires, the PaywallScreen inside <App/> handles the paywall gate.
+  // Onboarding plan selection (after install prompt)
+  if (authed && showPlanSelection) {
+    const u = getCurrentUser();
+    return <OnboardingPlanScreen currentUser={u} onPlanSelected={() => {
+      setShowPlanSelection(false);
+      setShowContactImport(true);
+    }}/>;
+  }
+
+  // Onboarding contact import (after plan selection)
+  if (authed && showContactImport) {
+    return <ContactImportScreen onDone={() => setShowContactImport(false)} />;
+  }
 
   if (authed) return <App onLogout={handleLogout}/>;
 
@@ -23918,12 +24041,13 @@ function AppWithAuth() {
       if (isSupabaseEnabled() && userEntry.isSupabaseUser) {
         pushProfile({ ...profileWithDate, username: userEntry.username }).catch(() => {});
       }
-      // Auto-login — show install prompt if not shown before
+      // Auto-login — show install prompt if not shown before, then plan selection
       setAuthed(true);
       try {
         if (!localStorage.getItem("installPromptShown")) {
           setShowInstallPrompt(true);
-        } else if (userNeedsPlanSelection(userEntry)) {
+        } else {
+          // Install prompt already shown — go straight to plan selection
           setShowPlanSelection(true);
         }
       } catch {}
