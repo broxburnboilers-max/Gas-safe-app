@@ -23890,21 +23890,21 @@ function OnboardingPlanScreen({ onPlanSelected, currentUser }) {
 function ContactImportScreen({ onDone, onClientDetails }) {
   return (
     <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
-      <div style={{ background:"#0d1f2d", padding:"20px 24px", textAlign:"center" }}>
-        <h1 style={{ color:"#fff200", fontSize:22, fontWeight:900, margin:"0 0 6px" }}>Import Your Contacts</h1>
-        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, margin:0 }}>Add your existing clients to get started faster</p>
+      <div style={{ background:"#0d1f2d", padding:"14px 20px", textAlign:"center" }}>
+        <h1 style={{ color:"#fff200", fontSize:18, fontWeight:900, margin:"0 0 4px" }}>Import Your Contacts</h1>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:12, margin:0 }}>Add your existing clients to get started faster</p>
       </div>
-      <div style={{ flex:1, padding:"32px 24px", display:"flex", flexDirection:"column", alignItems:"center", gap:16, maxWidth:400, margin:"0 auto", width:"100%" }}>
-        <div style={{ fontSize:48, marginBottom:8 }}>&#x1F4C7;</div>
-        <p style={{ fontSize:15, color:"#555", textAlign:"center", lineHeight:1.6, marginBottom:8 }}>
+      <div style={{ flex:1, padding:"20px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:12, maxWidth:360, margin:"0 auto", width:"100%" }}>
+        <div style={{ fontSize:36, marginBottom:4 }}>&#x1F4C7;</div>
+        <p style={{ fontSize:13, color:"#555", textAlign:"center", lineHeight:1.5, marginBottom:4 }}>
           Import your existing contacts so you can quickly auto-fill client details on certificates, invoices and quotes.
         </p>
         <button onClick={() => { if (onClientDetails) onClientDetails(); onDone(); }}
-          style={{ width:"100%", padding:16, background:"#0d1f2d", color:"#fff200", border:"none", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+          style={{ width:"100%", padding:12, background:"#0d1f2d", color:"#fff200", border:"none", borderRadius:10, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
           Add Manually
         </button>
         <button onClick={onDone}
-          style={{ width:"100%", padding:16, background:"#e5e7eb", color:"#555", border:"none", borderRadius:12, fontSize:15, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+          style={{ width:"100%", padding:12, background:"#e5e7eb", color:"#555", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
           Skip for Now
         </button>
       </div>
@@ -24003,11 +24003,8 @@ function AppWithAuth() {
         <InstallPromptModal onDismiss={() => {
           try { localStorage.setItem("installPromptShown", "true"); } catch {}
           setShowInstallPrompt(false);
-          // After install prompt, show plan selection for new users
-          const u = getCurrentUser();
-          if (u) {
-            try { const pp = JSON.parse(localStorage.getItem(`${u.username}_user_profile`)||"{}"); if (!pp.plan) { setShowPlanSelection(true); } } catch {}
-          }
+          // After install prompt, skip plan selection — go straight to contact import
+          setShowContactImport(true);
         }}/>
       </>
     );
@@ -24047,8 +24044,8 @@ function AppWithAuth() {
         if (!localStorage.getItem("installPromptShown")) {
           setShowInstallPrompt(true);
         } else {
-          // Install prompt already shown — go straight to plan selection
-          setShowPlanSelection(true);
+          // Install prompt already shown — go straight to contact import (skip plan selection)
+          setShowContactImport(true);
         }
       } catch {}
     }}
