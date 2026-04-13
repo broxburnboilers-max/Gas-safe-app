@@ -3938,7 +3938,1164 @@ function PSCScreen({ onHome, onSave, engineerData: initEngData }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 
-function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine, onAdminDashboard, onPSC, onBankStatements }) {
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── GAS RATE CALCULATOR ────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const GAS_RATE_CONSTANTS = {
+  NATURAL_GAS_CV_KW: 10.76,
+  LPG_CV_KW: 26.39,
+  GROSS_TO_NET: 1.11,
+  FT3_TO_M3: 0.0283,
+};
+
+function GasRateCalcScreen({ onBack, onHome }) {
+  const [meterType, setMeterType] = useState("imperial");
+  const [gasType, setGasType] = useState("natural");
+  const [testDial, setTestDial] = useState("1");
+  const [timeSeconds, setTimeSeconds] = useState("");
+  const [r1, setR1] = useState("");
+  const [r2, setR2] = useState("");
+  const [duration, setDuration] = useState("2");
+  const [ratedInput, setRatedInput] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(sk("gas_rate_calcs")) || "[]"); } catch { return []; }
+  });
+
+  const cv = gasType === "natural" ? GAS_RATE_CONSTANTS.NATURAL_GAS_CV_KW : GAS_RATE_CONSTANTS.LPG_CV_KW;
+
+  // Calculate results
+  let gasRateFt3 = null, gasRateM3 = null, grossKW = null, netKW = null, gasUsed = null;
+  if (meterType === "imperial") {
+    if (timeSeconds && parseFloat(timeSeconds) > 0) {
+      gasRateFt3 = (3600 * parseFloat(testDial)) / parseFloat(timeSeconds);
+      gasRateM3 = gasRateFt3 * GAS_RATE_CONSTANTS.FT3_TO_M3;
+      grossKW = gasRateM3 * cv;
+      netKW = grossKW / GAS_RATE_CONSTANTS.GROSS_TO_NET;
+    }
+  } else {
+    if (r1 !== "" && r2 !== "" && parseFloat(r2) > parseFloat(r1)) {
+      gasUsed = parseFloat(r2) - parseFloat(r1);
+      gasRateM3 = gasUsed * (60 / parseFloat(duration));
+      grossKW = gasRateM3 * cv;
+      netKW = grossKW / GAS_RATE_CONSTANTS.GROSS_TO_NET;
+    }
+  }
+
+  // Tolerance check
+  let toleranceStatus = null, toleranceMsg = "";
+  if (netKW !== null && ratedInput && parseFloat(ratedInput) > 0) {
+    const rated = parseFloat(ratedInput);
+    const upper = rated * 1.05;
+    const lower = rated * 0.90;
+    const diff = Math.abs(netKW - rated) / rated;
+    if (netKW >= lower && netKW <= upper) {
+      toleranceStatus = "green";
+      toleranceMsg = "Within tolerance (+5% / -10%)";
+    } else if (diff <= 0.20) {
+      toleranceStatus = "amber";
+      toleranceMsg = "Outside tolerance — check appliance";
+    } else {
+      toleranceStatus = "red";
+      toleranceMsg = "Significantly outside tolerance";
+    }
+  }
+
+  function saveCalc() {
+    if (netKW === null) return;
+    const calc = {
+      id: Date.now(),
+      timestamp: new Date().toISOString(),
+      meterType, gasType, cv,
+      ...(meterType === "imperial" ? { testDial, timeSeconds, gasRateFt3 } : { r1, r2, duration, gasUsed }),
+      gasRateM3, grossKW, netKW,
+      ratedInput: ratedInput || null,
+      toleranceStatus,
+    };
+    const updated = [calc, ...history];
+    setHistory(updated);
+    try { localStorage.setItem(sk("gas_rate_calcs"), JSON.stringify(updated)); } catch {}
+    alert("Calculation saved!");
+  }
+
+  function deleteCalc(id) {
+    const updated = history.filter(c => c.id !== id);
+    setHistory(updated);
+    try { localStorage.setItem(sk("gas_rate_calcs"), JSON.stringify(updated)); } catch {}
+  }
+
+  const toggleStyle = (active) => ({
+    flex:1, padding:"10px 12px", border:"none", borderRadius:10,
+    background: active ? "#fff200" : "rgba(255,255,255,0.1)",
+    color: active ? "#0d1f2d" : "rgba(255,255,255,0.7)",
+    fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif",
+    transition:"all 0.15s ease",
+  });
+
+  const tolColors = { green:"#22c55e", amber:"#f59e0b", red:"#ef4444" };
+  const tolIcons = { green:"✅", amber:"⚠️", red:"❌" };
+
+  if (showHistory) {
+    return (
+      <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+        <Header title="Calculation History" onBack={()=>setShowHistory(false)}/>
+        <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+          {history.length === 0 && <p style={{ textAlign:"center", color:"#888", padding:40 }}>No saved calculations yet.</p>}
+          {history.map(c => (
+            <div key={c.id} style={{ background:"#fff", borderRadius:12, padding:"14px 16px", marginBottom:10, boxShadow:"0 1px 6px rgba(0,0,0,0.06)" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                <span style={{ fontSize:12, color:"#888" }}>{new Date(c.timestamp).toLocaleString("en-GB")}</span>
+                <button onClick={()=>deleteCalc(c.id)} style={{ background:"none", border:"none", cursor:"pointer", color:"#ef4444", fontSize:16 }}>✕</button>
+              </div>
+              <div style={{ fontSize:13, color:"#444", marginBottom:4 }}>
+                {c.meterType === "imperial" ? "Imperial" : "Metric"} · {c.gasType === "natural" ? "Natural Gas" : "LPG"}
+              </div>
+              <div style={{ display:"flex", gap:16 }}>
+                <div><span style={{ fontSize:11, color:"#888" }}>Gross</span><div style={{ fontWeight:700, color:BLUE }}>{c.grossKW?.toFixed(2)} kW</div></div>
+                <div><span style={{ fontSize:11, color:"#888" }}>Net</span><div style={{ fontWeight:700, color:BLUE }}>{c.netKW?.toFixed(2)} kW</div></div>
+                <div><span style={{ fontSize:11, color:"#888" }}>Rate</span><div style={{ fontWeight:700, color:BLUE }}>{c.gasRateM3?.toFixed(4)} m³/hr</div></div>
+              </div>
+              {c.toleranceStatus && (
+                <div style={{ marginTop:6, fontSize:12, color:tolColors[c.toleranceStatus], fontWeight:600 }}>
+                  {tolIcons[c.toleranceStatus]} {c.toleranceStatus === "green" ? "Within tolerance" : c.toleranceStatus === "amber" ? "Outside tolerance" : "Significantly outside"}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <BottomBar onHome={onHome}/>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <Header title="Gas Rate Calculator" onBack={onBack} right={
+        <button onClick={()=>setShowHistory(true)} style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:10, padding:"6px 12px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+          History ({history.length})
+        </button>
+      }/>
+      <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+        {/* Meter Type Toggle */}
+        <div style={{ margin:"0 0 10px", background:DARK_BLUE, borderRadius:12, padding:4, display:"flex", gap:4 }}>
+          <button onClick={()=>setMeterType("imperial")} style={toggleStyle(meterType==="imperial")}>Imperial (ft³)</button>
+          <button onClick={()=>setMeterType("metric")} style={toggleStyle(meterType==="metric")}>Metric (m³)</button>
+        </div>
+        {/* Gas Type Toggle */}
+        <div style={{ margin:"0 0 14px", background:DARK_BLUE, borderRadius:12, padding:4, display:"flex", gap:4 }}>
+          <button onClick={()=>setGasType("natural")} style={toggleStyle(gasType==="natural")}>Natural Gas</button>
+          <button onClick={()=>setGasType("lpg")} style={toggleStyle(gasType==="lpg")}>LPG</button>
+        </div>
+
+        {meterType === "imperial" ? (
+          <>
+            <div style={{ margin:"0 0 8px", background:"#fff", borderRadius:10, border:"1px solid #e2e6ea", overflow:"hidden" }}>
+              <div style={{ fontSize:12, color:"#6b7b8d", padding:"8px 14px 0", fontWeight:600 }}>Test Dial Value (ft³)</div>
+              <select value={testDial} onChange={e=>setTestDial(e.target.value)} style={{ width:"100%", boxSizing:"border-box", padding:"6px 14px 10px", border:"none", background:"transparent", fontSize:15, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#222" }}>
+                {["0.5","1","2","5","10"].map(v=><option key={v} value={v}>{v} ft³</option>)}
+              </select>
+            </div>
+            <FormInput label="Time for 1 Revolution (seconds)" value={timeSeconds} onChange={setTimeSeconds} type="number" placeholder="e.g. 120"/>
+          </>
+        ) : (
+          <>
+            <FormInput label="Reading 1 (R1)" value={r1} onChange={setR1} type="number" placeholder="e.g. 0.072"/>
+            <FormInput label="Reading 2 (R2)" value={r2} onChange={setR2} type="number" placeholder="e.g. 0.133"/>
+            <div style={{ margin:"0 14px 8px", background:"#fff", borderRadius:10, border:"1px solid #e2e6ea", overflow:"hidden" }}>
+              <div style={{ fontSize:12, color:"#6b7b8d", padding:"8px 14px 0", fontWeight:600 }}>Test Duration</div>
+              <select value={duration} onChange={e=>setDuration(e.target.value)} style={{ width:"100%", boxSizing:"border-box", padding:"6px 14px 10px", border:"none", background:"transparent", fontSize:15, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#222" }}>
+                <option value="1">1 minute</option>
+                <option value="2">2 minutes</option>
+              </select>
+            </div>
+          </>
+        )}
+
+        {/* Results Card */}
+        {netKW !== null && (
+          <div style={{ margin:"14px 0", background:"#fff", borderRadius:14, padding:"18px 16px", boxShadow:"0 2px 12px rgba(0,0,0,0.08)", border:`2px solid ${BLUE}` }}>
+            <div style={{ fontSize:13, fontWeight:700, color:BLUE, marginBottom:12, textTransform:"uppercase", letterSpacing:0.5 }}>Results</div>
+            {meterType === "imperial" && gasRateFt3 !== null && (
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                <span style={{ fontSize:13, color:"#666" }}>Gas Rate</span>
+                <span style={{ fontWeight:700, color:"#222" }}>{gasRateFt3.toFixed(2)} ft³/hr</span>
+              </div>
+            )}
+            {meterType === "metric" && gasUsed !== null && (
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                <span style={{ fontSize:13, color:"#666" }}>Gas Used</span>
+                <span style={{ fontWeight:700, color:"#222" }}>{gasUsed.toFixed(4)} m³</span>
+              </div>
+            )}
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+              <span style={{ fontSize:13, color:"#666" }}>Gas Rate (m³/hr)</span>
+              <span style={{ fontWeight:700, color:"#222" }}>{gasRateM3.toFixed(4)} m³/hr</span>
+            </div>
+            <div style={{ borderTop:"1px solid #eee", margin:"10px 0", padding:"10px 0 0" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                <span style={{ fontSize:14, fontWeight:600, color:"#444" }}>Gross Input</span>
+                <span style={{ fontSize:20, fontWeight:800, color:BLUE }}>{grossKW.toFixed(2)} kW</span>
+              </div>
+              <div style={{ display:"flex", justifyContent:"space-between" }}>
+                <span style={{ fontSize:14, fontWeight:600, color:"#444" }}>Net Input</span>
+                <span style={{ fontSize:20, fontWeight:800, color:BLUE }}>{netKW.toFixed(2)} kW</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tolerance Check */}
+        {netKW !== null && (
+          <div style={{ margin:"0 0 10px" }}>
+            <FormInput label="Manufacturer's Rated Input (kW)" value={ratedInput} onChange={setRatedInput} type="number" placeholder="e.g. 24.0"/>
+            {toleranceStatus && (
+              <div style={{ margin:"0 14px", padding:"12px 16px", borderRadius:10, background:toleranceStatus === "green" ? "#f0fdf4" : toleranceStatus === "amber" ? "#fffbeb" : "#fef2f2", border:`1px solid ${tolColors[toleranceStatus]}40` }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:20 }}>{tolIcons[toleranceStatus]}</span>
+                  <span style={{ fontWeight:700, color:tolColors[toleranceStatus], fontSize:14 }}>{toleranceMsg}</span>
+                </div>
+                <div style={{ fontSize:12, color:"#666", marginTop:4 }}>
+                  Acceptable range: {(parseFloat(ratedInput)*0.90).toFixed(2)} kW – {(parseFloat(ratedInput)*1.05).toFixed(2)} kW
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Save Button */}
+        {netKW !== null && (
+          <div style={{ padding:"10px 14px" }}>
+            <button onClick={saveCalc} style={{ width:"100%", padding:14, background:BLUE, color:"#fff", border:"none", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+              Save Calculation
+            </button>
+          </div>
+        )}
+      </div>
+      <BottomBar onHome={onHome}/>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── END GAS RATE CALCULATOR ────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── JOB SHEETS ─────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function JobSheetsScreen({ onBack, onHome, onNewJobSheet, onEditJobSheet }) {
+  const [sheets, setSheets] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(sk("job_sheets")) || "[]"); } catch { return []; }
+  });
+  const [filterEngineer, setFilterEngineer] = useState("");
+
+  const engineers = (() => {
+    try { return JSON.parse(localStorage.getItem(sk("engineers")) || "[]").filter(e=>e.status==="active"); } catch { return []; }
+  })();
+
+  const filtered = filterEngineer ? sheets.filter(s => s.assignedEngineer === filterEngineer) : sheets;
+
+  function deleteSheet(id) {
+    if (!window.confirm("Delete this job sheet?")) return;
+    const updated = sheets.filter(s => s.id !== id);
+    setSheets(updated);
+    try { localStorage.setItem(sk("job_sheets"), JSON.stringify(updated)); } catch {}
+  }
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <Header title="Job Sheets" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+        <button onClick={onNewJobSheet} style={{ width:"100%", padding:14, background:BLUE, color:"#fff", border:"none", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", marginBottom:14, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+          <span style={{ fontSize:18 }}>+</span> New Job Sheet
+        </button>
+        {getUserPlan() === "proplus" && engineers.length > 0 && (
+          <div style={{ margin:"0 0 10px", background:"#fff", borderRadius:10, border:"1px solid #e2e6ea", overflow:"hidden" }}>
+            <select value={filterEngineer} onChange={e=>setFilterEngineer(e.target.value)} style={{ width:"100%", padding:"10px 14px", border:"none", fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#222", background:"transparent" }}>
+              <option value="">All Engineers</option>
+              {engineers.map(eng=><option key={eng.id} value={eng.engineerId}>{eng.name} ({eng.engineerId})</option>)}
+            </select>
+          </div>
+        )}
+        {filtered.length === 0 && <p style={{ textAlign:"center", color:"#888", padding:40 }}>No job sheets yet. Tap "New Job Sheet" to create one.</p>}
+        {filtered.map(s => (
+          <div key={s.id} style={{ background:"#fff", borderRadius:12, padding:"14px 16px", marginBottom:10, boxShadow:"0 1px 6px rgba(0,0,0,0.06)", cursor:"pointer" }} onClick={()=>onEditJobSheet(s.id)}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+              <span style={{ fontWeight:700, color:BLUE, fontSize:14 }}>{s.jobRef}</span>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:11, padding:"3px 8px", borderRadius:6, fontWeight:600, background: s.status === "Complete" ? "#dcfce7" : "#fef9c3", color: s.status === "Complete" ? "#166534" : "#854d0e" }}>
+                  {s.status || "Incomplete"}
+                </span>
+                <button onClick={e=>{e.stopPropagation();deleteSheet(s.id);}} style={{ background:"none", border:"none", cursor:"pointer", color:"#ef4444", fontSize:14, padding:2 }}>✕</button>
+              </div>
+            </div>
+            <div style={{ fontSize:13, color:"#444", marginBottom:2 }}>{s.clientName || "No client"}</div>
+            <div style={{ fontSize:12, color:"#888" }}>{s.date ? new Date(s.date).toLocaleDateString("en-GB") : "No date"}</div>
+            {s.assignedEngineer && <div style={{ fontSize:11, color:"#888", marginTop:4 }}>Engineer: {s.assignedEngineerName || s.assignedEngineer}</div>}
+          </div>
+        ))}
+      </div>
+      <BottomBar onHome={onHome}/>
+    </div>
+  );
+}
+
+
+function JobSheetWizardScreen({ onBack, onHome, editJobSheetId }) {
+  const [step, setStep] = useState(1);
+  const [showHoursPicker, setShowHoursPicker] = useState(false);
+  const [showContactPicker, setShowContactPicker] = useState(false);
+  const [showGdprInfo, setShowGdprInfo] = useState(false);
+  const custSigRef = useRef(null);
+  const engSigRef = useRef(null);
+  const custCanvasRef = useRef(null);
+  const engCanvasRef = useRef(null);
+
+  // Generate next job reference
+  const getNextRef = () => {
+    try {
+      const sheets = JSON.parse(localStorage.getItem(sk("job_sheets")) || "[]");
+      const nums = sheets.map(s => { const m = (s.jobRef||"").match(/JS-(\d+)/); return m ? parseInt(m[1]) : 0; });
+      const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+      return "JS-" + String(next).padStart(4, "0");
+    } catch { return "JS-0001"; }
+  };
+
+  const todayStr = new Date().toISOString().slice(0,10);
+
+  // Load existing job sheet for editing or create new
+  const [data, setData] = useState(() => {
+    if (editJobSheetId) {
+      try {
+        const sheets = JSON.parse(localStorage.getItem(sk("job_sheets")) || "[]");
+        const existing = sheets.find(s => s.id === editJobSheetId);
+        if (existing) return existing;
+      } catch {}
+    }
+    return {
+      id: Date.now(),
+      jobRef: getNextRef(),
+      certRef: "", certNumber: "", jobId: "",
+      date: todayStr, arrivalTime: "", departureTime: "",
+      clientName: "", clientAddr1: "", clientAddr2: "", clientAddr3: "", clientPostcode: "", clientTel: "", clientEmail: "",
+      instName: "", instAddr1: "", instAddr2: "", instAddr3: "", instPostcode: "", instTel: "",
+      jobDescription: "", sparesRequired: "",
+      hoursUsed: "0.00", customerInformed: "N/A", awaitingParts: "N/A", jobComplete: "N/A",
+      materialsPurchasedFrom: "", costExVat: "", supplierRef: "",
+      dataProtection: false, customerDeclaration: "",
+      customerSignature: "", engineerSignature: "",
+      assignedEngineer: "", assignedEngineerName: "",
+      status: "Incomplete", savedAt: null,
+    };
+  });
+
+  const upd = (field, val) => setData(prev => ({ ...prev, [field]: val }));
+
+  // Signature pad logic
+  function initCanvas(canvasEl, ref) {
+    if (!canvasEl || ref.current) return;
+    const ctx = canvasEl.getContext("2d");
+    const rect = canvasEl.getBoundingClientRect();
+    canvasEl.width = rect.width * 2;
+    canvasEl.height = rect.height * 2;
+    ctx.scale(2, 2);
+    ctx.strokeStyle = "#1a1a2e";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    let drawing = false;
+    const getPos = (e) => {
+      const r = canvasEl.getBoundingClientRect();
+      const t = e.touches ? e.touches[0] : e;
+      return { x: t.clientX - r.left, y: t.clientY - r.top };
+    };
+    const start = (e) => { e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+    const move = (e) => { if (!drawing) return; e.preventDefault(); const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
+    const end = () => { drawing = false; };
+    canvasEl.addEventListener("mousedown", start);
+    canvasEl.addEventListener("mousemove", move);
+    canvasEl.addEventListener("mouseup", end);
+    canvasEl.addEventListener("mouseleave", end);
+    canvasEl.addEventListener("touchstart", start, { passive:false });
+    canvasEl.addEventListener("touchmove", move, { passive:false });
+    canvasEl.addEventListener("touchend", end);
+    ref.current = { canvas: canvasEl, ctx };
+  }
+
+  function clearCanvas(ref) {
+    if (ref.current) {
+      const { canvas, ctx } = ref.current;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+
+  function getCanvasData(ref) {
+    if (ref.current) return ref.current.canvas.toDataURL("image/png");
+    return "";
+  }
+
+  // Copy client details to installation
+  function copyFromClient() {
+    setData(prev => ({
+      ...prev,
+      instName: prev.clientName,
+      instAddr1: prev.clientAddr1,
+      instAddr2: prev.clientAddr2,
+      instAddr3: prev.clientAddr3,
+      instPostcode: prev.clientPostcode,
+      instTel: prev.clientTel,
+    }));
+  }
+
+  // Select from contacts
+  function selectContact(contact) {
+    setData(prev => ({
+      ...prev,
+      clientName: contact.name || "",
+      clientAddr1: contact.addr1 || contact.address1 || "",
+      clientAddr2: contact.addr2 || contact.address2 || "",
+      clientAddr3: contact.addr3 || contact.address3 || "",
+      clientPostcode: contact.postcode || "",
+      clientTel: contact.tel || contact.phone || "",
+      clientEmail: contact.email || "",
+    }));
+    setShowContactPicker(false);
+  }
+
+  // Hours options (0.00, 0.15, 0.30, 0.45, 1.00, 1.15, ... up to 12.00)
+  const hoursOptions = [];
+  for (let h = 0; h <= 12; h++) {
+    for (let m = 0; m < 4; m++) {
+      const mins = m * 15;
+      const val = h + "." + String(mins).padStart(2, "0");
+      hoursOptions.push(val);
+      if (h === 12 && m === 0) break;
+    }
+  }
+
+  // Save
+  function saveJobSheet() {
+    const custSig = getCanvasData(custSigRef);
+    const engSig = getCanvasData(engSigRef);
+    const updated = { ...data, customerSignature: custSig || data.customerSignature, engineerSignature: engSig || data.engineerSignature, status: data.jobComplete === "Yes" ? "Complete" : "Incomplete", savedAt: new Date().toISOString() };
+    try {
+      const sheets = JSON.parse(localStorage.getItem(sk("job_sheets")) || "[]");
+      const idx = sheets.findIndex(s => s.id === updated.id);
+      if (idx >= 0) sheets[idx] = updated;
+      else sheets.unshift(updated);
+      localStorage.setItem(sk("job_sheets"), JSON.stringify(sheets));
+    } catch {}
+    alert("Job sheet saved!");
+    onBack();
+  }
+
+  // PDF preview
+  function previewPDF() {
+    const custSig = getCanvasData(custSigRef) || data.customerSignature;
+    const engSig = getCanvasData(engSigRef) || data.engineerSignature;
+    const profile = (() => { try { return JSON.parse(localStorage.getItem(sk("user_profile")) || "{}"); } catch { return {}; } })();
+    const w = window.open("", "_blank");
+    if (!w) { alert("Please allow popups to preview PDF"); return; }
+    w.document.write(`<!DOCTYPE html><html><head><title>Job Record - ${data.jobRef}</title>
+      <style>
+        body { font-family:'Segoe UI',sans-serif; padding:20px; color:#222; max-width:800px; margin:0 auto; font-size:12px; }
+        .header { text-align:center; border-bottom:2px solid #1a3a4a; padding-bottom:10px; margin-bottom:16px; }
+        .header h1 { color:#1a3a4a; font-size:18px; margin:4px 0; }
+        .header p { color:#888; font-size:11px; margin:2px 0; }
+        .two-col { display:flex; gap:16px; margin-bottom:14px; }
+        .two-col > div { flex:1; border:1px solid #ddd; border-radius:8px; padding:10px; }
+        .two-col h3 { font-size:12px; color:#1a3a4a; margin:0 0 8px; text-transform:uppercase; border-bottom:1px solid #eee; padding-bottom:4px; }
+        .field { margin-bottom:4px; }
+        .field label { color:#888; font-size:10px; display:block; }
+        .field span { font-weight:600; }
+        .section { border:1px solid #ddd; border-radius:8px; padding:10px; margin-bottom:14px; }
+        .section h3 { font-size:12px; color:#1a3a4a; margin:0 0 8px; text-transform:uppercase; border-bottom:1px solid #eee; padding-bottom:4px; }
+        .grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+        .sig-row { display:flex; gap:16px; margin-top:14px; }
+        .sig-row > div { flex:1; text-align:center; }
+        .sig-row img { max-height:60px; border-bottom:1px solid #222; }
+        @media print { body { padding:10px; } }
+      </style></head><body>
+      <div class="header">
+        <h1>Job Record</h1>
+        <p>Reference: ${data.jobRef} &nbsp;|&nbsp; Date: ${data.date ? new Date(data.date).toLocaleDateString("en-GB") : ""}</p>
+        <p>${profile.companyName || ""} &nbsp;|&nbsp; Gas Safe: ${profile.gasSafeNo || ""}</p>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Installation Details</h3>
+          <div class="field"><label>Name</label><span>${data.instName}</span></div>
+          <div class="field"><label>Address</label><span>${[data.instAddr1,data.instAddr2,data.instAddr3].filter(Boolean).join(", ")}</span></div>
+          <div class="field"><label>Postcode</label><span>${data.instPostcode}</span></div>
+          <div class="field"><label>Tel</label><span>${data.instTel}</span></div>
+        </div>
+        <div>
+          <h3>Client Details</h3>
+          <div class="field"><label>Name</label><span>${data.clientName}</span></div>
+          <div class="field"><label>Address</label><span>${[data.clientAddr1,data.clientAddr2,data.clientAddr3].filter(Boolean).join(", ")}</span></div>
+          <div class="field"><label>Postcode</label><span>${data.clientPostcode}</span></div>
+          <div class="field"><label>Tel</label><span>${data.clientTel}</span></div>
+          <div class="field"><label>Email</label><span>${data.clientEmail}</span></div>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Job Notes</h3>
+        <p>${(data.jobDescription||"").replace(/\n/g,"<br>")}</p>
+      </div>
+      <div class="section">
+        <h3>Spares Required</h3>
+        <p>${(data.sparesRequired||"").replace(/\n/g,"<br>")}</p>
+      </div>
+      <div class="section">
+        <h3>Hours & Status</h3>
+        <div class="grid">
+          <div class="field"><label>Hours Used</label><span>${data.hoursUsed}</span></div>
+          <div class="field"><label>Awaiting Parts</label><span>${data.awaitingParts}</span></div>
+          <div class="field"><label>Materials From</label><span>${data.materialsPurchasedFrom}</span></div>
+          <div class="field"><label>Cost (ex VAT)</label><span>${data.costExVat ? "£"+data.costExVat : ""}</span></div>
+          <div class="field"><label>Supplier Ref</label><span>${data.supplierRef}</span></div>
+          <div class="field"><label>Customer Informed</label><span>${data.customerInformed}</span></div>
+          <div class="field"><label>Job Complete</label><span>${data.jobComplete}</span></div>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Engineer Details</h3>
+        <div class="grid">
+          <div class="field"><label>Engineer</label><span>${data.assignedEngineerName || profile.engineerName || ""}</span></div>
+          <div class="field"><label>Gas Safe No</label><span>${profile.gasSafeNo || ""}</span></div>
+          <div class="field"><label>Company</label><span>${profile.companyName || ""}</span></div>
+        </div>
+      </div>
+      <div class="sig-row">
+        <div>
+          <p style="font-size:10px;color:#888;">Report Issued By (Engineer)</p>
+          ${engSig ? `<img src="${engSig}" alt="Engineer Signature"/>` : "<p>—</p>"}
+          <p style="font-size:10px;">${data.date ? new Date(data.date).toLocaleDateString("en-GB") : ""}</p>
+        </div>
+        <div>
+          <p style="font-size:10px;color:#888;">Report Received By (Customer)</p>
+          ${custSig ? `<img src="${custSig}" alt="Customer Signature"/>` : "<p>—</p>"}
+          <p style="font-size:10px;">${data.customerDeclaration || ""}</p>
+        </div>
+      </div>
+      <div style="text-align:center; margin-top:20px; border-top:1px solid #ddd; padding-top:10px; color:#888; font-size:10px;">
+        ${profile.companyName || ""} &nbsp;|&nbsp; ${profile.companyAddr || ""} ${profile.companyPostcode || ""} &nbsp;|&nbsp; ${profile.companyTel || ""} &nbsp;|&nbsp; ${profile.companyEmail || ""}
+      </div>
+    </body></html>`);
+    w.document.close();
+    setTimeout(()=>w.print(), 500);
+  }
+
+  function sharePDF() {
+    previewPDF();
+  }
+
+  // Engineers for assignment (Pro+ only)
+  const engineers = (() => {
+    if (getUserPlan() !== "proplus") return [];
+    try { return JSON.parse(localStorage.getItem(sk("engineers")) || "[]").filter(e=>e.status==="active"); } catch { return []; }
+  })();
+
+  // Contacts for picker
+  const contacts = (() => {
+    try { return JSON.parse(localStorage.getItem(sk("client_contacts")) || "[]"); } catch { return []; }
+  })();
+
+  const stepLabels = ["Job Record", "Client Details", "Job Report", "Hours & Status", "Signature", "Preview & Save"];
+  const progressPct = (step / 6) * 100;
+
+  const sectionStyle = { margin:"0 0 8px", background:"#fff", borderRadius:12, padding:"14px 16px", boxShadow:"0 1px 6px rgba(0,0,0,0.06)" };
+  const labelStyle = { fontSize:12, color:"#6b7b8d", fontWeight:600, marginBottom:4, display:"block" };
+  const inputStyle = { width:"100%", boxSizing:"border-box", padding:"8px 12px", border:"1px solid #e2e6ea", borderRadius:8, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#222" };
+  const radioGroupStyle = { display:"flex", gap:12, flexWrap:"wrap", marginTop:4 };
+  const radioBtn = (active) => ({
+    padding:"8px 16px", borderRadius:8, border:`1px solid ${active ? BLUE : "#ddd"}`,
+    background: active ? BLUE : "#fff", color: active ? "#fff" : "#444",
+    fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif",
+  });
+
+  // ── Step 1: Job Record ──
+  if (step === 1) return (
+    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <Header title="Job Sheet" onBack={onBack}/>
+      <div style={{ background:BLUE, padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
+        <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.2)", borderRadius:2, overflow:"hidden" }}>
+          <div style={{ width:`${progressPct}%`, height:"100%", background:"#fff200", borderRadius:2, transition:"width 0.3s" }}/>
+        </div>
+        <span style={{ color:"#fff", fontSize:11, fontWeight:600, whiteSpace:"nowrap" }}>Step {step}/6 — {stepLabels[step-1]}</span>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Job Reference</label>
+          <input value={data.jobRef} onChange={e=>upd("jobRef",e.target.value)} style={{...inputStyle, background:"#f8f9fa", fontWeight:700}}/>
+        </div>
+        {engineers.length > 0 && (
+          <div style={sectionStyle}>
+            <label style={labelStyle}>Assign Engineer</label>
+            <select value={data.assignedEngineer} onChange={e=>{
+              const eng = engineers.find(en=>en.engineerId===e.target.value);
+              upd("assignedEngineer", e.target.value);
+              upd("assignedEngineerName", eng ? eng.name : "");
+            }} style={inputStyle}>
+              <option value="">— None —</option>
+              {engineers.map(eng=><option key={eng.id} value={eng.engineerId}>{eng.name} ({eng.engineerId})</option>)}
+            </select>
+          </div>
+        )}
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Certificate Reference</label>
+          <input value={data.certRef} onChange={e=>upd("certRef",e.target.value)} style={inputStyle} placeholder="Optional"/>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Certificate Number</label>
+          <input value={data.certNumber} onChange={e=>upd("certNumber",e.target.value)} style={inputStyle} placeholder="Optional"/>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Job ID</label>
+          <input value={data.jobId} onChange={e=>upd("jobId",e.target.value)} style={inputStyle} placeholder="Optional"/>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Date</label>
+          <input type="date" value={data.date} onChange={e=>upd("date",e.target.value)} style={inputStyle}/>
+        </div>
+        <div style={{ display:"flex", gap:8 }}>
+          <div style={{...sectionStyle, flex:1}}>
+            <label style={labelStyle}>Time of Arrival</label>
+            <input type="time" value={data.arrivalTime} onChange={e=>upd("arrivalTime",e.target.value)} style={inputStyle}/>
+          </div>
+          <div style={{...sectionStyle, flex:1}}>
+            <label style={labelStyle}>Time of Departure</label>
+            <input type="time" value={data.departureTime} onChange={e=>upd("departureTime",e.target.value)} style={inputStyle}/>
+          </div>
+        </div>
+      </div>
+      <BottomBar onHome={onHome} onNext={()=>setStep(2)} nextLabel="Next: Client"/>
+    </div>
+  );
+
+  // ── Step 2: Client Details ──
+  if (step === 2) return (
+    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <Header title="Job Sheet" onBack={()=>setStep(1)}/>
+      <div style={{ background:BLUE, padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
+        <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.2)", borderRadius:2, overflow:"hidden" }}>
+          <div style={{ width:`${progressPct}%`, height:"100%", background:"#fff200", borderRadius:2, transition:"width 0.3s" }}/>
+        </div>
+        <span style={{ color:"#fff", fontSize:11, fontWeight:600, whiteSpace:"nowrap" }}>Step {step}/6 — {stepLabels[step-1]}</span>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+        <SectionHeader title="Client Details" actions={
+          <button onClick={()=>setShowContactPicker(true)} style={{ background:BLUE, color:"#fff", border:"none", borderRadius:8, padding:"6px 10px", fontSize:11, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+            <span>📇</span> Select from Contacts
+          </button>
+        }/>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Name</label>
+          <input value={data.clientName} onChange={e=>upd("clientName",e.target.value)} style={inputStyle}/>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Address Line 1</label>
+          <input value={data.clientAddr1} onChange={e=>upd("clientAddr1",e.target.value)} style={inputStyle}/>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Address Line 2</label>
+          <input value={data.clientAddr2} onChange={e=>upd("clientAddr2",e.target.value)} style={inputStyle}/>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Address Line 3</label>
+          <input value={data.clientAddr3} onChange={e=>upd("clientAddr3",e.target.value)} style={inputStyle}/>
+        </div>
+        <div style={{ display:"flex", gap:8 }}>
+          <div style={{...sectionStyle, flex:1}}>
+            <label style={labelStyle}>Postcode</label>
+            <input value={data.clientPostcode} onChange={e=>upd("clientPostcode",e.target.value)} style={inputStyle}/>
+          </div>
+          <div style={{...sectionStyle, flex:1}}>
+            <label style={labelStyle}>Telephone</label>
+            <input type="tel" value={data.clientTel} onChange={e=>upd("clientTel",e.target.value)} style={inputStyle}/>
+          </div>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Email</label>
+          <input type="email" value={data.clientEmail} onChange={e=>upd("clientEmail",e.target.value)} style={inputStyle}/>
+        </div>
+
+        <SectionHeader title="Installation Details" actions={
+          <button onClick={copyFromClient} style={{ background:"#fff200", color:"#0d1f2d", border:"none", borderRadius:8, padding:"6px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+            Copy from Client
+          </button>
+        }/>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Name</label>
+          <input value={data.instName} onChange={e=>upd("instName",e.target.value)} style={inputStyle}/>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Address Line 1</label>
+          <input value={data.instAddr1} onChange={e=>upd("instAddr1",e.target.value)} style={inputStyle}/>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Address Line 2</label>
+          <input value={data.instAddr2} onChange={e=>upd("instAddr2",e.target.value)} style={inputStyle}/>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Address Line 3</label>
+          <input value={data.instAddr3} onChange={e=>upd("instAddr3",e.target.value)} style={inputStyle}/>
+        </div>
+        <div style={{ display:"flex", gap:8 }}>
+          <div style={{...sectionStyle, flex:1}}>
+            <label style={labelStyle}>Postcode</label>
+            <input value={data.instPostcode} onChange={e=>upd("instPostcode",e.target.value)} style={inputStyle}/>
+          </div>
+          <div style={{...sectionStyle, flex:1}}>
+            <label style={labelStyle}>Telephone</label>
+            <input type="tel" value={data.instTel} onChange={e=>upd("instTel",e.target.value)} style={inputStyle}/>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Picker Modal */}
+      {showContactPicker && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20 }}>
+          <div style={{ background:"#fff", borderRadius:16, width:"100%", maxWidth:400, maxHeight:"70vh", overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.3)", display:"flex", flexDirection:"column" }}>
+            <div style={{ padding:"16px 20px", borderBottom:`2px solid ${BLUE}`, fontWeight:700, fontSize:16, textAlign:"center" }}>Select Contact</div>
+            <div style={{ flex:1, overflowY:"auto", padding:12 }}>
+              {contacts.length === 0 && <p style={{ textAlign:"center", color:"#888", padding:20 }}>No contacts saved yet.</p>}
+              {contacts.map((c, i) => (
+                <div key={i} onClick={()=>selectContact(c)} style={{ padding:"10px 14px", borderRadius:10, marginBottom:6, background:"#f8f9fa", cursor:"pointer", border:"1px solid #e2e6ea" }}>
+                  <div style={{ fontWeight:600, fontSize:14, color:"#222" }}>{c.name || "Unnamed"}</div>
+                  <div style={{ fontSize:12, color:"#888" }}>{c.addr1 || c.address1 || ""} {c.postcode || ""}</div>
+                </div>
+              ))}
+            </div>
+            <button onClick={()=>setShowContactPicker(false)} style={{ width:"100%", padding:14, background:BLUE, color:"#fff", border:"none", fontWeight:700, fontSize:15, cursor:"pointer" }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <BottomBar onHome={onHome} onNext={()=>setStep(3)} nextLabel="Next: Report"/>
+    </div>
+  );
+
+  // ── Step 3: Job Report ──
+  if (step === 3) return (
+    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <Header title="Job Sheet" onBack={()=>setStep(2)}/>
+      <div style={{ background:BLUE, padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
+        <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.2)", borderRadius:2, overflow:"hidden" }}>
+          <div style={{ width:`${progressPct}%`, height:"100%", background:"#fff200", borderRadius:2, transition:"width 0.3s" }}/>
+        </div>
+        <span style={{ color:"#fff", fontSize:11, fontWeight:600, whiteSpace:"nowrap" }}>Step {step}/6 — {stepLabels[step-1]}</span>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Job Description</label>
+          <textarea value={data.jobDescription} onChange={e=>upd("jobDescription",e.target.value)} style={{...inputStyle, height:140, resize:"none"}} placeholder="Describe the work carried out..."/>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Spares Required</label>
+          <textarea value={data.sparesRequired} onChange={e=>upd("sparesRequired",e.target.value)} style={{...inputStyle, height:100, resize:"none"}} placeholder="List any spares needed..."/>
+        </div>
+      </div>
+      <BottomBar onHome={onHome} onNext={()=>setStep(4)} nextLabel="Next: Hours"/>
+    </div>
+  );
+
+  // ── Step 4: Hours & Status ──
+  if (step === 4) return (
+    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <Header title="Job Sheet" onBack={()=>setStep(3)}/>
+      <div style={{ background:BLUE, padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
+        <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.2)", borderRadius:2, overflow:"hidden" }}>
+          <div style={{ width:`${progressPct}%`, height:"100%", background:"#fff200", borderRadius:2, transition:"width 0.3s" }}/>
+        </div>
+        <span style={{ color:"#fff", fontSize:11, fontWeight:600, whiteSpace:"nowrap" }}>Step {step}/6 — {stepLabels[step-1]}</span>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Hours Used</label>
+          <div onClick={()=>setShowHoursPicker(true)} style={{...inputStyle, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", background:"#f8f9fa"}}>
+            <span style={{ fontWeight:700 }}>{data.hoursUsed}</span>
+            <span style={{ fontSize:12, color:"#888" }}>Tap to select ▾</span>
+          </div>
+        </div>
+
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Customer Informed?</label>
+          <div style={radioGroupStyle}>
+            {["Yes","No","N/A"].map(v=>(
+              <button key={v} onClick={()=>upd("customerInformed",v)} style={radioBtn(data.customerInformed===v)}>{v}</button>
+            ))}
+          </div>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Awaiting Parts?</label>
+          <div style={radioGroupStyle}>
+            {["Yes","No","N/A"].map(v=>(
+              <button key={v} onClick={()=>upd("awaitingParts",v)} style={radioBtn(data.awaitingParts===v)}>{v}</button>
+            ))}
+          </div>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Job Complete?</label>
+          <div style={radioGroupStyle}>
+            {["Yes","No","N/A"].map(v=>(
+              <button key={v} onClick={()=>upd("jobComplete",v)} style={radioBtn(data.jobComplete===v)}>{v}</button>
+            ))}
+          </div>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Materials Purchased From</label>
+          <input value={data.materialsPurchasedFrom} onChange={e=>upd("materialsPurchasedFrom",e.target.value)} style={inputStyle} placeholder="e.g. Plumb Center"/>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Cost of Materials (ex-VAT)</label>
+          <div style={{ position:"relative" }}>
+            <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#888", fontWeight:600 }}>£</span>
+            <input type="number" value={data.costExVat} onChange={e=>upd("costExVat",e.target.value)} style={{...inputStyle, paddingLeft:28}} placeholder="0.00"/>
+          </div>
+        </div>
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Supplier Reference</label>
+          <input value={data.supplierRef} onChange={e=>upd("supplierRef",e.target.value)} style={inputStyle}/>
+        </div>
+      </div>
+
+      {/* Hours Picker Modal */}
+      {showHoursPicker && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20 }}>
+          <div style={{ background:"#fff", borderRadius:16, width:"100%", maxWidth:340, overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
+            <div style={{ padding:"16px 20px", background:BLUE, color:"#fff", fontWeight:700, fontSize:16, textAlign:"center" }}>SELECT HOURS</div>
+            <div style={{ maxHeight:300, overflowY:"auto", padding:8 }}>
+              {hoursOptions.map(h=>(
+                <div key={h} onClick={()=>{upd("hoursUsed",h);setShowHoursPicker(false);}}
+                  style={{ padding:"12px 16px", borderRadius:8, marginBottom:2, cursor:"pointer", background:data.hoursUsed===h ? BLUE : "transparent", color:data.hoursUsed===h ? "#fff" : "#222", fontWeight:data.hoursUsed===h ? 700 : 400, fontSize:15, textAlign:"center", transition:"all 0.1s" }}>
+                  {h}
+                </div>
+              ))}
+            </div>
+            <div style={{ display:"flex", borderTop:"1px solid #eee" }}>
+              <button onClick={()=>setShowHoursPicker(false)} style={{ flex:1, padding:14, background:"#f5f5f5", border:"none", fontWeight:600, fontSize:14, cursor:"pointer", color:"#666" }}>Cancel</button>
+              <button onClick={()=>setShowHoursPicker(false)} style={{ flex:1, padding:14, background:BLUE, border:"none", fontWeight:700, fontSize:14, cursor:"pointer", color:"#fff" }}>Select</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <BottomBar onHome={onHome} onNext={()=>setStep(5)} nextLabel="Next: Signature"/>
+    </div>
+  );
+
+  // ── Step 5: Signature ──
+  if (step === 5) return (
+    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <Header title="Job Sheet" onBack={()=>setStep(4)}/>
+      <div style={{ background:BLUE, padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
+        <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.2)", borderRadius:2, overflow:"hidden" }}>
+          <div style={{ width:`${progressPct}%`, height:"100%", background:"#fff200", borderRadius:2, transition:"width 0.3s" }}/>
+        </div>
+        <span style={{ color:"#fff", fontSize:11, fontWeight:600, whiteSpace:"nowrap" }}>Step {step}/6 — {stepLabels[step-1]}</span>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+        <div style={sectionStyle}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+            <input type="checkbox" checked={data.dataProtection} onChange={e=>upd("dataProtection",e.target.checked)} style={{ width:20, height:20, accentColor:BLUE }}/>
+            <span style={{ fontSize:13, color:"#444" }}>I agree to the data protection policy</span>
+            <button onClick={()=>setShowGdprInfo(true)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, color:BLUE }}>ℹ️</button>
+          </div>
+        </div>
+
+        <div style={sectionStyle}>
+          <label style={labelStyle}>Customer Declaration — Name</label>
+          <input value={data.customerDeclaration} onChange={e=>upd("customerDeclaration",e.target.value)} style={inputStyle} placeholder="Customer's full name"/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+            <label style={{...labelStyle, margin:0}}>Customer Signature</label>
+            <button onClick={()=>clearCanvas(custSigRef)} style={{ background:"#ef4444", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>CLEAN</button>
+          </div>
+          <canvas ref={el=>{custCanvasRef.current=el;initCanvas(el,custSigRef);}} style={{ width:"100%", height:120, border:"1px solid #e2e6ea", borderRadius:8, background:"#fafafa", touchAction:"none" }}/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+            <label style={{...labelStyle, margin:0}}>Engineer Signature</label>
+            <button onClick={()=>clearCanvas(engSigRef)} style={{ background:"#ef4444", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>CLEAN</button>
+          </div>
+          <canvas ref={el=>{engCanvasRef.current=el;initCanvas(el,engSigRef);}} style={{ width:"100%", height:120, border:"1px solid #e2e6ea", borderRadius:8, background:"#fafafa", touchAction:"none" }}/>
+        </div>
+      </div>
+
+      {/* GDPR Info Modal */}
+      {showGdprInfo && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20 }}>
+          <div style={{ background:"#fff", borderRadius:16, width:"100%", maxWidth:400, overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
+            <div style={{ padding:"16px 20px", borderBottom:`2px solid ${BLUE}`, fontWeight:700, fontSize:16, textAlign:"center" }}>Data Protection</div>
+            <div style={{ padding:20, fontSize:13, color:"#444", lineHeight:1.7 }}>
+              <p>Your personal data will be processed in accordance with the General Data Protection Regulation (GDPR) and the Data Protection Act 2018.</p>
+              <p>Data collected on this job sheet will be used solely for the purpose of recording gas safety work carried out at the property and may be shared with Gas Safe Register as required by law.</p>
+              <p>Your data will be stored securely and retained for the period required by Gas Safe Register regulations.</p>
+            </div>
+            <button onClick={()=>setShowGdprInfo(false)} style={{ width:"100%", padding:14, background:BLUE, color:"#fff", border:"none", fontWeight:700, fontSize:15, cursor:"pointer" }}>Close</button>
+          </div>
+        </div>
+      )}
+
+      <BottomBar onHome={onHome} onNext={()=>setStep(6)} nextLabel="Next: Preview"/>
+    </div>
+  );
+
+  // ── Step 6: Preview & Save ──
+  if (step === 6) {
+    const profile = (() => { try { return JSON.parse(localStorage.getItem(sk("user_profile")) || "{}"); } catch { return {}; } })();
+    return (
+      <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+        <Header title="Job Sheet" onBack={()=>setStep(5)}/>
+        <div style={{ background:BLUE, padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
+          <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.2)", borderRadius:2, overflow:"hidden" }}>
+            <div style={{ width:"100%", height:"100%", background:"#fff200", borderRadius:2 }}/>
+          </div>
+          <span style={{ color:"#fff", fontSize:11, fontWeight:600, whiteSpace:"nowrap" }}>Step 6/6 — Preview & Save</span>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+          {/* Preview Card */}
+          <div style={{ background:"#fff", borderRadius:14, padding:"18px 16px", boxShadow:"0 2px 12px rgba(0,0,0,0.08)", marginBottom:14 }}>
+            <div style={{ textAlign:"center", borderBottom:`2px solid ${BLUE}`, paddingBottom:10, marginBottom:12 }}>
+              <div style={{ fontSize:18, fontWeight:800, color:BLUE }}>Job Record</div>
+              <div style={{ fontSize:12, color:"#888" }}>{data.jobRef} · {data.date ? new Date(data.date).toLocaleDateString("en-GB") : ""}</div>
+            </div>
+
+            <div style={{ display:"flex", gap:10, marginBottom:12 }}>
+              <div style={{ flex:1, border:"1px solid #eee", borderRadius:8, padding:8 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:BLUE, textTransform:"uppercase", marginBottom:4 }}>Installation</div>
+                <div style={{ fontSize:12, color:"#333" }}>{data.instName}</div>
+                <div style={{ fontSize:11, color:"#666" }}>{[data.instAddr1,data.instAddr2,data.instAddr3].filter(Boolean).join(", ")}</div>
+                <div style={{ fontSize:11, color:"#666" }}>{data.instPostcode}</div>
+              </div>
+              <div style={{ flex:1, border:"1px solid #eee", borderRadius:8, padding:8 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:BLUE, textTransform:"uppercase", marginBottom:4 }}>Client</div>
+                <div style={{ fontSize:12, color:"#333" }}>{data.clientName}</div>
+                <div style={{ fontSize:11, color:"#666" }}>{[data.clientAddr1,data.clientAddr2,data.clientAddr3].filter(Boolean).join(", ")}</div>
+                <div style={{ fontSize:11, color:"#666" }}>{data.clientPostcode}</div>
+              </div>
+            </div>
+
+            {data.jobDescription && (
+              <div style={{ marginBottom:10 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:BLUE, textTransform:"uppercase", marginBottom:4 }}>Job Notes</div>
+                <div style={{ fontSize:12, color:"#444", whiteSpace:"pre-wrap" }}>{data.jobDescription}</div>
+              </div>
+            )}
+            {data.sparesRequired && (
+              <div style={{ marginBottom:10 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:BLUE, textTransform:"uppercase", marginBottom:4 }}>Spares Required</div>
+                <div style={{ fontSize:12, color:"#444", whiteSpace:"pre-wrap" }}>{data.sparesRequired}</div>
+              </div>
+            )}
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6, marginBottom:10, padding:8, background:"#f8f9fa", borderRadius:8 }}>
+              <div><span style={{ fontSize:10, color:"#888" }}>Hours</span><div style={{ fontSize:12, fontWeight:600 }}>{data.hoursUsed}</div></div>
+              <div><span style={{ fontSize:10, color:"#888" }}>Customer Informed</span><div style={{ fontSize:12, fontWeight:600 }}>{data.customerInformed}</div></div>
+              <div><span style={{ fontSize:10, color:"#888" }}>Awaiting Parts</span><div style={{ fontSize:12, fontWeight:600 }}>{data.awaitingParts}</div></div>
+              <div><span style={{ fontSize:10, color:"#888" }}>Job Complete</span><div style={{ fontSize:12, fontWeight:600 }}>{data.jobComplete}</div></div>
+              {data.materialsPurchasedFrom && <div><span style={{ fontSize:10, color:"#888" }}>Materials From</span><div style={{ fontSize:12, fontWeight:600 }}>{data.materialsPurchasedFrom}</div></div>}
+              {data.costExVat && <div><span style={{ fontSize:10, color:"#888" }}>Cost (ex VAT)</span><div style={{ fontSize:12, fontWeight:600 }}>£{data.costExVat}</div></div>}
+            </div>
+
+            <div style={{ padding:8, background:"#f8f9fa", borderRadius:8, marginBottom:10 }}>
+              <div style={{ fontSize:10, fontWeight:700, color:BLUE, textTransform:"uppercase", marginBottom:4 }}>Engineer</div>
+              <div style={{ fontSize:12, color:"#333" }}>{data.assignedEngineerName || profile.engineerName || ""}</div>
+              <div style={{ fontSize:11, color:"#666" }}>{profile.companyName || ""} · Gas Safe: {profile.gasSafeNo || ""}</div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ display:"flex", flexDirection:"column", gap:8, padding:"0 0 20px" }}>
+            <button onClick={saveJobSheet} style={{ width:"100%", padding:14, background:BLUE, color:"#fff", border:"none", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+              Save Job Sheet
+            </button>
+            <button onClick={previewPDF} style={{ width:"100%", padding:14, background:"#fff200", color:"#0d1f2d", border:"none", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+              Preview PDF
+            </button>
+            <button onClick={sharePDF} style={{ width:"100%", padding:14, background:"rgba(26,58,74,0.1)", color:BLUE, border:`1px solid ${BLUE}`, borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+              Share
+            </button>
+          </div>
+        </div>
+        <BottomBar onHome={onHome}/>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── END JOB SHEETS ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── MULTI-ENGINEER MANAGEMENT ──────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function EngineerManagementScreen({ onBack, onHome }) {
+  if (getUserPlan() !== "proplus") {
+    return <FeatureLockedScreen feature="Multiple Engineers" requiredPlan="Pro+" onBack={onBack} onHome={onHome}/>;
+  }
+
+  const [engineers, setEngineers] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(sk("engineers")) || "[]"); } catch { return []; }
+  });
+  const [showModal, setShowModal] = useState(false);
+  const [editEng, setEditEng] = useState(null);
+
+  const getNextId = () => {
+    const nums = engineers.map(e => { const m = (e.engineerId||"").match(/ENG-(\d+)/); return m ? parseInt(m[1]) : 0; });
+    const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+    return "ENG-" + String(next).padStart(3, "0");
+  };
+
+  const [form, setForm] = useState({ name:"", email:"", phone:"", gasSafeNo:"", engineerId:"", status:"active", notes:"" });
+
+  function openAdd() {
+    setEditEng(null);
+    setForm({ name:"", email:"", phone:"", gasSafeNo:"", engineerId:getNextId(), status:"active", notes:"" });
+    setShowModal(true);
+  }
+
+  function openEdit(eng) {
+    setEditEng(eng);
+    setForm({ name:eng.name, email:eng.email, phone:eng.phone, gasSafeNo:eng.gasSafeNo, engineerId:eng.engineerId, status:eng.status, notes:eng.notes });
+    setShowModal(true);
+  }
+
+  function saveEngineer() {
+    if (!form.name.trim()) { alert("Engineer name is required."); return; }
+    let updated;
+    if (editEng) {
+      updated = engineers.map(e => e.id === editEng.id ? { ...e, ...form } : e);
+    } else {
+      updated = [...engineers, { id: Date.now(), ...form, createdAt: new Date().toISOString() }];
+    }
+    setEngineers(updated);
+    try { localStorage.setItem(sk("engineers"), JSON.stringify(updated)); } catch {}
+    setShowModal(false);
+  }
+
+  function toggleStatus(eng) {
+    const newStatus = eng.status === "active" ? "inactive" : "active";
+    const updated = engineers.map(e => e.id === eng.id ? { ...e, status: newStatus } : e);
+    setEngineers(updated);
+    try { localStorage.setItem(sk("engineers"), JSON.stringify(updated)); } catch {}
+  }
+
+  // Count jobs per engineer
+  const jobSheets = (() => { try { return JSON.parse(localStorage.getItem(sk("job_sheets")) || "[]"); } catch { return []; } })();
+  function getJobCount(engineerId) {
+    return jobSheets.filter(j => j.assignedEngineer === engineerId).length;
+  }
+
+  const sectionStyle = { margin:"0 0 8px", background:"#fff", borderRadius:12, padding:"14px 16px", boxShadow:"0 1px 6px rgba(0,0,0,0.06)" };
+  const labelStyle = { fontSize:12, color:"#6b7b8d", fontWeight:600, marginBottom:4, display:"block" };
+  const inputStyle = { width:"100%", boxSizing:"border-box", padding:"8px 12px", border:"1px solid #e2e6ea", borderRadius:8, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#222" };
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <Header title="My Engineers" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+        <button onClick={openAdd} style={{ width:"100%", padding:14, background:BLUE, color:"#fff", border:"none", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", marginBottom:14, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+          <span style={{ fontSize:18 }}>+</span> Add Engineer
+        </button>
+
+        {engineers.length === 0 && <p style={{ textAlign:"center", color:"#888", padding:40 }}>No engineers added yet.</p>}
+        {engineers.map(eng => (
+          <div key={eng.id} style={{ background:"#fff", borderRadius:12, padding:"14px 16px", marginBottom:10, boxShadow:"0 1px 6px rgba(0,0,0,0.06)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+              <div>
+                <span style={{ fontWeight:700, color:BLUE, fontSize:14 }}>{eng.name}</span>
+                <span style={{ fontSize:11, color:"#888", marginLeft:8 }}>{eng.engineerId}</span>
+              </div>
+              <span style={{ fontSize:11, padding:"3px 8px", borderRadius:6, fontWeight:600, background: eng.status === "active" ? "#dcfce7" : "#fee2e2", color: eng.status === "active" ? "#166534" : "#991b1b" }}>
+                {eng.status === "active" ? "Active" : "Inactive"}
+              </span>
+            </div>
+            {eng.phone && <div style={{ fontSize:12, color:"#666", marginBottom:2 }}>📞 {eng.phone}</div>}
+            {eng.email && <div style={{ fontSize:12, color:"#666", marginBottom:2 }}>✉️ {eng.email}</div>}
+            {eng.gasSafeNo && <div style={{ fontSize:12, color:"#666", marginBottom:2 }}>Gas Safe: {eng.gasSafeNo}</div>}
+            <div style={{ fontSize:11, color:"#888", marginTop:4 }}>Jobs assigned: {getJobCount(eng.engineerId)}</div>
+            <div style={{ display:"flex", gap:8, marginTop:8 }}>
+              <button onClick={()=>openEdit(eng)} style={{ flex:1, padding:8, background:"rgba(26,58,74,0.08)", color:BLUE, border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>Edit</button>
+              <button onClick={()=>toggleStatus(eng)} style={{ flex:1, padding:8, background:eng.status==="active" ? "#fef2f2" : "#f0fdf4", color:eng.status==="active" ? "#dc2626" : "#16a34a", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                {eng.status === "active" ? "Deactivate" : "Activate"}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Add/Edit Engineer Modal */}
+      {showModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20 }}>
+          <div style={{ background:"#fff", borderRadius:16, width:"100%", maxWidth:400, maxHeight:"80vh", overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.3)", display:"flex", flexDirection:"column" }}>
+            <div style={{ padding:"16px 20px", background:BLUE, color:"#fff", fontWeight:700, fontSize:16, textAlign:"center" }}>
+              {editEng ? "Edit Engineer" : "Add Engineer"}
+            </div>
+            <div style={{ flex:1, overflowY:"auto", padding:16 }}>
+              <div style={sectionStyle}>
+                <label style={labelStyle}>Engineer Name *</label>
+                <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} style={inputStyle} placeholder="Full name"/>
+              </div>
+              <div style={sectionStyle}>
+                <label style={labelStyle}>Email</label>
+                <input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} style={inputStyle}/>
+              </div>
+              <div style={sectionStyle}>
+                <label style={labelStyle}>Phone</label>
+                <input type="tel" value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} style={inputStyle}/>
+              </div>
+              <div style={sectionStyle}>
+                <label style={labelStyle}>Gas Safe Number</label>
+                <input value={form.gasSafeNo} onChange={e=>setForm(f=>({...f,gasSafeNo:e.target.value}))} style={inputStyle} placeholder="Optional"/>
+              </div>
+              <div style={sectionStyle}>
+                <label style={labelStyle}>Engineer ID</label>
+                <input value={form.engineerId} style={{...inputStyle, background:"#f8f9fa", fontWeight:700}} readOnly/>
+              </div>
+              <div style={sectionStyle}>
+                <label style={labelStyle}>Status</label>
+                <div style={{ display:"flex", gap:8 }}>
+                  <button onClick={()=>setForm(f=>({...f,status:"active"}))} style={{ flex:1, padding:10, border:`1px solid ${form.status==="active"?BLUE:"#ddd"}`, borderRadius:8, background:form.status==="active"?BLUE:"#fff", color:form.status==="active"?"#fff":"#444", fontWeight:600, fontSize:13, cursor:"pointer" }}>Active</button>
+                  <button onClick={()=>setForm(f=>({...f,status:"inactive"}))} style={{ flex:1, padding:10, border:`1px solid ${form.status==="inactive"?"#dc2626":"#ddd"}`, borderRadius:8, background:form.status==="inactive"?"#fee2e2":"#fff", color:form.status==="inactive"?"#dc2626":"#444", fontWeight:600, fontSize:13, cursor:"pointer" }}>Inactive</button>
+                </div>
+              </div>
+              <div style={sectionStyle}>
+                <label style={labelStyle}>Notes</label>
+                <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} style={{...inputStyle, height:80, resize:"none"}} placeholder="Optional notes..."/>
+              </div>
+            </div>
+            <div style={{ display:"flex", borderTop:"1px solid #eee" }}>
+              <button onClick={()=>setShowModal(false)} style={{ flex:1, padding:14, background:"#f5f5f5", border:"none", fontWeight:600, fontSize:14, cursor:"pointer", color:"#666" }}>Cancel</button>
+              <button onClick={saveEngineer} style={{ flex:1, padding:14, background:BLUE, border:"none", fontWeight:700, fontSize:14, cursor:"pointer", color:"#fff" }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <BottomBar onHome={onHome}/>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── END MULTI-ENGINEER MANAGEMENT ──────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+
+function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine, onAdminDashboard, onPSC, onBankStatements, onGasRateCalc, onJobSheets, onEngineerManagement }) {
   const trialStatus = getTrialStatus();
   const daysLeft = getTrialDaysLeft();
   const [showFeedback, setShowFeedback] = useState(false);
@@ -4223,6 +5380,12 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
         <PillBtn onClick={onNew} label="New Job" color="#fff200">
           <svg width="28" height="28" viewBox="0 0 52 52" fill="none"><rect x="22" y="4" width="8" height="44" rx="4" fill="#0d1f2d"/><rect x="4" y="22" width="44" height="8" rx="4" fill="#0d1f2d"/></svg>
         </PillBtn>
+        <PillBtn onClick={onGasRateCalc} label="Gas Rate Calculator" color="#fff200" iconBg="#1a3a4a">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c.83 0 1.5.67 1.5 1.5S12.83 8 12 8s-1.5-.67-1.5-1.5S11.17 5 12 5zm-1 14v-2h2v2h-2zm2.5-4.5c0 .28-.22.5-.5.5h-2c-.28 0-.5-.22-.5-.5v-5c0-.28.22-.5.5-.5h2c.28 0 .5.22.5.5v5z" fill="white"/><path d="M8 13l4-6 4 6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/><circle cx="12" cy="15" r="2" fill="#fff200"/></svg>
+        </PillBtn>
+        <PillBtn onClick={onJobSheets} label="Job Sheets" color="#fff200" iconBg="#0d3320">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/><path d="M8 18H11" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        </PillBtn>
         <PillBtn onClick={onRecords} label="Records" color="#fff200" iconBg="#0d1f2d">
           <svg width="30" height="26" viewBox="0 0 56 48" fill="none"><rect x="2" y="10" width="52" height="36" rx="5" fill="white"/><rect x="2" y="6" width="22" height="14" rx="5" fill="white"/><rect x="8" y="18" width="40" height="24" rx="3" fill="rgba(3,105,161,0.3)"/></svg>
         </PillBtn>
@@ -4248,6 +5411,11 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
             <span style={{ fontSize:26 }}>👥</span>
           </PillBtn>
         </div>
+        {getUserPlan() === "proplus" && (
+          <PillBtn onClick={onEngineerManagement} label="My Engineers" color="#fff200" iconBg="#1a3a5c">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="3" stroke="white" strokeWidth="1.8"/><circle cx="17" cy="9" r="2.5" stroke="white" strokeWidth="1.5"/><path d="M2 20c0-3.31 2.69-6 6-6h2c3.31 0 6 2.69 6 6" stroke="white" strokeWidth="1.8" strokeLinecap="round"/><path d="M17 14c2.21 0 4 1.79 4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          </PillBtn>
+        )}
         <PillBtn onClick={onCombine} label="Combine Certs / Reports" color="#fff200" iconBg="#1a3a26">
           <svg width="30" height="28" viewBox="0 0 52 48" fill="none">
             <rect x="4" y="4" width="26" height="34" rx="3" fill="rgba(255,255,255,0.35)" stroke="white" strokeWidth="2"/>
@@ -20144,6 +21312,7 @@ function App({ onLogout }) {
   const [genericCertLabel, setGenericCertLabel] = useState("");
   const [gscInvoiceSource, setGscInvoiceSource] = useState(null);
   const [bsInvoiceSource, setBsInvoiceSource] = useState(null);
+  const [editJobSheetId, setEditJobSheetId] = useState(null);
 
   // ── Renewal handler — pre-populates cert state from existing record ──────────
   const [renewInitData, setRenewInitData] = useState(null);
@@ -20805,7 +21974,7 @@ function App({ onLogout }) {
       onPaymentSubmitted={()=>{ /* profile updated by markPaymentSubmitted, force re-render */ setScreen("home"); }}
     />;
   }
-  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("✅ "+n+" demo records added!\n\nGo to Records → Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")} onAdminDashboard={()=>setScreen("adminDashboard")} onPSC={()=>setScreen("psc")} onBankStatements={()=>setScreen("bankStatements")}/>;
+  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("✅ "+n+" demo records added!\n\nGo to Records → Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")} onAdminDashboard={()=>setScreen("adminDashboard")} onPSC={()=>setScreen("psc")} onBankStatements={()=>setScreen("bankStatements")} onGasRateCalc={()=>setScreen("gasRateCalc")} onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}/>;
   if (screen === "psc") return <PSCScreen onHome={goHome} engineerData={profileDefaults()} onSave={(rec)=>{ setRecords(prev=>[...prev, rec]); }}/>;
   if (screen === "adminDashboard") return <AdminDashboardScreen onBack={()=>setScreen("home")} onHome={goHome} records={records} invoices={invoices} quotes={quotes}/>;
   if (screen === "contacts") return <ClientContactsScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
@@ -20839,6 +22008,10 @@ function App({ onLogout }) {
     if (getUserPlan() === "lite") return <FeatureLockedScreen feature="Bank Statements" requiredPlan="Pro" onBack={()=>setScreen("home")} onHome={goHome}/>;
     return <BankStatementsScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
   }
+  if (screen === "gasRateCalc") return <GasRateCalcScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
+  if (screen === "jobSheets") return <JobSheetsScreen onBack={()=>setScreen("home")} onHome={goHome} onNewJobSheet={()=>{setEditJobSheetId(null);setScreen("jobSheetWizard");}} onEditJobSheet={(id)=>{setEditJobSheetId(id);setScreen("jobSheetWizard");}}/>;
+  if (screen === "jobSheetWizard") return <JobSheetWizardScreen onBack={()=>setScreen("jobSheets")} onHome={goHome} editJobSheetId={editJobSheetId}/>;
+  if (screen === "engineerManagement") return <EngineerManagementScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
   if (quoteWizardOpen) return <QuoteWizard sourceRecord={null} onSave={(qData)=>{ setQuotes(prev=>[...prev,qData]); alert("✅ Quote saved to Quotes folder!"); setQuoteWizardOpen(false); goHome(); }} onClose={()=>{ setQuoteWizardOpen(false); setScreen("newJob"); }} profile={userProfile}/>;
   if (invoiceWizardOpen) return <InvoiceWizard sourceRecord={null} onSave={(invData)=>{ setInvoices(prev=>[...prev, invData]); alert("✅ Invoice saved to Invoices folder!"); setInvoiceWizardOpen(false); goHome(); }} onClose={()=>{ setInvoiceWizardOpen(false); setScreen("newJob"); }} invoiceRecords={invoices} profile={userProfile}/>;
   if (screen === "benchmark") return <BenchmarkScreen
