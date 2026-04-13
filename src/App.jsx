@@ -367,12 +367,12 @@ const BLUE = "#1a3a4a";        // Deep teal-slate
 const DARK_BLUE = "#0d1f2d";   // Near-black navy
 
 const STRIPE_LINKS = {
-  lite_monthly:    "https://buy.stripe.com/test_6oUfZa2NZ9s36fCeTfcEw04",
-  lite_annual:     "https://buy.stripe.com/test_28E3cocoz0VxavS5iFcEw01",
-  pro_monthly:     "https://buy.stripe.com/test_fZucMY88j9s3cE09yVcEw02",
-  pro_annual:      "https://buy.stripe.com/test_bJecMY3S3gUv7jG6mJcEw00",
-  proplus_monthly: "https://buy.stripe.com/test_00w00cagr7jV8nK8uRcEw03",
-  proplus_annual:  "https://buy.stripe.com/test_28EbIU60b5bNbzW8uRcEw05",
+  lite_monthly:    "https://buy.stripe.com/6oU9AM41j1gud2RgGibAs00",
+  lite_annual:     "https://buy.stripe.com/cNi14g1Tb6AO0g575IbAs01",
+  pro_monthly:     "https://buy.stripe.com/7sY3co8hz9N04wl9dQbAs02",
+  pro_annual:      "https://buy.stripe.com/bJe3co7dvcZc2odblYbAs03",
+  proplus_monthly: "https://buy.stripe.com/3cI6oA69r1gu5ApgGibAs04",
+  proplus_annual:  "https://buy.stripe.com/bJe00cbtL1gu2od4XAbAs05",
 };
 
 // Build a Stripe payment link with the user's username as client_reference_id
