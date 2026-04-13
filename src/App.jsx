@@ -5412,12 +5412,7 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
         <PillBtn onClick={onProfile} label="My Profile" color="#fff200" iconBg="#35463d">
           <img src={getCompanyLogo()} style={{ width:38, height:38, objectFit:"contain", borderRadius:6 }} alt="Company Logo"/>
         </PillBtn>
-        <PillBtn onClick={onPayment} label="Payment Details" color="#fff200" iconBg="#0d1f2d">
-          <span style={{ fontSize:26 }}>💳</span>
-        </PillBtn>
-        <PillBtn onClick={onClientDetails} label="Client Details" color="#fff200" iconBg="#1a3a5c">
-          <span style={{ fontSize:26 }}>👥</span>
-        </PillBtn>
+
         {getUserPlan() === "proplus" && (
           <PillBtn onClick={onEngineerManagement} label="My Engineers" color="#fff200" iconBg="#1a3a5c">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="3" stroke="white" strokeWidth="1.8"/><circle cx="17" cy="9" r="2.5" stroke="white" strokeWidth="1.5"/><path d="M2 20c0-3.31 2.69-6 6-6h2c3.31 0 6 2.69 6 6" stroke="white" strokeWidth="1.8" strokeLinecap="round"/><path d="M17 14c2.21 0 4 1.79 4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
@@ -21286,7 +21281,7 @@ function CombineRunnerQueue({ items, onProgress, onDone }) {
 // ─── MULTI-TRADE HOME SCREEN ─────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function TradeHomeScreen({ currentUser, onSelectTrade, onLogout }) {
+function TradeHomeScreen({ currentUser, onSelectTrade, onLogout, onPayment, onClientDetails }) {
   const [lockedTrade, setLockedTrade] = useState(null);
   const [showFeatureSuggest, setShowFeatureSuggest] = useState(false);
 
@@ -21394,6 +21389,24 @@ function TradeHomeScreen({ currentUser, onSelectTrade, onLogout }) {
                 <span style={{ width:26, height:26, display:"flex", alignItems:"center", justifyContent:"center", color:"#fff" }}>{t.icon}</span>
               </div>
               <div style={{ fontSize:12, fontWeight:600, textAlign:"center", lineHeight:1.25, color: t.active ? "#e8edf2" : "#5a7088", whiteSpace:"pre-line" }}>{t.name}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Payment & Client tiles */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(2, 1fr)", gap:14, marginTop:14 }}>
+          {[{ id:"payment", name:"Payment\nDetails", color:"#f59e0b", icon:<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20" fill="#0d1f2d"/><rect x="5" y="13" width="5" height="2" rx="1" fill="#0d1f2d"/></svg>, onClick: onPayment },
+           { id:"clients", name:"Client\nDetails", color:"#3b82f6", icon:<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>, onClick: onClientDetails }].map(t => (
+            <div key={t.id} onClick={t.onClick}
+              style={{
+                aspectRatio:"1", background:"#1e3044", border:"1px solid #2a4058", borderRadius:20,
+                display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10,
+                cursor:"pointer", transition:"all 0.25s cubic-bezier(0.16,1,0.3,1)",
+              }}>
+              <div style={{ width:48, height:48, borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center", background:t.color }}>
+                <span style={{ width:26, height:26, display:"flex", alignItems:"center", justifyContent:"center", color:"#fff" }}>{t.icon}</span>
+              </div>
+              <div style={{ fontSize:12, fontWeight:600, textAlign:"center", lineHeight:1.25, color:"#e8edf2", whiteSpace:"pre-line" }}>{t.name}</div>
             </div>
           ))}
         </div>
@@ -22029,12 +22042,7 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
         <ElecPillBtn onClick={onProfile} label="My Profile" color="#fff200" iconBg="#35463d">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
         </ElecPillBtn>
-        <ElecPillBtn onClick={onPayment} label="Payment Details" color="#fff200" iconBg="#0d1f2d">
-          <span style={{ fontSize:26 }}>💳</span>
-        </ElecPillBtn>
-        <ElecPillBtn onClick={onClientDetails} label="Client Details" color="#fff200" iconBg="#1a3a5c">
-          <span style={{ fontSize:26 }}>👥</span>
-        </ElecPillBtn>
+
         {getUserPlan() === "proplus" && (
           <ElecPillBtn onClick={onEngineerManagement} label="My Engineers" color="#fff200" iconBg="#1a3a5c">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="3" stroke="white" strokeWidth="1.8"/><circle cx="17" cy="9" r="2.5" stroke="white" strokeWidth="1.5"/><path d="M2 20c0-3.31 2.69-6 6-6h2c3.31 0 6 2.69 6 6" stroke="white" strokeWidth="1.8" strokeLinecap="round"/><path d="M17 14c2.21 0 4 1.79 4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
@@ -22782,6 +22790,7 @@ function App({ onLogout }) {
   }
   // ── Multi-Trade Home Screen (activeTrade routing) ────────────────────────
   if (screen === "home" && !activeTrade) return <TradeHomeScreen currentUser={currentUser} onLogout={onLogout}
+    onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")}
     onSelectTrade={(trade) => {
       if (trade === "gas") { setActiveTrade("gas"); }
       else if (trade === "electrical") { setActiveTrade("electrical"); }
