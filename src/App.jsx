@@ -3166,7 +3166,779 @@ function AdminDashboardScreen({ onBack, onHome, records, invoices, quotes }) {
   );
 }
 
-function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine, onAdminDashboard }) {
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── PROPERTY SAFETY CHECK (PSC) ─────────────────────────────────────────────
+// Based on IGEM/G/11 Edition 2 with Amendments (July 2025)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const PSC_ITEM_TYPES = [
+  { key:"gas_meter", label:"Gas Meter", emoji:"\u{1F525}", hasDetails:true, detailFields:[{id:"meterType",label:"Meter Type",options:["Credit","Prepayment","Smart"]},{id:"location",label:"Location",options:["Internal","External","Meter Box"]}] },
+  { key:"pipework", label:"Installation Pipework", emoji:"\u{1F527}", hasDetails:true, detailFields:[{id:"material",label:"Material",options:["Copper","Steel","Other"]},{id:"condition",label:"Visible Condition",options:["Good","Fair","Poor"]}] },
+  { key:"flue", label:"Flue(s)", emoji:"\u{1F4A8}", hasDetails:true, detailFields:[{id:"flueType",label:"Flue Type",options:["Open Flue","Room Sealed","Fan Assisted"]}] },
+  { key:"boiler", label:"Boiler", emoji:"\u{1F525}", hasMakeModel:true, hasDetails:true, detailFields:[{id:"appType",label:"Type",options:["Combi","System","Regular"]},{id:"flueType",label:"Flue Type",options:["Open Flue","Room Sealed"]},{id:"location",label:"Location",type:"text"}] },
+  { key:"gas_fire", label:"Gas Fire", emoji:"\u{1F525}", hasMakeModel:true, hasDetails:true, detailFields:[{id:"appType",label:"Type",options:["Decorative","Live Fuel Effect","Inset","Outset"]},{id:"flueType",label:"Flue Type",options:["Open Flue","Room Sealed","Flueless"]}] },
+  { key:"cooker", label:"Cooker/Hob", emoji:"\u{1F373}", hasMakeModel:true, hasDetails:true, detailFields:[{id:"appType",label:"Type",options:["Freestanding","Built-in"]},{id:"flueless",label:"Flueless?",options:["Yes","No"]}] },
+  { key:"water_heater", label:"Water Heater", emoji:"\u{1F4A7}", hasMakeModel:true, hasDetails:true, detailFields:[{id:"appType",label:"Type",options:["Instantaneous","Storage","Multipoint"]},{id:"flueType",label:"Flue Type",options:["Open Flue","Room Sealed","Flueless"]}] },
+  { key:"warm_air", label:"Warm Air Unit", emoji:"\u{1F321}\uFE0F", hasMakeModel:true },
+  { key:"other", label:"Other Appliance", emoji:"\u{1F525}", hasMakeModel:true, hasDetails:true, detailFields:[{id:"description",label:"Description",type:"text"}] },
+];
+
+const PSC_QUESTIONS = {
+  gas_meter: [
+    { id:"1.1", q:"Is there a smell of gas at or near the meter?", yesClass:"ID", ref:"G-11 1.1", action:"Immediately Dangerous. Call Gas Emergency 0800 111 999. Do not operate electrical switches.", why:"A gas leak at the meter poses an immediate risk of fire or explosion." },
+    { id:"2.2", q:"Is the gas pressure incorrect? (Should be 21 mbar NG / 37 mbar LPG)", yesClass:"ID", ref:"G-11 2.2", action:"Notify the Gas Emergency Contact Centre. Incorrect pressure affects safe operation of all appliances.", why:"Incorrect pressure can cause incomplete combustion, flame instability and CO production." },
+    { id:"2.5", q:"Is the meter/regulator showing signs of damage (corrosion, mechanical damage, electrical contact)?", yesClass:"AR", ref:"G-11 2.5", action:"For primary meters, advise responsible person to contact Gas Supplier. For secondary meters, inform Responsible Person.", why:"Damage to the meter or regulator could lead to a gas escape or incorrect pressure regulation." },
+    { id:"3.5", q:"Is the ECV (Emergency Control Valve) inaccessible or inoperable?", yesClass:"AR", ref:"G-11 3.5", action:"Notify responsible person that access to ECV is required by law. If no handle present, notify Gas Emergency Contact Centre.", why:"The ECV must be accessible to shut off gas in an emergency." },
+    { id:"3.5b", q:"Is there no handle fitted to the ECV?", yesClass:"AR", ref:"G-11 3.5", action:"Notify Gas Emergency Contact Centre. In an emergency situation this would be classified as ID (G-11 3.3).", why:"Without a handle the ECV cannot be operated in an emergency." },
+    { id:"2.6", q:"Is a prepayment meter supplying a secondary meter or separate premises?", yesClass:"AR", ref:"G-11 2.6", action:"Contact Gas Supplier to have prepayment meter changed to credit meter.", why:"Prepayment meters supplying secondary premises can lead to gas being cut off to other users without warning." },
+    { id:"2.4", q:"Is the regulator relief valve/vent pipe blocked or discharging?", yesClass:"ID", ref:"G-11 2.4", action:"For continual discharge or blocked vent: notify Gas Emergency Contact Centre. For non-discharge in unsafe location: AR.", why:"A blocked relief valve could cause dangerous over-pressure in the system." },
+    { id:"2.8", q:"Is there a pathway for gas to enter the property from the meter box (unsealed sleeve, damaged box)?", yesClass:"AR", ref:"G-11 2.8", action:"Seal any unsealed sleeve, or advise gas user that pipework must be sleeved and sealed. If pathway exists, ensure gas supplier is informed.", why:"An unsealed pathway could allow gas to migrate into the building undetected." },
+    { id:"4.10", q:"Is the meter in non-domestic premises without purpose-provided ventilation?", yesClass:"AR", ref:"G-11 4.10", action:"Meter enclosure must be ventilated to the appropriate standard.", why:"Inadequate ventilation around meters in non-domestic premises increases risk of gas accumulation." },
+  ],
+  pipework: [
+    { id:"3.1", q:"Is there any pipework with an open end connected to gas supply?", yesClass:"ID", ref:"G-11 3.1", action:"Seal all open ends with an appropriate gas fitting immediately.", why:"An open-ended pipe connected to gas supply will leak gas continuously." },
+    { id:"3.2", q:"Is any pipework made of inappropriate material (e.g. plastic water pipe, hose pipe)?", yesClass:"ID", ref:"G-11 3.2", action:"This poses a very high risk of a serious incident. Replace with appropriate gas pipework.", why:"Unsuitable materials can fail, melt, or corrode, causing uncontrolled gas release." },
+    { id:"3.4", q:"Is any pipework undersized and affecting safe appliance operation?", yesClass:"ID", ref:"G-11 3.4", action:"Undersized pipework causes incomplete combustion. Replace with correctly sized pipework.", why:"Undersized pipes restrict gas flow causing low pressure at appliances and incomplete combustion." },
+    { id:"3.11", q:"Does the pipework show signs of corrosion, mechanical damage, or inadequate support?", yesClass:"AR", ref:"G-11 3.11", action:"Support pipework to appropriate standard. If damage is severe enough to risk accidental release, take immediate action.", why:"Damaged pipework could eventually develop a leak or fail completely." },
+    { id:"3.11b", q:"Is any pipework in a position where damage is highly foreseeable?", yesClass:"AR", ref:"G-11 3.11", action:"Relocate or protect pipework. If position makes damage and accidental release highly foreseeable, take immediate action.", why:"Pipework in vulnerable positions is likely to be damaged over time." },
+    { id:"3.6", q:"Is there no AECV (Additional Emergency Control Valve) at point of entry (where required)?", yesClass:"AR", ref:"G-11 3.6", action:"Notify responsible person that an AECV is required and access to ECV is required by law.", why:"An AECV provides an additional means of isolating gas in an emergency." },
+    { id:"3.13", q:"Is gas pipework located within a cavity wall without a purpose-designed duct?", yesClass:"AR", ref:"G-11 3.13", action:"Inform responsible person. Consider routing via shortest possible route.", why:"Unsleeved pipework in cavities risks undetected leaks and gas accumulation in the wall void." },
+    { id:"3.19", q:"Is the equipotential earth bonding missing, not installed, or inadequate?", yesClass:"NCS", ref:"G-11 3.19", action:"Leave a bonding notice. Bonding should be checked by an electrically competent person.", why:"Earth bonding is an electrical safety requirement to prevent electric shock from gas pipework." },
+    { id:"1.2", q:"Does the tightness test fail (pressure drop detected)?", yesClass:"ID", ref:"G-11 1.2", action:"Gas installation fails tightness test. Call Gas Emergency Contact Centre for NG. For LPG, call Gas Supplier.", why:"A failed tightness test means gas is leaking from the installation." },
+  ],
+  flue: [
+    { id:"5.1", q:"Do clearances around the open-flue appliance fail to meet manufacturer's minimum requirements?", yesClass:"AR", ref:"G-11 5.1", action:"If appliance shows signs of distress, classify as ID (5.1.1). Without distress, classify as AR (5.1.2). Minimum 5mm clearance is typically adequate in domestic situations.", why:"Inadequate clearances can cause overheating, fire risk, and poor combustion." },
+    { id:"5.2", q:"Is the draught diverter enclosed or missing?", yesClass:"AR", ref:"G-11 5.2", action:"Draught diverter must be accessible and functioning. Rectify or advise responsible person.", why:"An enclosed or missing draught diverter prevents proper flue operation and can cause spillage." },
+    { id:"5.3", q:"Is the chimney/flue incomplete, damaged, or inadequately sealed?", yesClass:"AR", ref:"G-11 5.3", action:"Examples include missing terminal, inadequate support, missing closure plate, porous external flue.", why:"A damaged flue can allow combustion products to enter the building." },
+    { id:"5.8", q:"Does the flue terminate in a prohibited zone?", yesClass:"AR", ref:"G-11 5.8", action:"Flue termination must comply with relevant standards. Advise responsible person.", why:"Termination in a prohibited zone can cause products of combustion to re-enter the building." },
+    { id:"5.9", q:"Are there installation defects (inadequate rise, 90-degree bends, horizontal runs, wrong material)?", yesClass:"AR", ref:"G-11 5.9", action:"Engineer should assess whether defects warrant AR classification based on severity.", why:"Flue defects can impair draught and cause spillage of combustion products." },
+    { id:"5.6", q:"Is there a manual damper not secured in the open position?", yesClass:"AR", ref:"G-11 5.6", action:"Secure damper in open position for domestic appliances.", why:"A closed damper will block flue gases from escaping, causing dangerous spillage." },
+    { id:"6.1", q:"Does a room-sealed flue terminate into an internal space (e.g. conservatory)?", yesClass:"ID", ref:"G-11 6.1", action:"Immediately Dangerous. Flue must not terminate into any internal space.", why:"Combustion products from a room-sealed appliance discharging indoors is immediately dangerous." },
+    { id:"6.2", q:"Is there leakage of combustion products from the room-sealed chimney system?", yesClass:"ID", ref:"G-11 6.2", action:"Immediately Dangerous. Evidence of products of combustion, leakage from chimney/flue system, or condensate air break.", why:"Any leakage from a sealed system means occupants are exposed to combustion products including CO." },
+    { id:"6.3", q:"Does a room-sealed flue terminate into a semi-enclosed area (covered passageway)?", yesClass:"AR", ref:"G-11 6.3", action:"If combustion products entering building: ID (6.3.1). If risk of entering: AR (6.3.2). See Gas Safe Register TB 007.", why:"Semi-enclosed areas can trap combustion products which may migrate into the building." },
+  ],
+  boiler: [
+    { id:"7.1", q:"Should this appliance be flued but is not?", yesClass:"ID", ref:"G-11 7.1", action:"Immediately Dangerous. Appliance must be disconnected.", why:"An unflued appliance that requires a flue will discharge combustion products directly into the room." },
+    { id:"7.4", q:"Are gas controls/safety devices inoperative, failing, or disabled?", yesClass:"ID", ref:"G-11 7.4", action:"Immediately Dangerous. Includes FSDs, regulators, spillage monitoring devices, TTBs, ASDs, pressure switches.", why:"Safety devices protect against gas leaks, CO production, and fire. Without them the appliance is unsafe." },
+    { id:"7.6", q:"Are combustion readings unsatisfactory (high CO, poor CO/CO2 ratio)?", yesClass:"AR", ref:"G-11 7.6", action:"For flueless appliance: ID. For flued appliance: AR. Investigate and rectify. Check manufacturer's instructions.", why:"Poor combustion produces dangerous levels of carbon monoxide." },
+    { id:"7.7", q:"Are there visual signs of incomplete combustion at the burner/heat exchanger?", yesClass:"AR", ref:"G-11 7.7", action:"For flueless appliance: ID (7.7.1). For flued appliance: AR (7.7.2). If spillage/leakage evident, classify as ID.", why:"Incomplete combustion produces carbon monoxide and indicates a serious malfunction." },
+    { id:"1.4", q:"Is there evidence of spillage or leakage of products of combustion?", yesClass:"ID", ref:"G-11 1.4/1.5", action:"Immediately Dangerous. Conduct spillage test per G-11 1.3. Make installation safe.", why:"Spillage of combustion products means occupants are being exposed to CO and other toxic gases." },
+    { id:"7.12", q:"Is the appliance insecure or unstable?", yesClass:"AR", ref:"G-11 7.12", action:"Secure the appliance. A stable freestanding cooking appliance with stability bracket would not be AR.", why:"An unstable appliance could fall, damaging gas connections and causing a gas escape." },
+    { id:"4.1", q:"Is the combustion air supply inadequate for this appliance?", yesClass:"AR", ref:"G-11 4.1", action:"Purpose-provided permanent ventilation required. 90% of requirement is considered acceptable if appliance operating safely.", why:"Inadequate air supply causes incomplete combustion and increased CO production." },
+    { id:"7.2", q:"Is the room-sealed appliance integrity breached (missing/damaged seals)?", yesClass:"ID", ref:"G-11 7.2", action:"Flue gas analysis sample point cap missing/damaged: ID. Air inlet cap missing (no evidence of leakage): AR.", why:"A breach in room-sealed integrity allows combustion products to enter the living space." },
+    { id:"7.5", q:"Is this a flueless or non-room-sealed appliance in a room with a bath or shower?", yesClass:"ID", ref:"G-11 7.5", action:"Immediately Dangerous. Includes cookers etc. installed in a room containing a bath or shower.", why:"Steam and moisture from bathing can cause incomplete combustion and elevated CO levels." },
+    { id:"7.8", q:"Is a flueless appliance in a bedroom/bed-sitting room without a built-in ASD?", yesClass:"AR", ref:"G-11 7.8", action:"Flueless or non-room-sealed space/water heater over 14kW (or under 14kW without ASD) in bedroom is AR.", why:"Sleeping occupants are particularly vulnerable to CO exposure from flueless appliances." },
+    { id:"4.5", q:"Is the room/space of inadequate volume for this flueless appliance?", yesClass:"AR", ref:"G-11 4.5", action:"Refer to relevant Standards and manufacturer's instructions for room volume requirements.", why:"Insufficient room volume means combustion products cannot adequately disperse." },
+  ],
+  gas_fire: [
+    { id:"7.1", q:"Should this appliance be flued but is not?", yesClass:"ID", ref:"G-11 7.1", action:"Immediately Dangerous. Appliance must be disconnected.", why:"An unflued appliance that requires a flue discharges combustion products directly into the room." },
+    { id:"7.4", q:"Are gas controls/safety devices inoperative, failing, or disabled?", yesClass:"ID", ref:"G-11 7.4", action:"Immediately Dangerous. Includes FSDs, ODS, regulators, TTBs.", why:"Safety devices are critical for preventing gas leaks and CO production." },
+    { id:"9.3", q:"Is the closure plate missing or inadequately sealed (where required)?", yesClass:"AR", ref:"G-11 9.3", action:"Fit or repair closure plate where combustion products do not enter the building.", why:"A missing closure plate can allow combustion products to enter the room." },
+    { id:"9.1", q:"Is the builder's opening inadequately sealed (combustion products not entering building)?", yesClass:"AR", ref:"G-11 9.1", action:"No gaps should exist other than the fireplace opening and chimney/flue itself.", why:"Gaps in the builder's opening can allow combustion products to leak into the room." },
+    { id:"7.6", q:"Are combustion readings unsatisfactory?", yesClass:"AR", ref:"G-11 7.6", action:"For flueless: ID. For flued: AR. Check CO, CO2, and CO/CO2 ratio against manufacturer's specs.", why:"Poor combustion readings indicate a risk of carbon monoxide production." },
+    { id:"1.4", q:"Is there evidence of spillage or leakage of combustion products?", yesClass:"ID", ref:"G-11 1.4", action:"Immediately Dangerous. Conduct spillage test. Make installation safe.", why:"Spillage exposes occupants to carbon monoxide and other toxic gases." },
+    { id:"4.1", q:"Is the combustion air supply inadequate?", yesClass:"AR", ref:"G-11 4.1", action:"Purpose-provided permanent ventilation required. Check adequacy.", why:"Inadequate air supply causes incomplete combustion." },
+    { id:"9.4", q:"Is the fire fitted over combustible flooring with heat damage evident?", yesClass:"AR", ref:"G-11 9.4", action:"See also situation 7.10. Investigate cause of heat damage.", why:"Heat damage to flooring indicates a fire risk." },
+    { id:"7.12", q:"Is the appliance insecure or unstable?", yesClass:"AR", ref:"G-11 7.12", action:"Secure the appliance properly.", why:"An unstable gas fire could fall and damage the gas connection." },
+  ],
+  cooker: [
+    { id:"7.12", q:"Is the cooker unstable (no stability bracket fitted for freestanding)?", yesClass:"AR", ref:"G-11 7.12", action:"Fit stability bracket. A cooker using a flexible connection secured to the building is not classified AR.", why:"An unstable freestanding cooker can tip, damaging the gas connection." },
+    { id:"7.11", q:"Is the flexible connection in poor condition (damage, wear, kinks)?", yesClass:"AR", ref:"G-11 7.11", action:"Replace flexible connection. Does not apply to gas-fired tumble dryers per BS 7624.", why:"A damaged flexible connection could leak gas." },
+    { id:"4.4", q:"Is this a flueless cooker in a bed-sitting room less than 20m\u00B3?", yesClass:"AR", ref:"G-11 4.4", action:"Room volume must be adequate for flueless cooking appliances in bed-sitting rooms.", why:"Insufficient room volume with a flueless cooker increases CO risk, especially while sleeping." },
+    { id:"7.5", q:"Is this cooker in a room containing a bath or shower?", yesClass:"ID", ref:"G-11 7.5", action:"Immediately Dangerous. Flueless or non-room-sealed appliance in room with bath/shower.", why:"Steam from bathing affects combustion and increases CO risk." },
+    { id:"7.4", q:"Are gas controls or safety devices inoperative or disabled?", yesClass:"ID", ref:"G-11 7.4", action:"Immediately Dangerous. All safety devices must be functioning.", why:"Disabled safety devices remove protection against gas leaks." },
+    { id:"7.6", q:"Are combustion readings unsatisfactory?", yesClass:"ID", ref:"G-11 7.6", action:"Flueless appliance with unsatisfactory readings is ID.", why:"Poor combustion in a flueless cooker directly exposes occupants to CO." },
+    { id:"4.1", q:"Is the combustion air supply inadequate?", yesClass:"AR", ref:"G-11 4.1", action:"Ensure adequate ventilation for the cooker.", why:"Inadequate air supply causes incomplete combustion." },
+  ],
+  water_heater: [
+    { id:"8.1", q:"Is this a flueless/open-flued instantaneous water heater without a built-in ASD?", yesClass:"AR", ref:"G-11 8.1", action:"Advise responsible person. ASD (Atmosphere Sensing Device) provides vital CO protection.", why:"Without an ASD, there is no automatic shut-off if CO levels rise." },
+    { id:"8.2", q:"Is a flueless instantaneous water heater in a room of inadequate volume?", yesClass:"AR", ref:"G-11 8.2", action:"Check room volume against manufacturer's requirements and relevant standards.", why:"Insufficient volume means combustion products cannot disperse safely." },
+    { id:"8.3", q:"Does a flueless water heater supply hot water outlets not in the same room?", yesClass:"AR", ref:"G-11 8.3", action:"Flueless water heaters should only supply outlets in the same room/space.", why:"Running hot water in another room may not alert users to combustion issues." },
+    { id:"8.4", q:"Is a flueless water heater missing the 5-minute warning label?", yesClass:"AR", ref:"G-11 8.4", action:"Fit the required 5-minute warning label.", why:"Users must be warned not to use the appliance for extended periods without ventilation." },
+    { id:"7.4", q:"Are gas controls or safety devices inoperative or disabled?", yesClass:"ID", ref:"G-11 7.4", action:"Immediately Dangerous. All safety devices must function correctly.", why:"Safety devices protect against CO production and gas leaks." },
+    { id:"7.5", q:"Is this a flueless/non-room-sealed appliance in a room with a bath or shower?", yesClass:"ID", ref:"G-11 7.5", action:"Immediately Dangerous. Must be disconnected.", why:"Steam from bathing affects combustion and dramatically increases CO risk." },
+    { id:"1.4", q:"Is there evidence of spillage or leakage of combustion products?", yesClass:"ID", ref:"G-11 1.4", action:"Immediately Dangerous. Make installation safe.", why:"Spillage means occupants are being exposed to toxic combustion products." },
+    { id:"4.1", q:"Is the combustion air supply inadequate?", yesClass:"AR", ref:"G-11 4.1", action:"Ensure adequate ventilation per requirements.", why:"Inadequate air supply causes incomplete combustion and CO production." },
+  ],
+  warm_air: [
+    { id:"11.1", q:"Is the plenum or ducting in the appliance compartment unsealed, affecting safe operation?", yesClass:"ID", ref:"G-11 11.1", action:"Immediately Dangerous if affecting safe operation. If not affecting safe operation, classify as AR.", why:"Unsealed plenum/ducting can distribute combustion products throughout the building via the ductwork." },
+    { id:"11.2", q:"Is this an open-flued warm air heater with fan-assisted circulation without a positive return air connection?", yesClass:"AR", ref:"G-11 11.2", action:"It may be possible to fit a return air duct. Otherwise consult manufacturer. Advise replacement if not possible.", why:"Without positive return air, combustion products may be drawn into the circulation system." },
+    { id:"11.3", q:"Does the warm air heater have an inadequate return air path?", yesClass:"AR", ref:"G-11 11.3", action:"Assess return air path adequacy. Consult manufacturer for requirements.", why:"An inadequate return air path affects combustion and can cause CO issues." },
+    { id:"7.4", q:"Are gas controls or safety devices inoperative or disabled?", yesClass:"ID", ref:"G-11 7.4", action:"Immediately Dangerous. All safety devices must function.", why:"Safety devices are critical on warm air units as faults can affect the entire building." },
+    { id:"1.4", q:"Is there evidence of spillage or leakage of combustion products?", yesClass:"ID", ref:"G-11 1.4", action:"Immediately Dangerous. Make installation safe.", why:"Combustion products in a warm air system can be distributed throughout the entire property." },
+    { id:"4.1", q:"Is the combustion air supply inadequate?", yesClass:"AR", ref:"G-11 4.1", action:"Ensure adequate ventilation.", why:"Warm air units require adequate combustion air for safe operation." },
+  ],
+  other: [
+    { id:"7.1", q:"Should this appliance be flued but is not?", yesClass:"ID", ref:"G-11 7.1", action:"Immediately Dangerous. Appliance must be disconnected.", why:"An unflued appliance that requires a flue discharges combustion products into the room." },
+    { id:"7.4", q:"Are gas controls or safety devices inoperative or disabled?", yesClass:"ID", ref:"G-11 7.4", action:"Immediately Dangerous. All safety devices must function.", why:"Disabled safety devices remove critical protection." },
+    { id:"7.6", q:"Are combustion readings unsatisfactory?", yesClass:"AR", ref:"G-11 7.6", action:"For flueless: ID. For flued: AR. Investigate and rectify.", why:"Poor combustion produces dangerous carbon monoxide." },
+    { id:"1.4", q:"Is there evidence of spillage or leakage of combustion products?", yesClass:"ID", ref:"G-11 1.4", action:"Immediately Dangerous. Make installation safe.", why:"Spillage exposes occupants to toxic gases." },
+    { id:"7.12", q:"Is the appliance insecure or unstable?", yesClass:"AR", ref:"G-11 7.12", action:"Secure the appliance properly.", why:"An unstable appliance could fall and damage gas connections." },
+    { id:"4.1", q:"Is the combustion air supply inadequate?", yesClass:"AR", ref:"G-11 4.1", action:"Ensure adequate ventilation.", why:"Inadequate air supply causes incomplete combustion." },
+    { id:"4.5", q:"Is the room of inadequate volume for this flueless appliance?", yesClass:"AR", ref:"G-11 4.5", action:"Check room volume against requirements.", why:"Insufficient volume prevents safe dispersal of combustion products." },
+  ],
+};
+
+function classifyItem(answers) {
+  let worst = "SAFE";
+  const faults = [];
+  for (const a of answers) {
+    if (a.answer === "yes" && a.classification) {
+      if (a.classification === "ID") worst = "ID";
+      else if (a.classification === "AR" && worst !== "ID") worst = "AR";
+      else if (a.classification === "NCS" && worst === "SAFE") worst = "NCS";
+      faults.push(a);
+    }
+  }
+  return { worst, faults };
+}
+
+function PSCScreen({ onHome, onSave, engineerData: initEngData }) {
+  const [step, setStep] = useState(1);
+  const [pscData, setPscData] = useState({
+    propertyRef: "PSC-" + Date.now().toString(36).toUpperCase(),
+    date: todayISO(),
+    engineer: { name: initEngData?.engineerName || "", gasRegNo: initEngData?.gasSafeNo || "", company: initEngData?.companyName || "" },
+    property: { addr1:"", addr2:"", city:"", postcode:"", landlord:"", tenant:"", type:"House" },
+    notes: "",
+  });
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [itemDetails, setItemDetails] = useState({});
+  const [itemAnswers, setItemAnswers] = useState({});
+  const [currentQItem, setCurrentQItem] = useState(0);
+  const [showPDF, setShowPDF] = useState(false);
+  const [showWN, setShowWN] = useState(false);
+  const certRef = useRef(null);
+
+  const upd = (path, val) => {
+    setPscData(prev => {
+      const d = JSON.parse(JSON.stringify(prev));
+      const parts = path.split(".");
+      let obj = d;
+      for (let i = 0; i < parts.length - 1; i++) obj = obj[parts[i]];
+      obj[parts[parts.length - 1]] = val;
+      return d;
+    });
+  };
+
+  const selectedItemDefs = PSC_ITEM_TYPES.filter(t => selectedItems.includes(t.key));
+
+  // Compute results
+  const computeResults = () => {
+    const results = [];
+    let overallWorst = "SAFE";
+    for (const item of selectedItemDefs) {
+      const answers = itemAnswers[item.key] || [];
+      const { worst, faults } = classifyItem(answers);
+      if (worst === "ID") overallWorst = "ID";
+      else if (worst === "AR" && overallWorst !== "ID") overallWorst = "AR";
+      else if (worst === "NCS" && overallWorst === "SAFE") overallWorst = "NCS";
+      results.push({ ...item, details: itemDetails[item.key] || {}, answers, classification: worst, faults });
+    }
+    return { results, overallWorst };
+  };
+
+  const hdrStyle = { background:"linear-gradient(135deg, #1a3a4a 0%, #0d1f2d 100%)", padding:"18px 16px 14px", display:"flex", alignItems:"center", gap:12, flexShrink:0 };
+  const cardStyle = { background:"#fff", borderRadius:14, padding:"16px 18px", boxShadow:"0 2px 8px rgba(0,0,0,0.06)", marginBottom:12 };
+  const labelStyle = { display:"block", color:"#1a3a4a", fontWeight:700, fontSize:13, marginBottom:4 };
+  const inputStyle = { width:"100%", padding:"11px 14px", borderRadius:10, border:"1.5px solid #d1d5db", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box" };
+  const selectStyle = { ...inputStyle, appearance:"auto" };
+
+  // ── Step 1: Property & Engineer Details ──
+  if (step === 1) return (
+    <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <div style={hdrStyle}>
+        <button onClick={onHome} style={{ background:"none", border:"none", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center" }}>
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M15 18L8 11L15 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+        <span style={{ color:"#fff", fontWeight:800, fontSize:17 }}>Property Safety Check</span>
+      </div>
+      <div style={{ padding:"4px 8px 4px", background:"#dc2626", textAlign:"center" }}>
+        <span style={{ color:"#fff", fontSize:12, fontWeight:700 }}>Step 1 of 6 — Property & Engineer Details</span>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+        <div style={cardStyle}>
+          <label style={labelStyle}>Property Reference</label>
+          <input style={inputStyle} value={pscData.propertyRef} onChange={e=>upd("propertyRef",e.target.value)} placeholder="PSC-001"/>
+        </div>
+        <div style={cardStyle}>
+          <label style={labelStyle}>Date of Inspection</label>
+          <input style={inputStyle} type="date" value={pscData.date} onChange={e=>upd("date",e.target.value)}/>
+        </div>
+        <SectionHeader title="Engineer Details"/>
+        <div style={cardStyle}>
+          <label style={labelStyle}>Engineer Name</label>
+          <input style={inputStyle} value={pscData.engineer.name} onChange={e=>upd("engineer.name",e.target.value)}/>
+          <div style={{height:10}}/>
+          <label style={labelStyle}>Gas Safe Registration No.</label>
+          <input style={inputStyle} value={pscData.engineer.gasRegNo} onChange={e=>upd("engineer.gasRegNo",e.target.value)}/>
+          <div style={{height:10}}/>
+          <label style={labelStyle}>Company</label>
+          <input style={inputStyle} value={pscData.engineer.company} onChange={e=>upd("engineer.company",e.target.value)}/>
+        </div>
+        <SectionHeader title="Property Details"/>
+        <div style={cardStyle}>
+          <label style={labelStyle}>Address Line 1</label>
+          <input style={inputStyle} value={pscData.property.addr1} onChange={e=>upd("property.addr1",e.target.value)}/>
+          <div style={{height:8}}/>
+          <label style={labelStyle}>Address Line 2</label>
+          <input style={inputStyle} value={pscData.property.addr2} onChange={e=>upd("property.addr2",e.target.value)}/>
+          <div style={{height:8}}/>
+          <label style={labelStyle}>City/Town</label>
+          <input style={inputStyle} value={pscData.property.city} onChange={e=>upd("property.city",e.target.value)}/>
+          <div style={{height:8}}/>
+          <label style={labelStyle}>Postcode</label>
+          <input style={inputStyle} value={pscData.property.postcode} onChange={e=>upd("property.postcode",e.target.value)}/>
+          <div style={{height:8}}/>
+          <label style={labelStyle}>Landlord/Owner Name</label>
+          <input style={inputStyle} value={pscData.property.landlord} onChange={e=>upd("property.landlord",e.target.value)}/>
+          <div style={{height:8}}/>
+          <label style={labelStyle}>Tenant Name</label>
+          <input style={inputStyle} value={pscData.property.tenant} onChange={e=>upd("property.tenant",e.target.value)}/>
+          <div style={{height:10}}/>
+          <label style={labelStyle}>Property Type</label>
+          <select style={selectStyle} value={pscData.property.type} onChange={e=>upd("property.type",e.target.value)}>
+            {["House","Flat","Commercial","HMO","Other"].map(t=><option key={t}>{t}</option>)}
+          </select>
+        </div>
+      </div>
+      <BottomBar onHome={onHome} onNext={()=>setStep(2)} nextLabel="Next: Select Items"/>
+    </div>
+  );
+
+  // ── Step 2: Appliance/Installation Selection ──
+  if (step === 2) return (
+    <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <div style={hdrStyle}>
+        <button onClick={()=>setStep(1)} style={{ background:"none", border:"none", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center" }}>
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M15 18L8 11L15 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+        <span style={{ color:"#fff", fontWeight:800, fontSize:17 }}>Select Items to Inspect</span>
+      </div>
+      <div style={{ padding:"4px 8px 4px", background:"#dc2626", textAlign:"center" }}>
+        <span style={{ color:"#fff", fontSize:12, fontWeight:700 }}>Step 2 of 6 — What does this property have?</span>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+        <p style={{ color:"#555", fontSize:13, margin:"0 0 12px", textAlign:"center" }}>Tap each item present at the property. Selected items turn green.</p>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+          {PSC_ITEM_TYPES.map(item => {
+            const sel = selectedItems.includes(item.key);
+            return (
+              <div key={item.key}>
+                <button onClick={()=>{
+                  setSelectedItems(prev => sel ? prev.filter(k=>k!==item.key) : [...prev, item.key]);
+                  if (!sel && !itemAnswers[item.key]) {
+                    const qs = PSC_QUESTIONS[item.key] || [];
+                    setItemAnswers(prev => ({...prev, [item.key]: qs.map(q=>({...q, answer:"", classification:null}))}));
+                  }
+                }} style={{
+                  width:"100%", padding:"16px 10px", borderRadius:14,
+                  background: sel ? "linear-gradient(135deg, #16a34a, #15803d)" : "#e5e7eb",
+                  color: sel ? "#fff" : "#374151",
+                  border: sel ? "2px solid #15803d" : "2px solid #d1d5db",
+                  cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", fontWeight:700, fontSize:13,
+                  display:"flex", flexDirection:"column", alignItems:"center", gap:6,
+                  boxShadow: sel ? "0 4px 12px rgba(22,163,74,0.3)" : "none",
+                  transition:"all 0.2s ease"
+                }}>
+                  <span style={{ fontSize:28 }}>{item.emoji}</span>
+                  {item.label}
+                  {sel && <span style={{ fontSize:18 }}>{"\u2713"}</span>}
+                </button>
+                {/* Detail fields when selected */}
+                {sel && (item.hasMakeModel || item.hasDetails) && (
+                  <div style={{ ...cardStyle, marginTop:8, padding:"12px 14px" }}>
+                    {item.hasMakeModel && (<>
+                      <label style={{...labelStyle, fontSize:12}}>Make</label>
+                      <input style={{...inputStyle, padding:"8px 10px", fontSize:13, marginBottom:6}} value={(itemDetails[item.key]||{}).make||""} onChange={e=>setItemDetails(p=>({...p,[item.key]:{...p[item.key],make:e.target.value}}))} placeholder="Make"/>
+                      <label style={{...labelStyle, fontSize:12}}>Model</label>
+                      <input style={{...inputStyle, padding:"8px 10px", fontSize:13, marginBottom:6}} value={(itemDetails[item.key]||{}).model||""} onChange={e=>setItemDetails(p=>({...p,[item.key]:{...p[item.key],model:e.target.value}}))} placeholder="Model"/>
+                    </>)}
+                    {item.detailFields && item.detailFields.map(df => (
+                      <div key={df.id} style={{marginBottom:6}}>
+                        <label style={{...labelStyle, fontSize:12}}>{df.label}</label>
+                        {df.options ? (
+                          <select style={{...selectStyle, padding:"8px 10px", fontSize:13}} value={(itemDetails[item.key]||{})[df.id]||""} onChange={e=>setItemDetails(p=>({...p,[item.key]:{...p[item.key],[df.id]:e.target.value}}))}>
+                            <option value="">Select...</option>
+                            {df.options.map(o=><option key={o} value={o}>{o}</option>)}
+                          </select>
+                        ) : (
+                          <input style={{...inputStyle, padding:"8px 10px", fontSize:13}} value={(itemDetails[item.key]||{})[df.id]||""} onChange={e=>setItemDetails(p=>({...p,[item.key]:{...p[item.key],[df.id]:e.target.value}}))} placeholder={df.label}/>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <BottomBar onHome={onHome} onNext={()=>{ if(selectedItems.length===0){alert("Please select at least one item to inspect.");return;} setCurrentQItem(0); setStep(3); }} nextLabel={`Next: Inspect ${selectedItems.length} Item${selectedItems.length!==1?"s":""}`}/>
+    </div>
+  );
+
+  // ── Step 3: Inspection Questions ──
+  if (step === 3) {
+    const currentItem = selectedItemDefs[currentQItem];
+    if (!currentItem) { setStep(4); return null; }
+    const answers = itemAnswers[currentItem.key] || [];
+
+    return (
+      <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+        <div style={hdrStyle}>
+          <button onClick={()=>{ if(currentQItem>0) setCurrentQItem(currentQItem-1); else setStep(2); }} style={{ background:"none", border:"none", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center" }}>
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M15 18L8 11L15 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <span style={{ color:"#fff", fontWeight:800, fontSize:17 }}>{currentItem.emoji} {currentItem.label}</span>
+        </div>
+        <div style={{ padding:"4px 8px", background:"#dc2626", textAlign:"center" }}>
+          <span style={{ color:"#fff", fontSize:12, fontWeight:700 }}>Step 3 of 6 — Inspecting item {currentQItem+1} of {selectedItemDefs.length}</span>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+          <p style={{ color:"#555", fontSize:13, margin:"0 0 14px", textAlign:"center" }}>Answer each question based on your inspection. "Yes" indicates a fault was found.</p>
+          {answers.map((a, idx) => (
+            <div key={a.id} style={{ ...cardStyle, borderLeft: a.answer==="yes" ? (a.classification==="ID" ? "4px solid #dc2626" : a.classification==="AR" ? "4px solid #f59e0b" : "4px solid #6b7280") : a.answer==="no" ? "4px solid #16a34a" : "4px solid #d1d5db" }}>
+              <p style={{ margin:"0 0 4px", fontWeight:700, fontSize:13, color:"#1a3a4a" }}>
+                <span style={{ color:"#6b7280", fontSize:11 }}>[{a.ref}]</span> {a.q}
+              </p>
+              <p style={{ margin:"0 0 8px", fontSize:12, color:"#6b7280", lineHeight:1.4 }}>{a.why}</p>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={()=>{
+                  const newAnswers = [...answers];
+                  newAnswers[idx] = { ...a, answer:"no", classification: null };
+                  setItemAnswers(prev=>({...prev, [currentItem.key]: newAnswers}));
+                }} style={{
+                  flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif",
+                  background: a.answer==="no" ? "#16a34a" : "#f3f4f6", color: a.answer==="no" ? "#fff" : "#374151",
+                  border: a.answer==="no" ? "2px solid #15803d" : "2px solid #d1d5db"
+                }}>
+                  {"\u2713"} No Fault
+                </button>
+                <button onClick={()=>{
+                  const newAnswers = [...answers];
+                  newAnswers[idx] = { ...a, answer:"yes", classification: a.yesClass };
+                  setItemAnswers(prev=>({...prev, [currentItem.key]: newAnswers}));
+                }} style={{
+                  flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif",
+                  background: a.answer==="yes" ? (a.yesClass==="ID" ? "#dc2626" : "#f59e0b") : "#f3f4f6",
+                  color: a.answer==="yes" ? "#fff" : "#374151",
+                  border: a.answer==="yes" ? (a.yesClass==="ID" ? "2px solid #b91c1c" : "2px solid #d97706") : "2px solid #d1d5db"
+                }}>
+                  {"\u26A0"} Yes — {a.yesClass}
+                </button>
+              </div>
+              {a.answer === "yes" && (
+                <div style={{ marginTop:8, padding:"10px 12px", borderRadius:8, background: a.classification==="ID" ? "#fef2f2" : "#fffbeb", border: a.classification==="ID" ? "1px solid #fecaca" : "1px solid #fde68a" }}>
+                  <p style={{ margin:0, fontSize:12, fontWeight:700, color: a.classification==="ID" ? "#dc2626" : "#d97706" }}>
+                    {a.classification==="ID" ? "\u{1F6D1} IMMEDIATELY DANGEROUS" : "\u26A0\uFE0F AT RISK"}
+                  </p>
+                  <p style={{ margin:"4px 0 0", fontSize:12, color:"#374151", lineHeight:1.4 }}>{a.action}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <BottomBar onHome={onHome} onNext={()=>{
+          const unanswered = answers.filter(a=>!a.answer).length;
+          if(unanswered > 0 && !window.confirm(`${unanswered} question(s) unanswered. Continue anyway?`)) return;
+          if(currentQItem < selectedItemDefs.length - 1) setCurrentQItem(currentQItem+1);
+          else setStep(4);
+        }} nextLabel={currentQItem < selectedItemDefs.length - 1 ? `Next: ${selectedItemDefs[currentQItem+1]?.label}` : "View Results"}/>
+      </div>
+    );
+  }
+
+  // ── Step 4: Results Summary ──
+  if (step === 4) {
+    const { results, overallWorst } = computeResults();
+    const hasIssues = overallWorst === "AR" || overallWorst === "ID";
+    const overallColor = overallWorst === "ID" ? "#dc2626" : overallWorst === "AR" ? "#f59e0b" : "#16a34a";
+    const overallIcon = overallWorst === "ID" ? "\u{1F6D1}" : overallWorst === "AR" ? "\u26A0\uFE0F" : "\u2705";
+    const overallLabel = overallWorst === "ID" ? "IMMEDIATELY DANGEROUS" : overallWorst === "AR" ? "AT RISK" : overallWorst === "NCS" ? "NOT TO CURRENT STANDARDS" : "SAFE";
+
+    return (
+      <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+        <div style={hdrStyle}>
+          <button onClick={()=>{ setStep(3); setCurrentQItem(selectedItemDefs.length-1); }} style={{ background:"none", border:"none", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center" }}>
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M15 18L8 11L15 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <span style={{ color:"#fff", fontWeight:800, fontSize:17 }}>Results Summary</span>
+        </div>
+        <div style={{ padding:"4px 8px", background: overallColor, textAlign:"center" }}>
+          <span style={{ color:"#fff", fontSize:12, fontWeight:700 }}>Step 4 of 6 — Overall Classification: {overallIcon} {overallLabel}</span>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+          {/* Overall banner */}
+          <div style={{ ...cardStyle, background: overallWorst==="ID" ? "#fef2f2" : overallWorst==="AR" ? "#fffbeb" : "#f0fdf4", borderLeft:`5px solid ${overallColor}` }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ fontSize:32 }}>{overallIcon}</span>
+              <div>
+                <p style={{ margin:0, fontWeight:800, fontSize:16, color:overallColor }}>{overallLabel}</p>
+                <p style={{ margin:"2px 0 0", fontSize:12, color:"#6b7280" }}>
+                  {pscData.property.addr1}{pscData.property.postcode ? ", " + pscData.property.postcode : ""} | {pscData.date}
+                </p>
+              </div>
+            </div>
+            {overallWorst === "ID" && (
+              <p style={{ margin:"10px 0 0", padding:"8px 12px", background:"#dc2626", color:"#fff", borderRadius:8, fontSize:12, fontWeight:700 }}>
+                {"\u260E"} If gas escape detected: Call Gas Emergency 0800 111 999
+              </p>
+            )}
+          </div>
+
+          {/* Per-item results */}
+          {results.map(item => {
+            const col = item.classification==="ID" ? "#dc2626" : item.classification==="AR" ? "#f59e0b" : item.classification==="NCS" ? "#6b7280" : "#16a34a";
+            const icon = item.classification==="ID" ? "\u{1F6D1}" : item.classification==="AR" ? "\u26A0\uFE0F" : item.classification==="NCS" ? "\u{1F4DD}" : "\u2705";
+            const label = item.classification==="ID" ? "IMMEDIATELY DANGEROUS" : item.classification==="AR" ? "AT RISK" : item.classification==="NCS" ? "NOT TO CURRENT STANDARDS" : "SAFE";
+            return (
+              <div key={item.key} style={{ ...cardStyle, borderLeft:`4px solid ${col}` }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                  <span style={{ fontWeight:700, fontSize:14, color:"#1a3a4a" }}>{item.emoji} {item.label}</span>
+                  <span style={{ padding:"3px 10px", borderRadius:20, background:col, color:"#fff", fontSize:11, fontWeight:700 }}>{icon} {label}</span>
+                </div>
+                {item.details.make && <p style={{ margin:"0 0 4px", fontSize:12, color:"#6b7280" }}>Make: {item.details.make} | Model: {item.details.model || "N/A"}</p>}
+                {item.faults.length > 0 && (
+                  <div style={{ marginTop:6 }}>
+                    {item.faults.map((f,fi) => (
+                      <div key={fi} style={{ padding:"8px 10px", borderRadius:8, background: f.classification==="ID" ? "#fef2f2" : "#fffbeb", marginBottom:4 }}>
+                        <p style={{ margin:0, fontSize:12, fontWeight:700, color: f.classification==="ID" ? "#dc2626" : "#d97706" }}>{f.classification} — {f.ref}</p>
+                        <p style={{ margin:"2px 0 0", fontSize:12, color:"#374151" }}>{f.q}</p>
+                        <p style={{ margin:"2px 0 0", fontSize:11, color:"#6b7280" }}>{f.action}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {item.faults.length === 0 && <p style={{ margin:0, fontSize:12, color:"#16a34a", fontWeight:600 }}>No faults found</p>}
+              </div>
+            );
+          })}
+
+          {/* RIDDOR notice */}
+          {overallWorst === "ID" && (
+            <div style={{ ...cardStyle, background:"#fef2f2", borderLeft:"4px solid #dc2626" }}>
+              <p style={{ margin:0, fontWeight:700, fontSize:13, color:"#dc2626" }}>RIDDOR Reporting</p>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:"#374151", lineHeight:1.4 }}>
+                If this ID situation is due to poor workmanship/design AND is dangerous to such an extent it is likely to cause death, unconsciousness, or taking to hospital — report under RIDDOR 11(2) within 14 days via hse.gov.uk/riddor
+              </p>
+            </div>
+          )}
+        </div>
+        <BottomBar onHome={onHome} onNext={()=>setStep(hasIssues ? 5 : 6)} nextLabel={hasIssues ? "Next: Warning Notice" : "Next: Generate PDF"}/>
+      </div>
+    );
+  }
+
+  // ── Step 5: Warning Notice ──
+  if (step === 5) {
+    const { results, overallWorst } = computeResults();
+    const faultItems = results.filter(r => r.classification === "AR" || r.classification === "ID");
+    const faultSummary = faultItems.map(fi => fi.faults.map(f => `${fi.label}: ${f.q} [${f.classification} - ${f.ref}]`).join("\n")).join("\n");
+
+    return (
+      <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+        <div style={hdrStyle}>
+          <button onClick={()=>setStep(4)} style={{ background:"none", border:"none", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center" }}>
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M15 18L8 11L15 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <span style={{ color:"#fff", fontWeight:800, fontSize:17 }}>Warning Notice</span>
+        </div>
+        <div style={{ padding:"4px 8px", background:"#f59e0b", textAlign:"center" }}>
+          <span style={{ color:"#fff", fontSize:12, fontWeight:700 }}>Step 5 of 6 — Warning Notice Required</span>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+          <div style={{ ...cardStyle, borderLeft:"4px solid #f59e0b", background:"#fffbeb" }}>
+            <p style={{ margin:0, fontWeight:700, fontSize:14, color:"#d97706" }}>{"\u26A0\uFE0F"} Warning Notice Required</p>
+            <p style={{ margin:"6px 0 0", fontSize:12, color:"#374151", lineHeight:1.5 }}>
+              {overallWorst === "ID" ? "Immediately Dangerous situation(s) found. The gas fitting(s) MUST be disconnected/made safe immediately. If the user refuses, cap off the gas supply." : "At Risk situation(s) found. The responsible person must be informed and a Warning Notice issued."}
+            </p>
+          </div>
+          <SectionHeader title="Faults Summary"/>
+          {faultItems.map(fi => (
+            <div key={fi.key} style={cardStyle}>
+              <p style={{ margin:"0 0 6px", fontWeight:700, fontSize:13, color:"#1a3a4a" }}>{fi.emoji} {fi.label} — {fi.classification}</p>
+              {fi.faults.map((f,i) => (
+                <div key={i} style={{ padding:"6px 8px", borderRadius:6, background: f.classification==="ID" ? "#fef2f2" : "#fffbeb", marginBottom:4 }}>
+                  <p style={{ margin:0, fontSize:12, fontWeight:600 }}>{f.classification} [{f.ref}]: {f.q}</p>
+                  <p style={{ margin:"2px 0 0", fontSize:11, color:"#6b7280" }}>Action: {f.action}</p>
+                </div>
+              ))}
+            </div>
+          ))}
+          <SectionHeader title="Actions Taken"/>
+          <div style={cardStyle}>
+            <label style={labelStyle}>Remedial Action / Notes</label>
+            <textarea style={{ ...inputStyle, minHeight:80 }} value={pscData.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Describe actions taken, e.g. appliance disconnected, gas supply capped, responsible person advised..."/>
+          </div>
+          <div style={{ ...cardStyle, background:"#f0fdf4", borderLeft:"4px solid #16a34a" }}>
+            <p style={{ margin:0, fontSize:12, fontWeight:700, color:"#16a34a" }}>
+              {"\u2139\uFE0F"} This warning notice will be included in the PDF report. You can also create a standalone Warning Notice from the existing Warning Notice flow in the app.
+            </p>
+          </div>
+        </div>
+        <BottomBar onHome={onHome} onNext={()=>setStep(6)} nextLabel="Next: Generate PDF"/>
+      </div>
+    );
+  }
+
+  // ── Step 6: PDF Report & Save ──
+  if (step === 6) {
+    const { results, overallWorst } = computeResults();
+    const overallColor = overallWorst === "ID" ? "#dc2626" : overallWorst === "AR" ? "#f59e0b" : "#16a34a";
+    const overallIcon = overallWorst === "ID" ? "\u{1F6D1}" : overallWorst === "AR" ? "\u26A0\uFE0F" : "\u2705";
+    const overallLabel = overallWorst === "ID" ? "IMMEDIATELY DANGEROUS" : overallWorst === "AR" ? "AT RISK" : "SAFE";
+
+    const handleSave = () => {
+      const rec = {
+        type: "psc",
+        certLabel: "Property Safety Check",
+        id: pscData.propertyRef,
+        propertyRef: pscData.propertyRef,
+        date: pscData.date,
+        engineer: pscData.engineer,
+        property: pscData.property,
+        items: results.map(r => ({
+          type: r.key, label: r.label, make: r.details.make||"", model: r.details.model||"",
+          details: r.details, answers: r.answers,
+          overallClassification: r.classification,
+          faults: r.faults.map(f => ({ id:f.id, ref:f.ref, question:f.q, classification:f.classification, action:f.action })),
+        })),
+        overallResult: overallWorst,
+        warningNoticeRequired: overallWorst === "AR" || overallWorst === "ID",
+        notes: pscData.notes,
+        savedAt: new Date().toISOString(),
+      };
+      onSave(rec);
+    };
+
+    const handleDownloadPDF = async () => {
+      try {
+        await Promise.all([
+          new Promise((res,rej)=>{ if(window.html2canvas) return res(); const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); }),
+          new Promise((res,rej)=>{ if(window.jspdf) return res(); const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); }),
+        ]);
+        const el = certRef.current;
+        if (!el) { alert("PDF element not ready"); return; }
+        const origW = el.style.width;
+        el.style.width = "900px";
+        await new Promise(r => setTimeout(r, 400));
+        const canvas = await window.html2canvas(el, { scale:2, useCORS:true, logging:false, width:900, height:el.scrollHeight, windowWidth:900, scrollX:0, scrollY:0 });
+        el.style.width = origW;
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+        const pdfW = 210, pdfH = 297;
+        const imgW = pdfW;
+        const imgH = imgW * canvas.height / canvas.width;
+        let yPos = 0;
+        let pageNum = 0;
+        while (yPos < imgH) {
+          if (pageNum > 0) pdf.addPage();
+          const srcY = (yPos / imgH) * canvas.height;
+          const srcH = Math.min((pdfH / imgH) * canvas.height, canvas.height - srcY);
+          const tmpCanvas = document.createElement("canvas");
+          tmpCanvas.width = canvas.width;
+          tmpCanvas.height = srcH;
+          tmpCanvas.getContext("2d").drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+          pdf.addImage(tmpCanvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, pdfW, pdfW * srcH / canvas.width);
+          yPos += pdfH;
+          pageNum++;
+        }
+        pdf.save(`PSC_${pscData.propertyRef}_${pscData.date}.pdf`);
+      } catch(e) { alert("PDF error: " + e.message); }
+    };
+
+    if (showPDF) return (
+      <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+        <div style={hdrStyle}>
+          <button onClick={()=>setShowPDF(false)} style={{ background:"none", border:"none", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center" }}>
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M15 18L8 11L15 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <span style={{ color:"#fff", fontWeight:800, fontSize:17 }}>PDF Preview</span>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+          <div ref={certRef} style={{ background:"#fff", padding:30, maxWidth:900, margin:"0 auto", fontSize:13, fontFamily:"Arial, sans-serif", color:"#111" }}>
+            {/* PDF Content */}
+            <div style={{ textAlign:"center", marginBottom:20, borderBottom:"3px solid #1a3a4a", paddingBottom:16 }}>
+              <h1 style={{ margin:0, fontSize:22, color:"#1a3a4a" }}>Property Safety Check Report</h1>
+              <p style={{ margin:"4px 0 0", fontSize:13, color:"#666" }}>Based on IGEM/G/11 Edition 2 with Amendments (July 2025)</p>
+            </div>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:16, gap:20 }}>
+              <div style={{ flex:1 }}>
+                <p style={{ margin:"0 0 2px", fontWeight:700, color:"#1a3a4a" }}>Property Details</p>
+                <p style={{ margin:0, lineHeight:1.5 }}>Ref: {pscData.propertyRef}<br/>
+                  {pscData.property.addr1}{pscData.property.addr2 ? ", "+pscData.property.addr2 : ""}<br/>
+                  {pscData.property.city} {pscData.property.postcode}<br/>
+                  Type: {pscData.property.type}<br/>
+                  {pscData.property.landlord && <>Landlord: {pscData.property.landlord}<br/></>}
+                  {pscData.property.tenant && <>Tenant: {pscData.property.tenant}</>}
+                </p>
+              </div>
+              <div style={{ flex:1 }}>
+                <p style={{ margin:"0 0 2px", fontWeight:700, color:"#1a3a4a" }}>Engineer Details</p>
+                <p style={{ margin:0, lineHeight:1.5 }}>
+                  {pscData.engineer.name}<br/>
+                  Gas Safe Reg: {pscData.engineer.gasRegNo}<br/>
+                  Company: {pscData.engineer.company}<br/>
+                  Date: {pscData.date}
+                </p>
+              </div>
+            </div>
+            {/* Overall Result Banner */}
+            <div style={{ padding:"12px 16px", background:overallColor, color:"#fff", borderRadius:8, marginBottom:16, textAlign:"center" }}>
+              <span style={{ fontSize:18, fontWeight:800 }}>{overallIcon} OVERALL CLASSIFICATION: {overallLabel}</span>
+            </div>
+            {/* Per-item */}
+            {results.map(item => {
+              const ic = item.classification==="ID" ? "#dc2626" : item.classification==="AR" ? "#f59e0b" : "#16a34a";
+              const il = item.classification==="ID" ? "IMMEDIATELY DANGEROUS" : item.classification==="AR" ? "AT RISK" : "SAFE";
+              return (
+                <div key={item.key} style={{ marginBottom:14, border:"1px solid #ddd", borderRadius:8, overflow:"hidden" }}>
+                  <div style={{ padding:"8px 14px", background:ic, color:"#fff", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <span style={{ fontWeight:700 }}>{item.emoji} {item.label}</span>
+                    <span style={{ fontWeight:800, fontSize:12 }}>{il}</span>
+                  </div>
+                  {item.details.make && (
+                    <div style={{ padding:"6px 14px", background:"#f9fafb", fontSize:12 }}>
+                      Make: {item.details.make} | Model: {item.details.model || "N/A"}
+                      {Object.entries(item.details).filter(([k])=>k!=="make"&&k!=="model").map(([k,v])=>v?<span key={k}> | {k}: {v}</span>:null)}
+                    </div>
+                  )}
+                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
+                    <thead>
+                      <tr style={{ background:"#f3f4f6" }}>
+                        <th style={{ padding:"6px 10px", textAlign:"left", borderBottom:"1px solid #e5e7eb" }}>Ref</th>
+                        <th style={{ padding:"6px 10px", textAlign:"left", borderBottom:"1px solid #e5e7eb" }}>Check</th>
+                        <th style={{ padding:"6px 10px", textAlign:"center", borderBottom:"1px solid #e5e7eb", width:60 }}>Result</th>
+                        <th style={{ padding:"6px 10px", textAlign:"center", borderBottom:"1px solid #e5e7eb", width:50 }}>Class</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {item.answers.map((a,ai) => (
+                        <tr key={ai} style={{ background: a.answer==="yes" ? (a.classification==="ID" ? "#fef2f2" : "#fffbeb") : "transparent" }}>
+                          <td style={{ padding:"5px 10px", borderBottom:"1px solid #f3f4f6", fontSize:10, color:"#6b7280" }}>{a.ref}</td>
+                          <td style={{ padding:"5px 10px", borderBottom:"1px solid #f3f4f6" }}>{a.q}</td>
+                          <td style={{ padding:"5px 10px", borderBottom:"1px solid #f3f4f6", textAlign:"center", fontWeight:700, color: a.answer==="yes" ? "#dc2626" : a.answer==="no" ? "#16a34a" : "#9ca3af" }}>{a.answer==="yes"?"FAULT":a.answer==="no"?"PASS":"-"}</td>
+                          <td style={{ padding:"5px 10px", borderBottom:"1px solid #f3f4f6", textAlign:"center", fontWeight:700, color: a.classification==="ID"?"#dc2626":a.classification==="AR"?"#d97706":"#16a34a" }}>{a.answer==="yes"?a.classification:a.answer==="no"?"\u2713":"-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {item.faults.length > 0 && (
+                    <div style={{ padding:"8px 14px", background:"#fffbeb", borderTop:"1px solid #fde68a" }}>
+                      <p style={{ margin:"0 0 4px", fontWeight:700, fontSize:11, color:"#92400e" }}>Faults & Required Actions:</p>
+                      {item.faults.map((f,fi)=>(
+                        <p key={fi} style={{ margin:"2px 0", fontSize:11 }}>
+                          <strong>[{f.ref}] {f.classification}:</strong> {f.q}<br/>
+                          <em style={{ color:"#6b7280" }}>Action: {f.action}</em>
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {/* Warning Notice section in PDF */}
+            {(overallWorst === "AR" || overallWorst === "ID") && (
+              <div style={{ marginTop:16, border:"2px solid #f59e0b", borderRadius:8, overflow:"hidden" }}>
+                <div style={{ padding:"10px 14px", background:"#f59e0b", color:"#fff" }}>
+                  <span style={{ fontWeight:800 }}>{"\u26A0\uFE0F"} WARNING NOTICE</span>
+                </div>
+                <div style={{ padding:"12px 14px" }}>
+                  <p style={{ margin:"0 0 6px", fontSize:12, lineHeight:1.5 }}>
+                    <strong>Property:</strong> {pscData.property.addr1}, {pscData.property.city} {pscData.property.postcode}<br/>
+                    <strong>Date:</strong> {pscData.date}<br/>
+                    <strong>Engineer:</strong> {pscData.engineer.name} (Gas Safe: {pscData.engineer.gasRegNo})<br/>
+                    <strong>Classification:</strong> {overallLabel}
+                  </p>
+                  <p style={{ margin:"0 0 6px", fontWeight:700, fontSize:12 }}>Faults Found:</p>
+                  {results.filter(r=>r.classification==="AR"||r.classification==="ID").map(r=>(
+                    <div key={r.key} style={{ marginBottom:6 }}>
+                      <p style={{ margin:0, fontSize:12, fontWeight:700 }}>{r.emoji} {r.label} ({r.classification})</p>
+                      {r.faults.map((f,i)=><p key={i} style={{ margin:"1px 0 1px 12px", fontSize:11 }}>[{f.ref}] {f.q} — {f.action}</p>)}
+                    </div>
+                  ))}
+                  {pscData.notes && <><p style={{ margin:"8px 0 4px", fontWeight:700, fontSize:12 }}>Remedial Actions / Notes:</p><p style={{ margin:0, fontSize:11, whiteSpace:"pre-wrap" }}>{pscData.notes}</p></>}
+                  <div style={{ marginTop:16, display:"flex", gap:40 }}>
+                    <div style={{ flex:1 }}>
+                      <p style={{ margin:0, fontWeight:700, fontSize:11, borderTop:"1px solid #999", paddingTop:6 }}>Engineer Signature</p>
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <p style={{ margin:0, fontWeight:700, fontSize:11, borderTop:"1px solid #999", paddingTop:6 }}>Responsible Person Signature</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Footer */}
+            <div style={{ marginTop:20, padding:"10px 0", borderTop:"2px solid #1a3a4a", textAlign:"center" }}>
+              <p style={{ margin:0, fontSize:10, color:"#6b7280" }}>
+                Property Safety Check conducted in accordance with IGEM/G/11 Ed.2 wA (July 2025) — Gas Industry Unsafe Situations Procedure<br/>
+                Generated by Gas Safe Engineer App | {new Date().toLocaleDateString("en-GB")}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div style={{ padding:"8px 16px 10px", background:"transparent", flexShrink:0, position:"sticky", bottom:0, zIndex:10 }}>
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={handleDownloadPDF} style={{ flex:1, padding:"14px", background:"#1a3a4a", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+              {"\u{1F4E5}"} Download PDF
+            </button>
+            <button onClick={()=>{ handleSave(); alert("\u2705 Property Safety Check saved to Records!"); setShowPDF(false); onHome(); }} style={{ flex:1, padding:"14px", background:"#16a34a", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+              {"\u{1F4BE}"} Save to Records
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+
+    return (
+      <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+        <div style={hdrStyle}>
+          <button onClick={()=>setStep(overallWorst==="AR"||overallWorst==="ID" ? 5 : 4)} style={{ background:"none", border:"none", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center" }}>
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M15 18L8 11L15 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <span style={{ color:"#fff", fontWeight:800, fontSize:17 }}>Save & Report</span>
+        </div>
+        <div style={{ padding:"4px 8px", background:"#1a3a4a", textAlign:"center" }}>
+          <span style={{ color:"#fff", fontSize:12, fontWeight:700 }}>Step 6 of 6 — Save & Generate PDF</span>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
+          <div style={cardStyle}>
+            <p style={{ margin:0, fontWeight:700, fontSize:15, color:"#1a3a4a" }}>Property Safety Check Complete</p>
+            <p style={{ margin:"6px 0", fontSize:13, color:"#6b7280" }}>
+              {pscData.property.addr1}{pscData.property.postcode ? ", "+pscData.property.postcode : ""} | {pscData.date}
+            </p>
+            <div style={{ padding:"8px 12px", borderRadius:8, background:overallColor, color:"#fff", textAlign:"center", marginTop:8 }}>
+              <span style={{ fontWeight:800 }}>{overallIcon} {overallLabel}</span>
+            </div>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:12 }}>
+            <button onClick={()=>setShowPDF(true)} style={{ padding:"16px", background:"#1a3a4a", color:"#fff", border:"none", borderRadius:14, fontWeight:700, fontSize:15, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+              {"\u{1F4C4}"} Preview & Download PDF
+            </button>
+            <button onClick={()=>{ handleSave(); alert("\u2705 Property Safety Check saved to Records!"); onHome(); }} style={{ padding:"16px", background:"#16a34a", color:"#fff", border:"none", borderRadius:14, fontWeight:700, fontSize:15, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+              {"\u{1F4BE}"} Save to Records
+            </button>
+            <button onClick={()=>{ handleSave(); setShowPDF(true); }} style={{ padding:"16px", background:"#f59e0b", color:"#fff", border:"none", borderRadius:14, fontWeight:700, fontSize:15, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+              {"\u{1F4BE}"} Save & Preview PDF
+            </button>
+          </div>
+        </div>
+        <BottomBar onHome={onHome}/>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── END PROPERTY SAFETY CHECK ───────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+
+function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine, onAdminDashboard, onPSC }) {
   const trialStatus = getTrialStatus();
   const daysLeft = getTrialDaysLeft();
   const [showFeedback, setShowFeedback] = useState(false);
@@ -3445,6 +4217,9 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
       <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 88px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
         <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, marginBottom:4, textAlign:"center", letterSpacing:0.3, textTransform:"uppercase", fontWeight:600 }}>What would you like to do?</p>
 
+        <PillBtn onClick={onPSC} label="Property Safety Check" color="#dc2626" iconBg="#991b1b">
+          <span style={{ fontSize:26 }}>{"\u{1F525}"}</span>
+        </PillBtn>
         <PillBtn onClick={onNew} label="New Job" color="#fff200">
           <svg width="28" height="28" viewBox="0 0 52 52" fill="none"><rect x="22" y="4" width="8" height="44" rx="4" fill="#0d1f2d"/><rect x="4" y="22" width="44" height="8" rx="4" fill="#0d1f2d"/></svg>
         </PillBtn>
@@ -19520,7 +20295,8 @@ function App({ onLogout }) {
       onPaymentSubmitted={()=>{ /* profile updated by markPaymentSubmitted, force re-render */ setScreen("home"); }}
     />;
   }
-  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("✅ "+n+" demo records added!\n\nGo to Records → Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")} onAdminDashboard={()=>setScreen("adminDashboard")}/>;
+  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("✅ "+n+" demo records added!\n\nGo to Records → Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")} onAdminDashboard={()=>setScreen("adminDashboard")} onPSC={()=>setScreen("psc")}/>;
+  if (screen === "psc") return <PSCScreen onHome={goHome} engineerData={profileDefaults()} onSave={(rec)=>{ setRecords(prev=>[...prev, rec]); }}/>;
   if (screen === "adminDashboard") return <AdminDashboardScreen onBack={()=>setScreen("home")} onHome={goHome} records={records} invoices={invoices} quotes={quotes}/>;
   if (screen === "contacts") return <ClientContactsScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
   if (screen === "emailImport") return <EmailImportScreen onBack={()=>setScreen("home")} onHome={goHome} defaultEngineerData={engineerData} onImportCerts={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
