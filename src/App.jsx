@@ -23071,19 +23071,9 @@ function OnboardingPlanScreen({ onPlanSelected, currentUser }) {
 
 // ─── Helper: check if user needs onboarding plan selection ───────────────────
 function userNeedsPlanSelection(user) {
-  if (!user) return false;
-  // Hardcoded accounts always bypass
-  if (USERS.some(u => u.username === user.username)) return false;
-  try {
-    const p = JSON.parse(localStorage.getItem(`${user.username}_user_profile`) || "{}");
-    // If subscription is active or payment was submitted, they don't need the plan screen
-    if (p.subscriptionActive === true) return false;
-    if (p.paymentSubmitted === true) return false;
-    if (p.paymentPending === true) return false;
-    // If they have a real plan set (not "none" or "free"), they're good
-    if (p.plan && p.plan !== "none" && p.plan !== "free") return false;
-    return true;
-  } catch { return false; }
+  // NEVER block new users — let them use the full app during their 7-day free trial.
+  // The PaywallScreen inside App already handles the expired-trial gate.
+  return false;
 }
 
 function AppWithAuth() {
@@ -23169,22 +23159,13 @@ function AppWithAuth() {
         <InstallPromptModal onDismiss={() => {
           try { localStorage.setItem("installPromptShown", "true"); } catch {}
           setShowInstallPrompt(false);
-          // After dismissing install prompt, check if plan selection is needed
-          const u = getCurrentUser();
-          if (u && userNeedsPlanSelection(u)) {
-            setShowPlanSelection(true);
-          }
         }}/>
       </>
     );
   }
 
-  // Plan selection screen (blocks access until subscription confirmed)
-  if (authed && (showPlanSelection || userNeedsPlanSelection(getCurrentUser()))) {
-    return <OnboardingPlanScreen currentUser={getCurrentUser()} onPlanSelected={(planKey) => {
-      setShowPlanSelection(false);
-    }}/>;
-  }
+  // Plan selection is no longer forced — users get a 7-day free trial first.
+  // After trial expires, the PaywallScreen inside <App/> handles the paywall gate.
 
   if (authed) return <App onLogout={handleLogout}/>;
 
