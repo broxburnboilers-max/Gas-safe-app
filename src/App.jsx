@@ -21322,11 +21322,11 @@ function TradeHomeScreen({ currentUser, onSelectTrade, onLogout, onPayment, onCl
       icon: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 5 10 5 15C5 18.87 8.13 22 12 22C15.87 22 19 18.87 19 15C19 10 12 2 12 2Z"/></svg> },
     { id: "electrical", name: "Electrical", color: "#3b82f6", active: true, badge: 0,
       icon: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg> },
-    { id: "fire", name: "Fire Safety", color: "#ef4444", active: false, badge: 0,
+    { id: "fire", name: "Fire Safety", color: "#ef4444", active: true, badge: 0,
       icon: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12.9l-2.13 2.09C9.31 15.55 9 16.28 9 17.06 9 18.68 10.35 20 12 20s3-1.32 3-2.94c0-.78-.31-1.52-.87-2.07L12 12.9z"/><path d="M16 6l-.44.55C14.38 8.02 12 7.19 12 5.3V2S4 7 4 13c0 4.42 3.58 8 8 8s8-3.58 8-8c0-2.96-1.61-5.62-4-7z" opacity="0.6"/></svg> },
-    { id: "plumbing", name: "Plumbing", color: "#06b6d4", active: false, badge: 0,
+    { id: "plumbing", name: "Plumbing", color: "#06b6d4", active: true, badge: 0,
       icon: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg> },
-    { id: "oil", name: "Oil &\nRenewables", color: "#22c55e", active: false, badge: 0,
+    { id: "oil", name: "Oil &\nRenewables", color: "#22c55e", active: true, badge: 0,
       icon: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9z"/></svg> },
     { id: "compliance", name: "Compliance", color: "#a855f7", active: true, badge: complianceBadge,
       icon: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg> },
@@ -22078,6 +22078,3095 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ─── FIRE SAFETY DASHBOARD ──────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function FireSafetyPDFPreview({ certData, certType, certTitle, onClose }) {
+  const [downloading, setDownloading] = useState(false);
+  const certRef = React.useRef(null);
+
+  const downloadPDF = async () => {
+    setDownloading(true);
+    try {
+      await Promise.all([
+        new Promise((res, rej) => { if (window.html2canvas) return res(); const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; s.onload = res; s.onerror = rej; document.head.appendChild(s); }),
+        new Promise((res, rej) => { if (window.jspdf) return res(); const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload = res; s.onerror = rej; document.head.appendChild(s); })
+      ]);
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+      const el = certRef.current;
+      const prevW = el.style.width; el.style.width = "800px"; el.style.maxWidth = "800px";
+      await new Promise(r => setTimeout(r, 150));
+      const canvas = await window.html2canvas(el, { scale:2, useCORS:true, logging:false, width:800, height:el.scrollHeight, windowWidth:800 });
+      el.style.width = prevW; el.style.maxWidth = prevW;
+      const pdfW = 210, pdfH = 297;
+      const imgR = canvas.width / canvas.height;
+      const pgR = pdfW / pdfH;
+      let dW, dH, dX, dY;
+      if (imgR > pgR) { dW = pdfW - 10; dH = dW / imgR; dX = 5; dY = 5; }
+      else { dH = pdfH - 10; dW = dH * imgR; dX = (pdfW - dW) / 2; dY = 5; }
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", dX, dY, dW, dH);
+      const fn = (certData.siteName || certData.clientName || certType).replace(/[^a-zA-Z0-9 ]/g,"").trim().replace(/\s+/g,"_") + ".pdf";
+      pdf.save(fn);
+    } catch(e) { console.error(e); alert("Could not generate PDF: " + e.message); }
+    setDownloading(false);
+  };
+
+  const sectionStyle = { marginBottom:16, padding:"12px 16px", background:"#f8f9fa", borderRadius:8, border:"1px solid #e0e0e0" };
+  const labelStyle = { color:"#555", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
+  const valueStyle = { color:"#1a1a2e", fontSize:13, fontWeight:500 };
+  const headerBg = { background:"linear-gradient(135deg, #ff6b35 0%, #d63031 100%)", padding:"20px 24px", color:"#fff" };
+
+  const renderField = (label, value) => {
+    if (!value || value === "N/A") return null;
+    return <div style={{ marginBottom:8 }}><div style={labelStyle}>{label}</div><div style={valueStyle}>{value}</div></div>;
+  };
+
+  const renderPassFail = (label, value) => {
+    const colors = { Pass:"#22c55e", Fail:"#ef4444", Advisory:"#f59e0b", Satisfactory:"#22c55e", Unsatisfactory:"#ef4444", "N/A":"#888" };
+    return <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 0", borderBottom:"1px solid #eee" }}>
+      <span style={{ fontSize:12, color:"#333" }}>{label}</span>
+      <span style={{ fontSize:11, fontWeight:700, color: colors[value] || "#333", padding:"2px 10px", borderRadius:4, background: value === "Pass" || value === "Satisfactory" ? "#e8f8ef" : value === "Fail" || value === "Unsatisfactory" ? "#fde8e8" : value === "Advisory" ? "#fff8e8" : "#f0f0f0" }}>{value || "—"}</span>
+    </div>;
+  };
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onClose} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2" }}>PDF Preview</h2>
+        <div style={{ flex:1 }}/>
+        <button onClick={downloadPDF} disabled={downloading} style={{ background:"#ff6b35", color:"#fff", border:"none", borderRadius:10, padding:"8px 18px", fontWeight:700, fontSize:13, cursor:"pointer", opacity: downloading ? 0.6 : 1 }}>
+          {downloading ? "Generating..." : "Download PDF"}
+        </button>
+      </div>
+      <div style={{ padding:"12px", overflowY:"auto" }}>
+        <div ref={certRef} style={{ background:"#fff", borderRadius:12, overflow:"hidden", maxWidth:800, margin:"0 auto" }}>
+          <div style={headerBg}>
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
+              <img src={APP_LOGO_SVG} style={{ height:48, objectFit:"contain" }} alt="Logo"/>
+              <div>
+                <div style={{ fontSize:20, fontWeight:800 }}>{certTitle}</div>
+                <div style={{ fontSize:12, opacity:0.85 }}>Fire Safety Certificate</div>
+              </div>
+            </div>
+            {certData.engineerName && <div style={{ fontSize:12, opacity:0.9 }}>{certData.engineerName}{certData.companyName ? ` · ${certData.companyName}` : ""}</div>}
+            {certData.bafeNumber && <div style={{ fontSize:11, opacity:0.8 }}>BAFE Reg: {certData.bafeNumber}</div>}
+          </div>
+          <div style={{ padding:"20px 24px" }}>
+            {renderField("Certificate Reference", certData.certRef)}
+            {renderField("Date", certData.date)}
+            {renderField("Client / Site Name", certData.siteName || certData.clientName)}
+            {renderField("Site Address", [certData.siteAddr1, certData.siteAddr2, certData.sitePostcode].filter(Boolean).join(", "))}
+            {renderField("Client Name", certData.clientName)}
+            {renderField("Client Email", certData.clientEmail)}
+            {renderField("Client Tel", certData.clientTel)}
+
+            {certType === "fra" && <>
+              <div style={{ ...sectionStyle, background:"#fff5f0", borderColor:"#ff6b35" }}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#d63031", marginBottom:10 }}>Premises Description</div>
+                {renderField("Building Age", certData.buildingAge)}
+                {renderField("Construction Type", certData.constructionType)}
+                {renderField("Number of Floors", certData.floors)}
+                {renderField("Floor Area (m²)", certData.floorArea)}
+                {renderField("Primary Use", certData.primaryUse)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Fire Hazards</div>
+                {renderField("Sources of Ignition", certData.ignitionSources)}
+                {renderField("Fuel Sources", certData.fuelSources)}
+                {renderField("Oxygen Sources", certData.oxygenSources)}
+                {renderField("Existing Controls", certData.existingControls)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Fire Protection Measures</div>
+                {renderPassFail("Compartmentation", certData.compartmentation)}
+                {renderPassFail("Fire Doors", certData.fireDoors)}
+                {renderPassFail("Fire Stopping", certData.fireStopping)}
+                {renderField("Alarm Category", certData.alarmCategory)}
+                {renderPassFail("Emergency Lighting", certData.emergencyLighting)}
+                {renderPassFail("Extinguishers", certData.extinguishers)}
+                {renderPassFail("Sprinklers", certData.sprinklers)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Management</div>
+                {renderField("Responsible Person", certData.responsiblePerson)}
+                {renderPassFail("Fire Safety Policy", certData.fireSafetyPolicy)}
+                {renderPassFail("Drill Records", certData.drillRecords)}
+                {renderPassFail("Maintenance Records", certData.maintenanceRecords)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Occupancy</div>
+                {renderField("Occupant Types", certData.occupantTypes)}
+                {renderField("Max Occupancy", certData.maxOccupancy)}
+                {renderField("Vulnerable Occupants", certData.vulnerableOccupants)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Risk Evaluation</div>
+                {renderField("Likelihood", certData.likelihood)}
+                {renderField("Consequence", certData.consequence)}
+                {renderField("Overall Risk Rating", certData.overallRisk)}
+                {renderField("Justification", certData.riskJustification)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Significant Findings & Action Plan</div>
+                {renderField("Findings", certData.significantFindings)}
+                {renderField("Action Plan", certData.actionPlan)}
+                {renderField("Priority", certData.actionPriority)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Conclusions</div>
+                {renderField("Overall Fire Risk Level", certData.overallFireRisk)}
+                {renderField("Critical Actions", certData.criticalActions)}
+                {renderField("Next Review Date", certData.nextReviewDate)}
+              </div>
+            </>}
+
+            {certType === "extinguisher" && <>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Extinguisher Details</div>
+                {renderField("Asset ID / Serial Number", certData.assetId)}
+                {renderField("Extinguisher Type", certData.extinguisherType)}
+                {renderField("Manufacturer", certData.manufacturer)}
+                {renderField("Model", certData.model)}
+                {renderField("Capacity", certData.capacity)}
+                {renderField("Location", certData.location)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Service Details</div>
+                {renderField("Service Type", certData.serviceType)}
+                {renderField("Work Carried Out", certData.workCarriedOut)}
+                {renderPassFail("Condition", certData.condition)}
+                {renderField("Service Label Attached", certData.serviceLabelAttached)}
+                {renderField("Next Service Due", certData.nextServiceDate)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Technician</div>
+                {renderField("BAFE SP101 ID", certData.bafeNumber)}
+                {renderField("Company BAFE SP101 Reg", certData.companyBafeReg)}
+              </div>
+            </>}
+
+            {certType === "emergencyLighting" && <>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Test Details</div>
+                {renderField("Test Type", certData.testType)}
+                {renderField("Duration Achieved", certData.durationAchieved)}
+                {renderPassFail("All Luminaires OK", certData.allLuminairesOk)}
+                {renderField("Faults Noted", certData.faultsNoted)}
+                {renderField("Repairs Carried Out", certData.repairs)}
+                {renderField("Lux Level Readings", certData.luxReadings)}
+                {renderPassFail("BS 5266 Compliance", certData.bs5266Compliance)}
+                {renderField("Next Test Date", certData.nextTestDate)}
+              </div>
+            </>}
+
+            {certType === "fireAlarm" && <>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>System Details</div>
+                {renderField("System Type", certData.systemType)}
+                {renderField("Panel Manufacturer", certData.panelManufacturer)}
+                {renderField("Service Scope", certData.serviceScope)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Test Results</div>
+                {renderField("Devices Tested", certData.devicesTested)}
+                {renderPassFail("Test Results", certData.testResults)}
+                {renderPassFail("Battery Condition", certData.batteryCondition)}
+                {renderField("Major Findings", certData.majorFindings)}
+                {renderField("Recommendations", certData.recommendations)}
+                {renderField("BAFE SP203-1 Number", certData.bafeNumber)}
+                {renderField("Next Service Date", certData.nextServiceDate)}
+              </div>
+            </>}
+
+            {certType === "fireDoor" && <>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Door Details</div>
+                {renderField("Door Unique ID", certData.doorId)}
+                {renderField("Door Location", certData.doorLocation)}
+                {renderField("Door Type", certData.doorType)}
+                {renderField("Fire Rating", certData.fireRating)}
+                {renderField("Quarterly Inspection (11m+ building)", certData.quarterlyInspection)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Inspection Checklist</div>
+                {renderPassFail("Door Leaf Condition", certData.doorLeaf)}
+                {renderPassFail("Frame / Architrave", certData.frameCondition)}
+                {renderPassFail("Seals (Smoke/Intumescent)", certData.seals)}
+                {renderPassFail("Hinges", certData.hinges)}
+                {renderPassFail("Latch / Lock", certData.latchLock)}
+                {renderPassFail("Door Closer", certData.doorCloser)}
+                {renderPassFail("Signage", certData.signage)}
+                {renderPassFail("Vision Panel", certData.visionPanel)}
+                {renderPassFail("Threshold Gap", certData.thresholdGap)}
+                {renderPassFail("Side / Head Gaps", certData.sideHeadGaps)}
+              </div>
+              <div style={sectionStyle}>
+                {renderPassFail("Overall Condition", certData.overallCondition)}
+                {renderField("Next Inspection Due", certData.nextInspectionDate)}
+              </div>
+            </>}
+
+            {renderField("Notes / Observations", certData.notes)}
+            {renderField("Overall Result", certData.result)}
+
+            {certData.signatureData && <div style={{ marginTop:16, borderTop:"1px solid #e0e0e0", paddingTop:12 }}>
+              <div style={labelStyle}>Signature</div>
+              <img src={certData.signatureData} style={{ maxWidth:260, height:80, objectFit:"contain" }} alt="Signature"/>
+            </div>}
+
+            <div style={{ marginTop:20, paddingTop:12, borderTop:"2px solid #ff6b35", display:"flex", justifyContent:"space-between", fontSize:10, color:"#888" }}>
+              <span>Ref: {certData.certRef || "—"}</span>
+              <span>Generated: {new Date().toLocaleDateString()}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Fire Safety Certificate Forms ──────────────────────────────────────────
+
+function FireRiskAssessmentForm({ onBack, onSave, currentUser }) {
+  const [certData, setCertData] = useState({
+    certRef: "FRA-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().split("T")[0],
+    siteName: "", siteAddr1: "", siteAddr2: "", sitePostcode: "",
+    clientName: "", clientEmail: "", clientTel: "",
+    buildingAge: "", constructionType: "", floors: "", floorArea: "", primaryUse: "",
+    ignitionSources: "", fuelSources: "", oxygenSources: "", existingControls: "",
+    compartmentation: "N/A", fireDoors: "N/A", fireStopping: "N/A",
+    alarmCategory: "", emergencyLighting: "N/A", extinguishers: "N/A", sprinklers: "N/A",
+    responsiblePerson: "", fireSafetyPolicy: "N/A", drillRecords: "N/A", maintenanceRecords: "N/A",
+    occupantTypes: "", maxOccupancy: "", vulnerableOccupants: "",
+    likelihood: "", consequence: "", overallRisk: "", riskJustification: "",
+    significantFindings: "", actionPlan: "", actionPriority: "",
+    overallFireRisk: "", criticalActions: "", nextReviewDate: "",
+    notes: "", result: "Satisfactory",
+    engineerName: "", companyName: "", bafeNumber: "",
+    signatureData: null,
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const sigCanvasRef = React.useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  React.useEffect(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
+      setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", bafeNumber: p.bafeNumber || "" }));
+    } catch {}
+  }, [currentUser]);
+
+  const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
+
+  const initSig = (canvas) => {
+    if (!canvas) return; sigCanvasRef.current = canvas;
+    const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round";
+  };
+  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
+  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
+  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
+  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+
+  const handleSave = () => {
+    const record = { ...certData, trade:"fire", type:"fra", savedAt: new Date().toISOString() };
+    if (onSave) onSave(record);
+    alert("Fire Risk Assessment saved!");
+    onBack();
+  };
+
+  if (showPDF) return <FireSafetyPDFPreview certData={certData} certType="fra" certTitle="Fire Risk Assessment — PAS 79-1:2020" onClose={() => setShowPDF(false)} />;
+
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
+  const sectionTitleStyle = { color:"#ff6b35", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(255,107,53,0.3)", paddingBottom:6 };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const toggleRow = (label, field) => (
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+      <span style={{ color:"rgba(255,255,255,0.8)", fontSize:13 }}>{label}</span>
+      <div style={{ display:"flex", gap:4 }}>
+        {["Pass","Fail","Advisory","N/A"].map(v => (
+          <button key={v} onClick={() => update(field, v)} style={{
+            padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", border:"none",
+            background: certData[field] === v ? (v==="Pass"?"#22c55e":v==="Fail"?"#ef4444":v==="Advisory"?"#f59e0b":"#555") : "rgba(255,255,255,0.08)",
+            color: certData[field] === v ? "#fff" : "rgba(255,255,255,0.5)",
+          }}>{v}</button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>Fire Risk Assessment</h2>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
+        <div style={sectionTitleStyle}>Client & Site Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Name</div><input style={inputStyle} value={certData.siteName} onChange={e => update("siteName", e.target.value)} placeholder="Building / premises name"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Address</div><input style={inputStyle} value={certData.siteAddr1} onChange={e => update("siteAddr1", e.target.value)} placeholder="Address line 1"/></div>
+        <div style={{ marginBottom:10 }}><input style={inputStyle} value={certData.siteAddr2} onChange={e => update("siteAddr2", e.target.value)} placeholder="Address line 2"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Postcode</div><input style={inputStyle} value={certData.sitePostcode} onChange={e => update("sitePostcode", e.target.value)} placeholder="Postcode"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Tel</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>1. Premises Description</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Building Age</div><input style={inputStyle} value={certData.buildingAge} onChange={e => update("buildingAge", e.target.value)} placeholder="e.g. Pre-1900, 1960s, 2020"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Construction Type</div><select style={selectStyle} value={certData.constructionType} onChange={e => update("constructionType", e.target.value)}><option value="">Select...</option><option>Traditional Brick/Block</option><option>Timber Frame</option><option>Steel Frame</option><option>Concrete Frame</option><option>Mixed Construction</option><option>Modular/Prefab</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Number of Floors</div><input type="number" style={inputStyle} value={certData.floors} onChange={e => update("floors", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Floor Area (m²)</div><input type="number" style={inputStyle} value={certData.floorArea} onChange={e => update("floorArea", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Primary Use</div><select style={selectStyle} value={certData.primaryUse} onChange={e => update("primaryUse", e.target.value)}><option value="">Select...</option><option>Office</option><option>Retail</option><option>Industrial / Warehouse</option><option>Residential (HMO)</option><option>Residential (Flats)</option><option>Education</option><option>Healthcare</option><option>Hospitality</option><option>Assembly / Leisure</option><option>Mixed Use</option></select></div>
+
+        <div style={sectionTitleStyle}>2. Fire Hazards</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Sources of Ignition</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.ignitionSources} onChange={e => update("ignitionSources", e.target.value)} placeholder="Electrical equipment, heating, cooking, smoking materials..."/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Fuel Sources</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.fuelSources} onChange={e => update("fuelSources", e.target.value)} placeholder="Combustible materials, furniture, paper, chemicals..."/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Oxygen Sources</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.oxygenSources} onChange={e => update("oxygenSources", e.target.value)} placeholder="Natural ventilation, mechanical ventilation, oxygen cylinders..."/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Existing Controls</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.existingControls} onChange={e => update("existingControls", e.target.value)} placeholder="Controls in place to mitigate identified hazards..."/></div>
+
+        <div style={sectionTitleStyle}>3. Fire Protection Measures</div>
+        {toggleRow("Compartmentation", "compartmentation")}
+        {toggleRow("Fire Doors", "fireDoors")}
+        {toggleRow("Fire Stopping", "fireStopping")}
+        <div style={{ marginBottom:10, marginTop:10 }}><div style={labelSt}>Alarm Category</div><select style={selectStyle} value={certData.alarmCategory} onChange={e => update("alarmCategory", e.target.value)}><option value="">Select...</option><option>L1</option><option>L2</option><option>L3</option><option>L4</option><option>L5</option><option>P1</option><option>P2</option><option>M</option></select></div>
+        {toggleRow("Emergency Lighting", "emergencyLighting")}
+        {toggleRow("Extinguishers", "extinguishers")}
+        {toggleRow("Sprinklers", "sprinklers")}
+
+        <div style={sectionTitleStyle}>4. Management</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Responsible Person</div><input style={inputStyle} value={certData.responsiblePerson} onChange={e => update("responsiblePerson", e.target.value)}/></div>
+        {toggleRow("Fire Safety Policy", "fireSafetyPolicy")}
+        {toggleRow("Drill Records", "drillRecords")}
+        {toggleRow("Maintenance Records", "maintenanceRecords")}
+
+        <div style={sectionTitleStyle}>5. Occupancy</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Occupant Types</div><input style={inputStyle} value={certData.occupantTypes} onChange={e => update("occupantTypes", e.target.value)} placeholder="Staff, visitors, residents..."/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Max Occupancy</div><input type="number" style={inputStyle} value={certData.maxOccupancy} onChange={e => update("maxOccupancy", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Vulnerable Occupants</div><input style={inputStyle} value={certData.vulnerableOccupants} onChange={e => update("vulnerableOccupants", e.target.value)} placeholder="Elderly, disabled, children..."/></div>
+
+        <div style={sectionTitleStyle}>6. Risk Evaluation</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Likelihood</div><select style={selectStyle} value={certData.likelihood} onChange={e => update("likelihood", e.target.value)}><option value="">Select...</option><option>Low</option><option>Medium</option><option>High</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Consequence</div><select style={selectStyle} value={certData.consequence} onChange={e => update("consequence", e.target.value)}><option value="">Select...</option><option>Low</option><option>Medium</option><option>High</option><option>Catastrophic</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Overall Risk Rating</div><select style={selectStyle} value={certData.overallRisk} onChange={e => update("overallRisk", e.target.value)}><option value="">Select...</option><option>Trivial</option><option>Tolerable</option><option>Moderate</option><option>Substantial</option><option>Intolerable</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Justification</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.riskJustification} onChange={e => update("riskJustification", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>7. Significant Findings & Action Plan</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Significant Findings</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.significantFindings} onChange={e => update("significantFindings", e.target.value)} placeholder="Description of significant findings..."/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Action Plan</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.actionPlan} onChange={e => update("actionPlan", e.target.value)} placeholder="Recommended actions..."/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Priority</div><select style={selectStyle} value={certData.actionPriority} onChange={e => update("actionPriority", e.target.value)}><option value="">Select...</option><option>Immediate</option><option>Within 1 Month</option><option>Within 3 Months</option><option>Routine</option></select></div>
+
+        <div style={sectionTitleStyle}>8. Conclusions</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Overall Fire Risk Level</div><select style={selectStyle} value={certData.overallFireRisk} onChange={e => update("overallFireRisk", e.target.value)}><option value="">Select...</option><option>Low</option><option>Medium</option><option>High</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Critical Actions Summary</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.criticalActions} onChange={e => update("criticalActions", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Next Review Date</div><input type="date" style={inputStyle} value={certData.nextReviewDate} onChange={e => update("nextReviewDate", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Notes & Result</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Notes / Observations</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Result</div>
+          <div style={{ display:"flex", gap:8 }}>
+            {["Satisfactory","Unsatisfactory"].map(v => (
+              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v==="Satisfactory"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={sectionTitleStyle}>Engineer Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Engineer Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>BAFE SP205 / IFE / IFSM Number</div><input style={inputStyle} value={certData.bafeNumber} onChange={e => update("bafeNumber", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Signature</div>
+        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
+          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
+            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
+          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+        </div>
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
+        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
+        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+      </div>
+    </div>
+  );
+}
+
+function FireExtinguisherForm({ onBack, onSave, currentUser }) {
+  const [certData, setCertData] = useState({
+    certRef: "FES-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().split("T")[0],
+    siteName: "", siteAddr1: "", siteAddr2: "", sitePostcode: "",
+    clientName: "", clientEmail: "", clientTel: "",
+    assetId: "", extinguisherType: "", manufacturer: "", model: "", capacity: "", location: "",
+    serviceType: "", workCarriedOut: "", condition: "Pass", serviceLabelAttached: "Yes",
+    nextServiceDate: "", notes: "", result: "Satisfactory",
+    engineerName: "", companyName: "", bafeNumber: "", companyBafeReg: "",
+    signatureData: null,
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const sigCanvasRef = React.useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  React.useEffect(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
+      setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", bafeNumber: p.bafeNumber || "", companyBafeReg: p.companyBafeReg || "" }));
+    } catch {}
+  }, [currentUser]);
+
+  const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
+  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
+  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
+  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
+  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
+  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+
+  const handleSave = () => {
+    const record = { ...certData, trade:"fire", type:"extinguisher_service", savedAt: new Date().toISOString() };
+    if (onSave) onSave(record);
+    alert("Fire Extinguisher Service Record saved!");
+    onBack();
+  };
+
+  if (showPDF) return <FireSafetyPDFPreview certData={certData} certType="extinguisher" certTitle="Fire Extinguisher Service — BS 5306" onClose={() => setShowPDF(false)} />;
+
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
+  const sectionTitleStyle = { color:"#ff6b35", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(255,107,53,0.3)", paddingBottom:6 };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>Fire Extinguisher Service</h2>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
+        <div style={sectionTitleStyle}>Client & Site Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Date of Service</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Name</div><input style={inputStyle} value={certData.siteName} onChange={e => update("siteName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Address</div><input style={inputStyle} value={certData.siteAddr1} onChange={e => update("siteAddr1", e.target.value)} placeholder="Address line 1"/></div>
+        <div style={{ marginBottom:10 }}><input style={inputStyle} value={certData.siteAddr2} onChange={e => update("siteAddr2", e.target.value)} placeholder="Address line 2"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.sitePostcode} onChange={e => update("sitePostcode", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Tel</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Extinguisher Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Asset ID / Serial Number</div><input style={inputStyle} value={certData.assetId} onChange={e => update("assetId", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Extinguisher Type</div><select style={selectStyle} value={certData.extinguisherType} onChange={e => update("extinguisherType", e.target.value)}><option value="">Select...</option><option>Water</option><option>CO₂</option><option>Powder</option><option>Foam</option><option>Wet Chemical</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Manufacturer</div><input style={inputStyle} value={certData.manufacturer} onChange={e => update("manufacturer", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Model</div><input style={inputStyle} value={certData.model} onChange={e => update("model", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Capacity</div><input style={inputStyle} value={certData.capacity} onChange={e => update("capacity", e.target.value)} placeholder="e.g. 6kg, 9L"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Location (Floor, Zone, Room)</div><input style={inputStyle} value={certData.location} onChange={e => update("location", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Service Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Service Type</div><select style={selectStyle} value={certData.serviceType} onChange={e => update("serviceType", e.target.value)}><option value="">Select...</option><option>Visual Inspection</option><option>Basic Annual Service</option><option>Extended Service</option><option>Hydrostatic Test</option><option>Discharge Test</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Work Carried Out</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.workCarriedOut} onChange={e => update("workCarriedOut", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Condition</div>
+          <div style={{ display:"flex", gap:8 }}>
+            {["Pass","Fail","Advisory"].map(v => (
+              <button key={v} onClick={() => update("condition", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.condition === v ? (v==="Pass"?"#22c55e":v==="Fail"?"#ef4444":"#f59e0b") : "rgba(255,255,255,0.15)", background: certData.condition === v ? (v==="Pass"?"rgba(34,197,94,0.15)":v==="Fail"?"rgba(239,68,68,0.15)":"rgba(245,158,11,0.15)") : "transparent", color: certData.condition === v ? (v==="Pass"?"#22c55e":v==="Fail"?"#ef4444":"#f59e0b") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Service Label Attached</div><div style={{ display:"flex", gap:8 }}>
+          {["Yes","No"].map(v => (<button key={v} onClick={() => update("serviceLabelAttached", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.serviceLabelAttached===v?"#ff6b35":"rgba(255,255,255,0.15)", background: certData.serviceLabelAttached===v?"rgba(255,107,53,0.15)":"transparent", color: certData.serviceLabelAttached===v?"#ff6b35":"rgba(255,255,255,0.5)" }}>{v}</button>))}
+        </div></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Next Service Due</div><input type="date" style={inputStyle} value={certData.nextServiceDate} onChange={e => update("nextServiceDate", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Notes</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Engineer Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Engineer Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>BAFE SP101 ID Card Number</div><input style={inputStyle} value={certData.bafeNumber} onChange={e => update("bafeNumber", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Company BAFE SP101 Reg Number</div><input style={inputStyle} value={certData.companyBafeReg} onChange={e => update("companyBafeReg", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Signature</div>
+        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
+          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
+            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
+          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+        </div>
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
+        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
+        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+      </div>
+    </div>
+  );
+}
+
+function EmergencyLightingForm({ onBack, onSave, currentUser }) {
+  const [certData, setCertData] = useState({
+    certRef: "ELT-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().split("T")[0],
+    siteName: "", siteAddr1: "", siteAddr2: "", sitePostcode: "",
+    clientName: "", clientEmail: "", clientTel: "",
+    testType: "", durationAchieved: "", allLuminairesOk: "Pass",
+    faultsNoted: "", repairs: "", luxReadings: "", bs5266Compliance: "Pass",
+    nextTestDate: "", notes: "", result: "Satisfactory",
+    engineerName: "", companyName: "", bafeNumber: "",
+    signatureData: null,
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const sigCanvasRef = React.useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  React.useEffect(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
+      setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "" }));
+    } catch {}
+  }, [currentUser]);
+
+  const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
+  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
+  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
+  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
+  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
+  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+
+  const handleSave = () => {
+    const record = { ...certData, trade:"fire", type:"emergency_lighting", savedAt: new Date().toISOString() };
+    if (onSave) onSave(record);
+    alert("Emergency Lighting Test saved!");
+    onBack();
+  };
+
+  if (showPDF) return <FireSafetyPDFPreview certData={certData} certType="emergencyLighting" certTitle="Emergency Lighting Test — BS 5266" onClose={() => setShowPDF(false)} />;
+
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
+  const sectionTitleStyle = { color:"#ff6b35", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(255,107,53,0.3)", paddingBottom:6 };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const toggleRow = (label, field) => (
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+      <span style={{ color:"rgba(255,255,255,0.8)", fontSize:13 }}>{label}</span>
+      <div style={{ display:"flex", gap:4 }}>
+        {["Pass","Fail","N/A"].map(v => (
+          <button key={v} onClick={() => update(field, v)} style={{
+            padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", border:"none",
+            background: certData[field] === v ? (v==="Pass"?"#22c55e":v==="Fail"?"#ef4444":"#555") : "rgba(255,255,255,0.08)",
+            color: certData[field] === v ? "#fff" : "rgba(255,255,255,0.5)",
+          }}>{v}</button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>Emergency Lighting Test</h2>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
+        <div style={sectionTitleStyle}>Client & Site Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Name</div><input style={inputStyle} value={certData.siteName} onChange={e => update("siteName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Address</div><input style={inputStyle} value={certData.siteAddr1} onChange={e => update("siteAddr1", e.target.value)} placeholder="Address line 1"/></div>
+        <div style={{ marginBottom:10 }}><input style={inputStyle} value={certData.siteAddr2} onChange={e => update("siteAddr2", e.target.value)} placeholder="Address line 2"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.sitePostcode} onChange={e => update("sitePostcode", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Tel</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Test Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Test Type</div><select style={selectStyle} value={certData.testType} onChange={e => update("testType", e.target.value)}><option value="">Select...</option><option>Monthly Functional Test</option><option>Annual Full Duration Test</option><option>3-Yearly Periodic Verification</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Duration Achieved</div><input style={inputStyle} value={certData.durationAchieved} onChange={e => update("durationAchieved", e.target.value)} placeholder="e.g. 3 hours"/></div>
+        {toggleRow("All Luminaires OK", "allLuminairesOk")}
+        <div style={{ marginBottom:10, marginTop:10 }}><div style={labelSt}>Faults Noted</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.faultsNoted} onChange={e => update("faultsNoted", e.target.value)} placeholder="Describe any faults found..."/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Repairs Carried Out</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.repairs} onChange={e => update("repairs", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Lux Level Readings</div><input style={inputStyle} value={certData.luxReadings} onChange={e => update("luxReadings", e.target.value)} placeholder="If applicable"/></div>
+        {toggleRow("BS 5266 Compliance", "bs5266Compliance")}
+        <div style={{ marginBottom:10, marginTop:10 }}><div style={labelSt}>Next Test Date</div><input type="date" style={inputStyle} value={certData.nextTestDate} onChange={e => update("nextTestDate", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Notes & Result</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Notes / Observations</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Result</div>
+          <div style={{ display:"flex", gap:8 }}>
+            {["Satisfactory","Unsatisfactory"].map(v => (
+              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v==="Satisfactory"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={sectionTitleStyle}>Engineer Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Engineer Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Signature</div>
+        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
+          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
+            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
+          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+        </div>
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
+        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
+        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+      </div>
+    </div>
+  );
+}
+
+function FireAlarmServiceForm({ onBack, onSave, currentUser }) {
+  const [certData, setCertData] = useState({
+    certRef: "FAS-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().split("T")[0],
+    siteName: "", siteAddr1: "", siteAddr2: "", sitePostcode: "",
+    clientName: "", clientEmail: "", clientTel: "",
+    systemType: "", panelManufacturer: "", serviceScope: "",
+    devicesTested: "", testResults: "Pass", batteryCondition: "Pass",
+    majorFindings: "", recommendations: "",
+    nextServiceDate: "", notes: "", result: "Satisfactory",
+    engineerName: "", companyName: "", bafeNumber: "",
+    signatureData: null,
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const sigCanvasRef = React.useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  React.useEffect(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
+      setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", bafeNumber: p.bafeNumber || "" }));
+    } catch {}
+  }, [currentUser]);
+
+  const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
+  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
+  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
+  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
+  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
+  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+
+  const handleSave = () => {
+    const record = { ...certData, trade:"fire", type:"fire_alarm", savedAt: new Date().toISOString() };
+    if (onSave) onSave(record);
+    alert("Fire Alarm Service Report saved!");
+    onBack();
+  };
+
+  if (showPDF) return <FireSafetyPDFPreview certData={certData} certType="fireAlarm" certTitle="Fire Alarm Service Report — BS 5839" onClose={() => setShowPDF(false)} />;
+
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
+  const sectionTitleStyle = { color:"#ff6b35", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(255,107,53,0.3)", paddingBottom:6 };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const toggleRow = (label, field) => (
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+      <span style={{ color:"rgba(255,255,255,0.8)", fontSize:13 }}>{label}</span>
+      <div style={{ display:"flex", gap:4 }}>
+        {["Pass","Fail","N/A"].map(v => (
+          <button key={v} onClick={() => update(field, v)} style={{
+            padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", border:"none",
+            background: certData[field] === v ? (v==="Pass"?"#22c55e":v==="Fail"?"#ef4444":"#555") : "rgba(255,255,255,0.08)",
+            color: certData[field] === v ? "#fff" : "rgba(255,255,255,0.5)",
+          }}>{v}</button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>Fire Alarm Service</h2>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
+        <div style={sectionTitleStyle}>Client & Site Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Name</div><input style={inputStyle} value={certData.siteName} onChange={e => update("siteName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Address</div><input style={inputStyle} value={certData.siteAddr1} onChange={e => update("siteAddr1", e.target.value)} placeholder="Address line 1"/></div>
+        <div style={{ marginBottom:10 }}><input style={inputStyle} value={certData.siteAddr2} onChange={e => update("siteAddr2", e.target.value)} placeholder="Address line 2"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.sitePostcode} onChange={e => update("sitePostcode", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Tel</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>System Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>System Type</div><select style={selectStyle} value={certData.systemType} onChange={e => update("systemType", e.target.value)}><option value="">Select...</option><option>Conventional</option><option>Addressable</option><option>Wireless</option><option>Hybrid</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Panel Manufacturer</div><input style={inputStyle} value={certData.panelManufacturer} onChange={e => update("panelManufacturer", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Service Scope</div><select style={selectStyle} value={certData.serviceScope} onChange={e => update("serviceScope", e.target.value)}><option value="">Select...</option><option>Weekly Test</option><option>6-Monthly Service</option><option>Annual Service</option></select></div>
+
+        <div style={sectionTitleStyle}>Test Results</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Devices Tested (Summary)</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.devicesTested} onChange={e => update("devicesTested", e.target.value)} placeholder="List zones/devices tested..."/></div>
+        {toggleRow("Test Results", "testResults")}
+        {toggleRow("Battery Condition", "batteryCondition")}
+        <div style={{ marginBottom:10, marginTop:10 }}><div style={labelSt}>Major Findings</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.majorFindings} onChange={e => update("majorFindings", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Recommendations</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.recommendations} onChange={e => update("recommendations", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Next Service Date</div><input type="date" style={inputStyle} value={certData.nextServiceDate} onChange={e => update("nextServiceDate", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Notes & Result</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Notes / Observations</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Result</div>
+          <div style={{ display:"flex", gap:8 }}>
+            {["Satisfactory","Unsatisfactory"].map(v => (
+              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v==="Satisfactory"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={sectionTitleStyle}>Engineer Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Engineer Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>BAFE SP203-1 Number</div><input style={inputStyle} value={certData.bafeNumber} onChange={e => update("bafeNumber", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Signature</div>
+        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
+          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
+            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
+          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+        </div>
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
+        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
+        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+      </div>
+    </div>
+  );
+}
+
+function FireDoorInspectionForm({ onBack, onSave, currentUser }) {
+  const [certData, setCertData] = useState({
+    certRef: "FDI-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().split("T")[0],
+    siteName: "", siteAddr1: "", siteAddr2: "", sitePostcode: "",
+    clientName: "", clientEmail: "", clientTel: "",
+    doorId: "", doorLocation: "", doorType: "", fireRating: "", quarterlyInspection: "No",
+    doorLeaf: "Pass", frameCondition: "Pass", seals: "Pass", hinges: "Pass",
+    latchLock: "Pass", doorCloser: "Pass", signage: "Pass", visionPanel: "N/A",
+    thresholdGap: "Pass", sideHeadGaps: "Pass",
+    overallCondition: "Satisfactory", nextInspectionDate: "",
+    notes: "", result: "Satisfactory",
+    engineerName: "", companyName: "",
+    signatureData: null,
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const sigCanvasRef = React.useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  React.useEffect(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
+      setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "" }));
+    } catch {}
+  }, [currentUser]);
+
+  const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
+  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
+  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
+  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
+  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
+  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+
+  const handleSave = () => {
+    const record = { ...certData, trade:"fire", type:"fire_door", savedAt: new Date().toISOString() };
+    if (onSave) onSave(record);
+    alert("Fire Door Inspection saved!");
+    onBack();
+  };
+
+  if (showPDF) return <FireSafetyPDFPreview certData={certData} certType="fireDoor" certTitle="Fire Door Inspection — BS 8214" onClose={() => setShowPDF(false)} />;
+
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
+  const sectionTitleStyle = { color:"#ff6b35", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(255,107,53,0.3)", paddingBottom:6 };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const toggleRow = (label, field) => (
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+      <span style={{ color:"rgba(255,255,255,0.8)", fontSize:13 }}>{label}</span>
+      <div style={{ display:"flex", gap:4 }}>
+        {["Pass","Fail","Advisory","N/A"].map(v => (
+          <button key={v} onClick={() => update(field, v)} style={{
+            padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", border:"none",
+            background: certData[field] === v ? (v==="Pass"?"#22c55e":v==="Fail"?"#ef4444":v==="Advisory"?"#f59e0b":"#555") : "rgba(255,255,255,0.08)",
+            color: certData[field] === v ? "#fff" : "rgba(255,255,255,0.5)",
+          }}>{v}</button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>Fire Door Inspection</h2>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
+        <div style={sectionTitleStyle}>Client & Site Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Inspection Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Building Name</div><input style={inputStyle} value={certData.siteName} onChange={e => update("siteName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Building Address</div><input style={inputStyle} value={certData.siteAddr1} onChange={e => update("siteAddr1", e.target.value)} placeholder="Address line 1"/></div>
+        <div style={{ marginBottom:10 }}><input style={inputStyle} value={certData.siteAddr2} onChange={e => update("siteAddr2", e.target.value)} placeholder="Address line 2"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.sitePostcode} onChange={e => update("sitePostcode", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Tel</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Door Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Door Unique ID</div><input style={inputStyle} value={certData.doorId} onChange={e => update("doorId", e.target.value)} placeholder="e.g. FD-001"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Door Location (Floor, Zone)</div><input style={inputStyle} value={certData.doorLocation} onChange={e => update("doorLocation", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Door Type</div><input style={inputStyle} value={certData.doorType} onChange={e => update("doorType", e.target.value)} placeholder="e.g. Single leaf, double leaf"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Fire Rating</div><select style={selectStyle} value={certData.fireRating} onChange={e => update("fireRating", e.target.value)}><option value="">Select...</option><option>FD30</option><option>FD60</option><option>FD90</option><option>FD120</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Quarterly Inspection (Communal 11m+ Building)</div><div style={{ display:"flex", gap:8 }}>
+          {["Yes","No"].map(v => (<button key={v} onClick={() => update("quarterlyInspection", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.quarterlyInspection===v?"#ff6b35":"rgba(255,255,255,0.15)", background: certData.quarterlyInspection===v?"rgba(255,107,53,0.15)":"transparent", color: certData.quarterlyInspection===v?"#ff6b35":"rgba(255,255,255,0.5)" }}>{v}</button>))}
+        </div></div>
+
+        <div style={sectionTitleStyle}>Inspection Checklist</div>
+        {toggleRow("Door Leaf Condition", "doorLeaf")}
+        {toggleRow("Frame / Architrave Condition", "frameCondition")}
+        {toggleRow("Seals (Smoke/Intumescent)", "seals")}
+        {toggleRow("Hinges (Type, Qty, Fixings)", "hinges")}
+        {toggleRow("Latch / Lock", "latchLock")}
+        {toggleRow("Door Closer (Type, Operation)", "doorCloser")}
+        {toggleRow("Signage", "signage")}
+        {toggleRow("Vision Panel", "visionPanel")}
+        {toggleRow("Threshold Gap", "thresholdGap")}
+        {toggleRow("Side / Head Gaps", "sideHeadGaps")}
+
+        <div style={sectionTitleStyle}>Overall Assessment</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Overall Condition</div>
+          <div style={{ display:"flex", gap:8 }}>
+            {["Satisfactory","Unsatisfactory"].map(v => (
+              <button key={v} onClick={() => { update("overallCondition", v); update("result", v); }} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.overallCondition === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.overallCondition === v ? (v==="Satisfactory"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.overallCondition === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Next Inspection Due</div><input type="date" style={inputStyle} value={certData.nextInspectionDate} onChange={e => update("nextInspectionDate", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Notes / Observations</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Inspector Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Inspector Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Signature</div>
+        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
+          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
+            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
+          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+        </div>
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
+        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
+        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Fire Safety Dashboard ──────────────────────────────────────────────────
+
+function FireSafetyDashboard({ onBack, currentUser, onSaveCert, records, invoices, quotes, accountReports, yearlyReports }) {
+  const [fireScreen, setFireScreen] = useState(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [showFeatureSuggest, setShowFeatureSuggest] = useState(false);
+
+  if (fireScreen === "fra") return <FireRiskAssessmentForm onBack={() => setFireScreen(null)} onSave={onSaveCert} currentUser={currentUser} />;
+  if (fireScreen === "extinguisher") return <FireExtinguisherForm onBack={() => setFireScreen(null)} onSave={onSaveCert} currentUser={currentUser} />;
+  if (fireScreen === "emergencyLighting") return <EmergencyLightingForm onBack={() => setFireScreen(null)} onSave={onSaveCert} currentUser={currentUser} />;
+  if (fireScreen === "fireAlarm") return <FireAlarmServiceForm onBack={() => setFireScreen(null)} onSave={onSaveCert} currentUser={currentUser} />;
+  if (fireScreen === "fireDoor") return <FireDoorInspectionForm onBack={() => setFireScreen(null)} onSave={onSaveCert} currentUser={currentUser} />;
+
+  function FirePillBtn({ onClick, label, color="#ff6b35", iconBg, children }) {
+    const [hov, setHov] = useState(false);
+    const textColor = color === "#fff200" ? "#111" : "#fff";
+    const circleBg = iconBg || color;
+    const btnGradient = `linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, ${color} 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), ${color}`;
+    const circleGradient = `linear-gradient(180deg, rgba(255,255,255,0.22) 0%, ${circleBg} 50%, rgba(0,0,0,0.22) 100%)`;
+    return (
+      <div onClick={onClick} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+        style={{
+          display:"flex", alignItems:"center", cursor:"pointer", borderRadius:999, overflow:"hidden",
+          background: btnGradient,
+          boxShadow: hov ? "0 8px 28px rgba(0,0,0,0.42), 0 2px 10px rgba(0,0,0,0.22)" : "0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)",
+          transition:"all 0.16s ease",
+          transform: hov ? "translateY(-2px) scale(1.018)" : "translateY(0) scale(1)",
+          position:"relative", width:"100%", maxWidth:360, height:76,
+        }}>
+        <div style={{
+          width:58, height:58, borderRadius:"50%", flexShrink:0,
+          background: circleGradient,
+          border:"2.5px solid rgba(255,255,255,0.45)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          margin:"0 0 0 9px",
+          boxShadow:"0 3px 10px rgba(0,0,0,0.30), inset 0 1px 3px rgba(255,255,255,0.25)",
+          position:"relative", zIndex:3, boxSizing:"border-box",
+        }}>{children}</div>
+        <span style={{
+          flex:1, color: textColor, fontSize:15, fontWeight:800,
+          fontFamily:"'Segoe UI',sans-serif",
+          paddingLeft:18, paddingRight:8,
+          letterSpacing:0.8, textTransform:"uppercase",
+          textShadow: textColor==="#111" ? "0 1px 2px rgba(255,255,255,0.4)" : "0 1px 4px rgba(0,0,0,0.35)",
+          position:"relative", zIndex:3,
+        }}>{label}</span>
+        <svg style={{ flexShrink:0, marginRight:22, opacity:0.85, position:"relative", zIndex:3 }} width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M4 2.5L9.5 7L4 11.5" stroke={textColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+    );
+  }
+
+  // Finance stats
+  const now=new Date(), tm=now.getMonth(), ty=now.getFullYear();
+  const lm=tm===0?11:tm-1, ly=tm===0?ty-1:ty;
+  const isT=d=>{try{const x=new Date(d);return x.getMonth()===tm&&x.getFullYear()===ty;}catch{return false;}};
+  const isL=d=>{try{const x=new Date(d);return x.getMonth()===lm&&x.getFullYear()===ly;}catch{return false;}};
+  const fireRecs=(records||[]).filter(r=>r.trade==="fire"&&!r.isDemo);
+  const frT=fireRecs.filter(r=>isT(r.savedAt)).length, frL=fireRecs.filter(r=>isL(r.savedAt)).length;
+  const frTotal=fireRecs.length;
+  const frPending=fireRecs.filter(r=>{
+    const nd=r.nextReviewDate||r.nextServiceDate||r.nextTestDate||r.nextInspectionDate;
+    if(!nd) return false;
+    const d=new Date(nd), diff=(d-now)/(1000*60*60*24);
+    return diff<=30&&diff>=-7;
+  }).length;
+  const pct=(c,p)=>p===0?(c>0?100:0):Math.round(((c-p)/p)*100);
+  const FinCard=({label,count,prev})=>{const ch=pct(count,prev),up=ch>0,nl=ch===0;return(
+    <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:14,padding:"10px 10px 8px",backdropFilter:"blur(4px)",minWidth:0}}>
+      <div style={{color:"rgba(255,255,255,0.55)",fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:6,lineHeight:1.3}}>{label}</div>
+      <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:4}}>
+        <span style={{color:nl?"#fff200":up?"#4ade80":"#f87171",fontSize:12}}>{nl?"→":up?"↑":"↓"}</span>
+        <span style={{color:"#fff",fontWeight:800,fontSize:22,lineHeight:1}}>{count}</span>
+      </div>
+      <div style={{color:nl?"rgba(255,255,255,0.45)":up?"#4ade80":"#f87171",fontSize:9,fontWeight:600}}>{ch===0?"0% from last month":`${Math.abs(ch)}% ${up?"▲":"▼"} last month`}</div>
+    </div>);};
+
+  return (
+    <div style={{ minHeight:"100dvh", background:`linear-gradient(160deg,${DARK_BLUE} 0%,${BLUE} 60%,${DARK_BLUE} 100%)`, display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      {/* Header */}
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack}
+          style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Gas Safety App"/>
+        <div style={{ flex:1 }}>
+          <div style={{ color:"#fff", fontWeight:800, fontSize:18 }}>Fire Safety</div>
+          <div style={{ color:"rgba(255,255,255,0.7)", fontSize:12 }}>BAFE Registered</div>
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
+          <span style={{ color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600 }}>{currentUser?.displayName || currentUser?.username}</span>
+          <span style={{ background:"#ff6b35", color:"#fff", fontSize:9, fontWeight:800, padding:"2px 8px", borderRadius:6, letterSpacing:0.8 }}>PRO</span>
+        </div>
+      </div>
+
+      {/* Stat widgets */}
+      <div style={{width:"100%",display:"flex",gap:6,marginBottom:8,padding:"0 12px",boxSizing:"border-box"}}>
+        <FinCard label="Total Certs" count={frTotal} prev={frTotal}/>
+        <FinCard label="This Month" count={frT} prev={frL}/>
+        <FinCard label="Pending Reviews" count={frPending} prev={0}/>
+      </div>
+
+      {/* Charts row */}
+      <div style={{width:"100%",display:"flex",gap:6,marginBottom:4,marginTop:4,padding:"0 12px",boxSizing:"border-box"}}>
+        <div style={{flex:1.2,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 10px 8px",backdropFilter:"blur(4px)",minWidth:0}}>
+          <div style={{color:"rgba(255,255,255,0.6)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Monthly Overview</div>
+          <div style={{color:"rgba(255,255,255,0.35)",fontSize:11,textAlign:"center",padding:"12px 4px",lineHeight:1.6}}>No reports yet.<br/>Import bank statements<br/>to see your chart.</div>
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,background:"#4ade80",borderRadius:2}}/><span style={{fontSize:9,color:"rgba(255,255,255,0.55)"}}>Income</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,background:"#f87171",borderRadius:2}}/><span style={{fontSize:9,color:"rgba(255,255,255,0.55)"}}>Expenses</span></div>
+          </div>
+        </div>
+        <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 12px",backdropFilter:"blur(4px)",display:"flex",flexDirection:"column",minWidth:0}}>
+          <div style={{color:"rgba(255,255,255,0.6)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Annual Turnover</div>
+          <div style={{color:"rgba(255,255,255,0.35)",fontSize:11,textAlign:"center",flex:1,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1.6}}>No yearly report yet.<br/>Import bank statements<br/>to see your company turnover.</div>
+        </div>
+      </div>
+
+      {/* Pill Buttons */}
+      <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 88px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, marginBottom:4, textAlign:"center", letterSpacing:0.3, textTransform:"uppercase", fontWeight:600 }}>What would you like to do today?</p>
+
+        <FirePillBtn onClick={() => setFireScreen("fra")} label="Fire Risk Assessment" color="#ff6b35" iconBg="#d63031">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM8 15h8v2H8v-2zm0-4h8v2H8v-2z"/></svg>
+        </FirePillBtn>
+        <FirePillBtn onClick={() => setFireScreen("extinguisher")} label="Fire Extinguisher Service" color="#ff6b35" iconBg="#c0392b">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C12 2 5 10 5 15C5 18.87 8.13 22 12 22C15.87 22 19 18.87 19 15C19 10 12 2 12 2Z"/></svg>
+        </FirePillBtn>
+        <FirePillBtn onClick={() => setFireScreen("emergencyLighting")} label="Emergency Lighting Test" color="#ff6b35" iconBg="#e17055">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+        </FirePillBtn>
+        <FirePillBtn onClick={() => setFireScreen("fireAlarm")} label="Fire Alarm Service" color="#ff6b35" iconBg="#b71c1c">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+        </FirePillBtn>
+        <FirePillBtn onClick={() => setFireScreen("fireDoor")} label="Fire Door Inspection" color="#ff6b35" iconBg="#8d6e63">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M19 19V5c0-1.1-.9-2-2-2H7c-1.1 0-2 .9-2 2v14H3v2h18v-2h-2zm-4-6h-2v-2h2v2z"/></svg>
+        </FirePillBtn>
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding:"14px 20px 20px", display:"flex", alignItems:"center", justifyContent:"center", gap:10, flexWrap:"wrap" }}>
+        <p style={{ color:"rgba(255,255,255,0.5)", fontSize:12, margin:0 }}>BAFE Registered · Fire Safety</p>
+        <button onClick={() => setShowFeedback(true)}
+          style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:20, padding:"6px 16px", color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="white" strokeWidth="1.5"/><rect x="6.25" y="6" width="1.5" height="4.5" rx=".75" fill="white"/><circle cx="7" cy="4" r=".85" fill="white"/></svg>
+          Support
+        </button>
+        <button onClick={() => setShowFeatureSuggest(true)}
+          style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:20, padding:"6px 16px", color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#fff200" strokeWidth="1.5"/><path d="M7 4v3M7 9v.5" stroke="#fff200" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          Suggest a Feature
+        </button>
+      </div>
+      {showFeatureSuggest && <SuggestFeatureModal onClose={() => setShowFeatureSuggest(false)} />}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── END MULTI-TRADE COMPONENTS ──────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ██ PLUMBING & LEGIONELLA MODULE
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── PLUMBING & LEGIONELLA COMPONENTS ───────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Plumbing PDF Preview (shared by all plumbing cert types) ────────────────
+function PlumbingPDFPreview({ title, form, fields, onClose }) {
+  const pdfRef = useRef(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const fmtDate = (d) => {
+    if (!d) return "";
+    const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+    return d;
+  };
+
+  const sigImage = form.sigImage || (() => { try { return localStorage.getItem(sk("gsc_engineer_sig")) || ""; } catch(e) { return ""; } })();
+
+  const downloadPDF = async () => {
+    setDownloading(true);
+    try {
+      await Promise.all([
+        new Promise((res,rej)=>{ if(window.html2canvas) return res(); const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); }),
+        new Promise((res,rej)=>{ if(window.jspdf) return res(); const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); }),
+      ]);
+      const el = pdfRef.current;
+      const RENDER_WIDTH = 1200;
+      const prevWidth = el.style.width, prevMax = el.style.maxWidth, prevMin = el.style.minWidth;
+      el.style.width = RENDER_WIDTH+"px"; el.style.maxWidth = RENDER_WIDTH+"px"; el.style.minWidth = RENDER_WIDTH+"px";
+      await new Promise(r=>setTimeout(r,500));
+      const canvas = await window.html2canvas(el,{scale:2,useCORS:true,logging:false,width:RENDER_WIDTH,height:el.scrollHeight,windowWidth:RENDER_WIDTH,scrollX:0,scrollY:0});
+      el.style.width = prevWidth; el.style.maxWidth = prevMax; el.style.minWidth = prevMin;
+      const {jsPDF} = window.jspdf;
+      const pdf = new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+      const pdfW=210, pdfH=297;
+      const imgAspect=canvas.width/canvas.height, pageAspect=pdfW/pdfH;
+      let drawW,drawH,drawX,drawY;
+      if(imgAspect>pageAspect){drawW=pdfW;drawH=pdfW/imgAspect;drawX=0;drawY=(pdfH-drawH)/2;}
+      else{drawH=pdfH;drawW=pdfH*imgAspect;drawX=(pdfW-drawW)/2;drawY=0;}
+      pdf.addImage(canvas.toDataURL("image/jpeg",0.97),"JPEG",drawX,drawY,drawW,drawH);
+      const filename = (form.siteAddress||form.siteName||"plumbing-cert").replace(/[^a-zA-Z0-9 \-_]/g,"").trim().replace(/\s+/g,"_") + "_" + title.replace(/\s+/g,"_") + ".pdf";
+      pdf.save(filename);
+    } catch(e) { alert("Could not generate PDF: "+e.message); }
+    setDownloading(false);
+  };
+
+  const cellStyle = { border:"1px solid #ccc", padding:"6px 10px", fontSize:12 };
+  const thStyle = { ...cellStyle, background:"#00b4d8", color:"#fff", fontWeight:700, fontSize:11 };
+  const sectionTitleStyle = { background:"#0d1f2d", color:"#fff", padding:"8px 12px", fontWeight:700, fontSize:13, margin:"16px 0 0" };
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:"#1a1a2e", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ background:"#0d1f2d", padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:8, padding:"6px 14px", color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer" }}>← Back</button>
+        <span style={{ color:"#fff", fontWeight:700, fontSize:15 }}>{title}</span>
+        <button onClick={downloadPDF} disabled={downloading} style={{ background:"#00b4d8", color:"#fff", border:"none", borderRadius:20, padding:"8px 18px", fontWeight:700, fontSize:13, cursor:"pointer" }}>
+          {downloading?"...":"⬇ Download"}
+        </button>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", overflowX:"hidden", padding:16, paddingBottom:80 }}>
+        <div ref={pdfRef} style={{ background:"#fff", padding:24, width:"100%", maxWidth:"min(760px, calc(100vw - 32px))", margin:"0 auto", fontFamily:"Arial, sans-serif", fontSize:13, boxSizing:"border-box" }}>
+          {/* Header */}
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:"3px solid #00b4d8", paddingBottom:12, marginBottom:16 }}>
+            <div>
+              <img src={APP_LOGO_SVG} style={{ height:40, objectFit:"contain" }} alt="Gas Safety App"/>
+              <div style={{ fontSize:10, color:"#666", marginTop:4 }}>Plumbing & Legionella</div>
+            </div>
+            <div style={{ textAlign:"right" }}>
+              <div style={{ fontSize:18, fontWeight:800, color:"#0d1f2d" }}>{title}</div>
+              <div style={{ fontSize:11, color:"#666" }}>Ref: {form.certRef || "—"}</div>
+              <div style={{ fontSize:11, color:"#666" }}>Date: {fmtDate(form.date) || fmtDate(form.inspectionDate) || "—"}</div>
+            </div>
+          </div>
+
+          {/* Dynamic field sections */}
+          {fields.map((section, si) => (
+            <div key={si}>
+              <div style={sectionTitleStyle}>{section.title}</div>
+              <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                <tbody>
+                  {section.rows.map((row, ri) => (
+                    <tr key={ri}>
+                      <td style={{ ...thStyle, width:"35%" }}>{row.label}</td>
+                      <td style={cellStyle}>{row.value || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+
+          {/* Signature */}
+          {sigImage && (
+            <div style={{ marginTop:20, borderTop:"1px solid #ddd", paddingTop:12 }}>
+              <div style={{ fontSize:11, color:"#666", marginBottom:6 }}>Engineer Signature:</div>
+              <img src={sigImage} style={{ maxWidth:200, height:60, objectFit:"contain" }} alt="Signature"/>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div style={{ marginTop:20, borderTop:"2px solid #00b4d8", paddingTop:8, textAlign:"center" }}>
+            <div style={{ fontSize:10, color:"#888" }}>Generated by Gas Safety App — Plumbing & Legionella Module</div>
+            <div style={{ fontSize:10, color:"#888" }}>Certificate Reference: {form.certRef || "—"}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Plumbing Signature Pad ──────────────────────────────────────────────────
+function PlumbingSigPad({ onSign }) {
+  const canvasRef = useRef(null);
+  const [drawing, setDrawing] = useState(false);
+
+  const getPos = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+  };
+
+  const start = (e) => { e.preventDefault(); setDrawing(true); const ctx = canvasRef.current.getContext("2d"); const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+  const draw = (e) => { if (!drawing) return; e.preventDefault(); const ctx = canvasRef.current.getContext("2d"); const p = getPos(e); ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#000"; ctx.lineTo(p.x, p.y); ctx.stroke(); };
+  const end = () => { setDrawing(false); if (onSign) onSign(canvasRef.current.toDataURL()); };
+  const clear = () => { const ctx = canvasRef.current.getContext("2d"); ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); if (onSign) onSign(""); };
+
+  return (
+    <div>
+      <canvas ref={canvasRef} width={320} height={120}
+        style={{ border:"1px solid #ccc", borderRadius:8, background:"#fafafa", touchAction:"none", width:"100%", maxWidth:320, height:120 }}
+        onMouseDown={start} onMouseMove={draw} onMouseUp={end} onMouseLeave={end}
+        onTouchStart={start} onTouchMove={draw} onTouchEnd={end}/>
+      <button onClick={clear} style={{ marginTop:4, fontSize:11, color:"#c00", background:"none", border:"none", cursor:"pointer" }}>Clear Signature</button>
+    </div>
+  );
+}
+
+// ── Legionella Risk Assessment Form ─────────────────────────────────────────
+function PlumbingLRAForm({ onBack, onSave, currentUser }) {
+  const [form, setForm] = useState({
+    certRef: "LRA-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().slice(0,10),
+    assessorName: "", assessorQualifications: "",
+    responsiblePerson: "", responsiblePersonContact: "",
+    siteName: "", siteAddress: "", sitePostcode: "",
+    waterSystemsHot: false, waterSystemsCold: false, waterSystemsShowers: false,
+    waterSystemsCoolingTowers: false, waterSystemsSpa: false, waterSystemsOther: "",
+    assetRegister: "",
+    riskBacterialGrowth: "Low", riskExposure: "Low", atRiskGroups: "",
+    riskRatingHotWater: "Low", riskRatingColdWater: "Low", riskRatingShowers: "Low",
+    controlMeasuresInPlace: "", controlMeasuresRecommended: "",
+    tempReadings: "",
+    correctiveActions: "", correctivePriority: "Routine",
+    overallRiskLevel: "Low",
+    reviewDate: "",
+    notes: "", result: "Satisfactory", sigImage: ""
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const s = (k,v) => setForm(f=>({...f,[k]:v}));
+  const labelStyle = { display:"block", fontSize:12, fontWeight:600, color:"#334", marginBottom:4 };
+  const inputStyle = { width:"100%", padding:"10px 12px", border:"1px solid #d0d5dd", borderRadius:8, fontSize:14, boxSizing:"border-box", marginBottom:12 };
+  const sectionStyle = { background:"#fff", borderRadius:14, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" };
+  const sectionTitleStyle = { fontSize:15, fontWeight:700, color:"#0d1f2d", marginBottom:12, display:"flex", alignItems:"center", gap:8 };
+  const checkStyle = { display:"flex", alignItems:"center", gap:8, marginBottom:8, fontSize:13 };
+  const selectStyle = { ...inputStyle, background:"#fff" };
+
+  if (showPDF) {
+    const fields = [
+      { title: "Assessment Details", rows: [
+        { label: "Reference", value: form.certRef },
+        { label: "Date", value: form.date },
+        { label: "Assessor", value: form.assessorName },
+        { label: "Qualifications", value: form.assessorQualifications },
+        { label: "Responsible Person", value: form.responsiblePerson },
+        { label: "Contact", value: form.responsiblePersonContact },
+      ]},
+      { title: "Site Details", rows: [
+        { label: "Site Name", value: form.siteName },
+        { label: "Address", value: form.siteAddress },
+        { label: "Postcode", value: form.sitePostcode },
+      ]},
+      { title: "Water Systems Present", rows: [
+        { label: "Hot Water", value: form.waterSystemsHot ? "Yes" : "No" },
+        { label: "Cold Water", value: form.waterSystemsCold ? "Yes" : "No" },
+        { label: "Showers", value: form.waterSystemsShowers ? "Yes" : "No" },
+        { label: "Cooling Towers", value: form.waterSystemsCoolingTowers ? "Yes" : "No" },
+        { label: "Spa/Pool", value: form.waterSystemsSpa ? "Yes" : "No" },
+        { label: "Other", value: form.waterSystemsOther },
+      ]},
+      { title: "Asset Register", rows: [
+        { label: "Assets (tanks, calorifiers, outlets, TMVs)", value: form.assetRegister },
+      ]},
+      { title: "Risk Assessment", rows: [
+        { label: "Bacterial Growth Likelihood", value: form.riskBacterialGrowth },
+        { label: "Exposure Risk", value: form.riskExposure },
+        { label: "At-Risk Groups", value: form.atRiskGroups },
+        { label: "Hot Water Risk Rating", value: form.riskRatingHotWater },
+        { label: "Cold Water Risk Rating", value: form.riskRatingColdWater },
+        { label: "Showers Risk Rating", value: form.riskRatingShowers },
+      ]},
+      { title: "Control Measures", rows: [
+        { label: "In Place", value: form.controlMeasuresInPlace },
+        { label: "Recommended", value: form.controlMeasuresRecommended },
+      ]},
+      { title: "Temperature Readings", rows: [
+        { label: "Readings at Key Outlets", value: form.tempReadings },
+      ]},
+      { title: "Corrective Actions", rows: [
+        { label: "Actions Required", value: form.correctiveActions },
+        { label: "Priority", value: form.correctivePriority },
+      ]},
+      { title: "Outcome", rows: [
+        { label: "Overall Risk Level", value: form.overallRiskLevel },
+        { label: "Result", value: form.result },
+        { label: "Review Date", value: form.reviewDate },
+        { label: "Notes", value: form.notes },
+      ]},
+    ];
+    return <PlumbingPDFPreview title="Legionella Risk Assessment" form={form} fields={fields} onClose={()=>setShowPDF(false)} />;
+  }
+
+  const handleSave = () => {
+    const rec = { ...form, trade:"plumbing", type:"lra", savedAt:new Date().toISOString() };
+    if (onSave) onSave(rec);
+    alert("Legionella Risk Assessment saved!");
+  };
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ background:"linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div style={{ flex:1 }}>
+          <div style={{ color:"#fff", fontWeight:800, fontSize:16 }}>Legionella Risk Assessment</div>
+          <div style={{ color:"rgba(255,255,255,0.6)", fontSize:11 }}>ACOP L8 / BS 8580-1:2019</div>
+        </div>
+      </div>
+
+      <div style={{ padding:"12px 16px 100px", maxWidth:600, margin:"0 auto" }}>
+        {/* Assessment Details */}
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>📋 Assessment Details</div>
+          <label style={labelStyle}>Reference</label>
+          <input value={form.certRef} onChange={e=>s("certRef",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Date</label>
+          <input type="date" value={form.date} onChange={e=>s("date",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Assessor Name</label>
+          <input value={form.assessorName} onChange={e=>s("assessorName",e.target.value)} style={inputStyle} placeholder="Full name"/>
+          <label style={labelStyle}>Qualifications</label>
+          <input value={form.assessorQualifications} onChange={e=>s("assessorQualifications",e.target.value)} style={inputStyle} placeholder="e.g. Legionella Risk Assessor, City & Guilds"/>
+          <label style={labelStyle}>Responsible Person</label>
+          <input value={form.responsiblePerson} onChange={e=>s("responsiblePerson",e.target.value)} style={inputStyle} placeholder="Name"/>
+          <label style={labelStyle}>Contact Details</label>
+          <input value={form.responsiblePersonContact} onChange={e=>s("responsiblePersonContact",e.target.value)} style={inputStyle} placeholder="Phone / Email"/>
+        </div>
+
+        {/* Site Details */}
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>🏢 Site Details</div>
+          <label style={labelStyle}>Site Name</label>
+          <input value={form.siteName} onChange={e=>s("siteName",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Address</label>
+          <input value={form.siteAddress} onChange={e=>s("siteAddress",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Postcode</label>
+          <input value={form.sitePostcode} onChange={e=>s("sitePostcode",e.target.value)} style={inputStyle}/>
+        </div>
+
+        {/* Water Systems */}
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>🚿 Water Systems Present</div>
+          <div style={checkStyle}><input type="checkbox" checked={form.waterSystemsHot} onChange={e=>s("waterSystemsHot",e.target.checked)}/><span>Hot Water System</span></div>
+          <div style={checkStyle}><input type="checkbox" checked={form.waterSystemsCold} onChange={e=>s("waterSystemsCold",e.target.checked)}/><span>Cold Water System</span></div>
+          <div style={checkStyle}><input type="checkbox" checked={form.waterSystemsShowers} onChange={e=>s("waterSystemsShowers",e.target.checked)}/><span>Showers</span></div>
+          <div style={checkStyle}><input type="checkbox" checked={form.waterSystemsCoolingTowers} onChange={e=>s("waterSystemsCoolingTowers",e.target.checked)}/><span>Cooling Towers</span></div>
+          <div style={checkStyle}><input type="checkbox" checked={form.waterSystemsSpa} onChange={e=>s("waterSystemsSpa",e.target.checked)}/><span>Spa / Pool</span></div>
+          <label style={labelStyle}>Other Systems</label>
+          <input value={form.waterSystemsOther} onChange={e=>s("waterSystemsOther",e.target.value)} style={inputStyle} placeholder="Describe other water systems"/>
+        </div>
+
+        {/* Asset Register */}
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>📦 Asset Register</div>
+          <label style={labelStyle}>Assets (tanks, calorifiers, outlets, TMVs)</label>
+          <textarea value={form.assetRegister} onChange={e=>s("assetRegister",e.target.value)} style={{...inputStyle, minHeight:80}} placeholder="List water system assets..."/>
+        </div>
+
+        {/* Risk Assessment */}
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>⚠️ Risk Assessment</div>
+          <label style={labelStyle}>Likelihood of Bacterial Growth</label>
+          <select value={form.riskBacterialGrowth} onChange={e=>s("riskBacterialGrowth",e.target.value)} style={selectStyle}>
+            <option>Low</option><option>Medium</option><option>High</option><option>Very High</option>
+          </select>
+          <label style={labelStyle}>Exposure Risk</label>
+          <select value={form.riskExposure} onChange={e=>s("riskExposure",e.target.value)} style={selectStyle}>
+            <option>Low</option><option>Medium</option><option>High</option><option>Very High</option>
+          </select>
+          <label style={labelStyle}>At-Risk Groups</label>
+          <input value={form.atRiskGroups} onChange={e=>s("atRiskGroups",e.target.value)} style={inputStyle} placeholder="e.g. Elderly, immunocompromised"/>
+          <label style={labelStyle}>Hot Water Risk Rating</label>
+          <select value={form.riskRatingHotWater} onChange={e=>s("riskRatingHotWater",e.target.value)} style={selectStyle}>
+            <option>Low</option><option>Medium</option><option>High</option><option>Very High</option>
+          </select>
+          <label style={labelStyle}>Cold Water Risk Rating</label>
+          <select value={form.riskRatingColdWater} onChange={e=>s("riskRatingColdWater",e.target.value)} style={selectStyle}>
+            <option>Low</option><option>Medium</option><option>High</option><option>Very High</option>
+          </select>
+          <label style={labelStyle}>Showers Risk Rating</label>
+          <select value={form.riskRatingShowers} onChange={e=>s("riskRatingShowers",e.target.value)} style={selectStyle}>
+            <option>Low</option><option>Medium</option><option>High</option><option>Very High</option>
+          </select>
+        </div>
+
+        {/* Control Measures */}
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>🛡️ Control Measures</div>
+          <label style={labelStyle}>Control Measures In Place</label>
+          <textarea value={form.controlMeasuresInPlace} onChange={e=>s("controlMeasuresInPlace",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Describe existing controls..."/>
+          <label style={labelStyle}>Recommended Control Measures</label>
+          <textarea value={form.controlMeasuresRecommended} onChange={e=>s("controlMeasuresRecommended",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Recommended additional controls..."/>
+        </div>
+
+        {/* Temperature Readings */}
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>🌡️ Temperature Readings</div>
+          <label style={labelStyle}>Readings at Key Outlets</label>
+          <textarea value={form.tempReadings} onChange={e=>s("tempReadings",e.target.value)} style={{...inputStyle, minHeight:80}} placeholder="Outlet ID — Location — Temp °C — Pass/Fail"/>
+        </div>
+
+        {/* Corrective Actions */}
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>🔧 Corrective Actions</div>
+          <label style={labelStyle}>Actions Required</label>
+          <textarea value={form.correctiveActions} onChange={e=>s("correctiveActions",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="List corrective actions..."/>
+          <label style={labelStyle}>Priority</label>
+          <select value={form.correctivePriority} onChange={e=>s("correctivePriority",e.target.value)} style={selectStyle}>
+            <option>Immediate</option><option>1 Month</option><option>3 Months</option><option>Routine</option>
+          </select>
+        </div>
+
+        {/* Outcome */}
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>✅ Outcome</div>
+          <label style={labelStyle}>Overall Risk Level</label>
+          <select value={form.overallRiskLevel} onChange={e=>s("overallRiskLevel",e.target.value)} style={selectStyle}>
+            <option>Low</option><option>Medium</option><option>High</option><option>Very High</option>
+          </select>
+          <label style={labelStyle}>Result</label>
+          <select value={form.result} onChange={e=>s("result",e.target.value)} style={selectStyle}>
+            <option>Satisfactory</option><option>Unsatisfactory</option>
+          </select>
+          <label style={labelStyle}>Review Date</label>
+          <input type="date" value={form.reviewDate} onChange={e=>s("reviewDate",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Notes / Observations</label>
+          <textarea value={form.notes} onChange={e=>s("notes",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Additional notes..."/>
+        </div>
+
+        {/* Signature */}
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>✍️ Signature</div>
+          <PlumbingSigPad onSign={dataUrl=>s("sigImage",dataUrl)}/>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display:"flex", gap:10, marginTop:8 }}>
+          <button onClick={handleSave} style={{ flex:1, padding:"14px 0", background:"#00b4d8", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>💾 Save Certificate</button>
+          <button onClick={()=>setShowPDF(true)} style={{ flex:1, padding:"14px 0", background:"#0d1f2d", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>📄 Generate PDF</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Water Temperature Log Form ──────────────────────────────────────────────
+function PlumbingTempLogForm({ onBack, onSave, currentUser }) {
+  const [form, setForm] = useState({
+    certRef: "WTL-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().slice(0,10),
+    time: "",
+    siteName: "", siteAddress: "",
+    outletId: "", outletLocation: "",
+    measurementType: "Hot",
+    temperatureReading: "",
+    passFail: "",
+    correctiveAction: "",
+    engineerName: "",
+    notes: "", sigImage: ""
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const s = (k,v) => {
+    const updated = { ...form, [k]: v };
+    // Auto pass/fail
+    if (k === "temperatureReading" || k === "measurementType") {
+      const temp = parseFloat(k === "temperatureReading" ? v : updated.temperatureReading);
+      const type = k === "measurementType" ? v : updated.measurementType;
+      if (!isNaN(temp)) {
+        if (type === "Hot" || type === "TMV" || type === "Calorifier") {
+          updated.passFail = temp >= 50 ? "Pass" : "Fail";
+        } else if (type === "Cold" || type === "Tank") {
+          updated.passFail = temp <= 20 ? "Pass" : "Fail";
+        }
+      }
+    }
+    setForm(updated);
+  };
+  const labelStyle = { display:"block", fontSize:12, fontWeight:600, color:"#334", marginBottom:4 };
+  const inputStyle = { width:"100%", padding:"10px 12px", border:"1px solid #d0d5dd", borderRadius:8, fontSize:14, boxSizing:"border-box", marginBottom:12 };
+  const sectionStyle = { background:"#fff", borderRadius:14, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" };
+  const sectionTitleStyle = { fontSize:15, fontWeight:700, color:"#0d1f2d", marginBottom:12, display:"flex", alignItems:"center", gap:8 };
+  const selectStyle = { ...inputStyle, background:"#fff" };
+
+  if (showPDF) {
+    const fields = [
+      { title: "Log Details", rows: [
+        { label: "Reference", value: form.certRef },
+        { label: "Date", value: form.date },
+        { label: "Time", value: form.time },
+        { label: "Engineer", value: form.engineerName },
+      ]},
+      { title: "Site", rows: [
+        { label: "Site Name", value: form.siteName },
+        { label: "Address", value: form.siteAddress },
+      ]},
+      { title: "Measurement", rows: [
+        { label: "Outlet ID", value: form.outletId },
+        { label: "Location", value: form.outletLocation },
+        { label: "Type", value: form.measurementType },
+        { label: "Temperature (°C)", value: form.temperatureReading },
+        { label: "Result", value: form.passFail },
+      ]},
+      { title: "Actions", rows: [
+        { label: "Corrective Action", value: form.correctiveAction },
+        { label: "Notes", value: form.notes },
+      ]},
+    ];
+    return <PlumbingPDFPreview title="Water Temperature Log" form={form} fields={fields} onClose={()=>setShowPDF(false)} />;
+  }
+
+  const handleSave = () => {
+    const rec = { ...form, trade:"plumbing", type:"tempLog", savedAt:new Date().toISOString() };
+    if (onSave) onSave(rec);
+    alert("Water Temperature Log saved!");
+  };
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ background:"linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div style={{ flex:1 }}>
+          <div style={{ color:"#fff", fontWeight:800, fontSize:16 }}>Water Temperature Log</div>
+          <div style={{ color:"rgba(255,255,255,0.6)", fontSize:11 }}>Monthly Monitoring Record</div>
+        </div>
+      </div>
+
+      <div style={{ padding:"12px 16px 100px", maxWidth:600, margin:"0 auto" }}>
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>📋 Log Details</div>
+          <label style={labelStyle}>Reference</label>
+          <input value={form.certRef} onChange={e=>s("certRef",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Date</label>
+          <input type="date" value={form.date} onChange={e=>s("date",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Time</label>
+          <input type="time" value={form.time} onChange={e=>s("time",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Engineer Name</label>
+          <input value={form.engineerName} onChange={e=>s("engineerName",e.target.value)} style={inputStyle}/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>🏢 Site Details</div>
+          <label style={labelStyle}>Site Name / Reference</label>
+          <input value={form.siteName} onChange={e=>s("siteName",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Address</label>
+          <input value={form.siteAddress} onChange={e=>s("siteAddress",e.target.value)} style={inputStyle}/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>🌡️ Temperature Measurement</div>
+          <label style={labelStyle}>Outlet ID</label>
+          <input value={form.outletId} onChange={e=>s("outletId",e.target.value)} style={inputStyle} placeholder="e.g. WHB-01"/>
+          <label style={labelStyle}>Outlet Location</label>
+          <input value={form.outletLocation} onChange={e=>s("outletLocation",e.target.value)} style={inputStyle} placeholder="e.g. Kitchen sink"/>
+          <label style={labelStyle}>Measurement Type</label>
+          <select value={form.measurementType} onChange={e=>s("measurementType",e.target.value)} style={selectStyle}>
+            <option>Hot</option><option>Cold</option><option>TMV</option><option>Calorifier</option><option>Tank</option>
+          </select>
+          <label style={labelStyle}>Temperature Reading (°C)</label>
+          <input type="number" step="0.1" value={form.temperatureReading} onChange={e=>s("temperatureReading",e.target.value)} style={inputStyle} placeholder="e.g. 55.2"/>
+          {form.passFail && (
+            <div style={{ padding:"8px 14px", borderRadius:8, background: form.passFail === "Pass" ? "#d1fae5" : "#fee2e2", color: form.passFail === "Pass" ? "#065f46" : "#991b1b", fontWeight:700, fontSize:14, marginBottom:12, textAlign:"center" }}>
+              {form.passFail === "Pass" ? "✅ PASS" : "❌ FAIL"} — {form.measurementType === "Hot" || form.measurementType === "TMV" || form.measurementType === "Calorifier" ? "Hot ≥50°C at 1 min" : "Cold ≤20°C at 2 min"}
+            </div>
+          )}
+          <label style={labelStyle}>Corrective Action (if out of range)</label>
+          <textarea value={form.correctiveAction} onChange={e=>s("correctiveAction",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Action taken if temperature out of range..."/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>📝 Notes</div>
+          <textarea value={form.notes} onChange={e=>s("notes",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Additional notes..."/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>✍️ Signature</div>
+          <PlumbingSigPad onSign={dataUrl=>s("sigImage",dataUrl)}/>
+        </div>
+
+        <div style={{ display:"flex", gap:10, marginTop:8 }}>
+          <button onClick={handleSave} style={{ flex:1, padding:"14px 0", background:"#00b4d8", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>💾 Save Log</button>
+          <button onClick={()=>setShowPDF(true)} style={{ flex:1, padding:"14px 0", background:"#0d1f2d", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>📄 Generate PDF</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── G3 Unvented Cylinder Commissioning Form ─────────────────────────────────
+function PlumbingG3Form({ onBack, onSave, currentUser }) {
+  const [form, setForm] = useState({
+    certRef: "G3-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().slice(0,10),
+    engineerName: "", g3QualNo: "", wrasNumber: "",
+    siteAddress: "", sitePostcode: "",
+    cylManufacturer: "", cylModel: "", cylSerial: "", cylCapacity: "", cylMaxPressure: "",
+    tpValve: "Pass", expansionVessel: "Pass", prv: "Pass", tundishDetails: "",
+    thermostatCutout: "Pass", dischargeTest: "Pass", flowRates: "", pressures: "",
+    competentPersonScheme: "",
+    operatingInstructionsGiven: "Yes",
+    notes: "", result: "Satisfactory", sigImage: ""
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const s = (k,v) => setForm(f=>({...f,[k]:v}));
+  const labelStyle = { display:"block", fontSize:12, fontWeight:600, color:"#334", marginBottom:4 };
+  const inputStyle = { width:"100%", padding:"10px 12px", border:"1px solid #d0d5dd", borderRadius:8, fontSize:14, boxSizing:"border-box", marginBottom:12 };
+  const sectionStyle = { background:"#fff", borderRadius:14, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" };
+  const sectionTitleStyle = { fontSize:15, fontWeight:700, color:"#0d1f2d", marginBottom:12, display:"flex", alignItems:"center", gap:8 };
+  const selectStyle = { ...inputStyle, background:"#fff" };
+
+  if (showPDF) {
+    const fields = [
+      { title: "Engineer Details", rows: [
+        { label: "Reference", value: form.certRef },
+        { label: "Date", value: form.date },
+        { label: "Engineer Name", value: form.engineerName },
+        { label: "G3 Qualification No.", value: form.g3QualNo },
+        { label: "WRAS Number", value: form.wrasNumber },
+      ]},
+      { title: "Site", rows: [
+        { label: "Address", value: form.siteAddress },
+        { label: "Postcode", value: form.sitePostcode },
+      ]},
+      { title: "Cylinder Details", rows: [
+        { label: "Manufacturer", value: form.cylManufacturer },
+        { label: "Model", value: form.cylModel },
+        { label: "Serial No.", value: form.cylSerial },
+        { label: "Capacity (litres)", value: form.cylCapacity },
+        { label: "Max Pressure (bar)", value: form.cylMaxPressure },
+      ]},
+      { title: "Safety Devices", rows: [
+        { label: "T&P Valve", value: form.tpValve },
+        { label: "Expansion Vessel", value: form.expansionVessel },
+        { label: "PRV", value: form.prv },
+        { label: "Tundish Details", value: form.tundishDetails },
+      ]},
+      { title: "Commissioning Checks", rows: [
+        { label: "Thermostat Cutout", value: form.thermostatCutout },
+        { label: "Discharge Test", value: form.dischargeTest },
+        { label: "Flow Rates", value: form.flowRates },
+        { label: "Pressures", value: form.pressures },
+      ]},
+      { title: "Compliance", rows: [
+        { label: "Competent Person Scheme", value: form.competentPersonScheme },
+        { label: "Operating Instructions Given", value: form.operatingInstructionsGiven },
+        { label: "Result", value: form.result },
+        { label: "Notes", value: form.notes },
+      ]},
+    ];
+    return <PlumbingPDFPreview title="G3 Unvented Cylinder Commissioning" form={form} fields={fields} onClose={()=>setShowPDF(false)} />;
+  }
+
+  const handleSave = () => {
+    const rec = { ...form, trade:"plumbing", type:"g3", savedAt:new Date().toISOString() };
+    if (onSave) onSave(rec);
+    alert("G3 Unvented Cylinder Commissioning saved!");
+  };
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ background:"linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div style={{ flex:1 }}>
+          <div style={{ color:"#fff", fontWeight:800, fontSize:16 }}>G3 Unvented Cylinder</div>
+          <div style={{ color:"rgba(255,255,255,0.6)", fontSize:11 }}>Building Regs Part G3</div>
+        </div>
+      </div>
+
+      <div style={{ padding:"12px 16px 100px", maxWidth:600, margin:"0 auto" }}>
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>👷 Engineer Details</div>
+          <label style={labelStyle}>Reference</label>
+          <input value={form.certRef} onChange={e=>s("certRef",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Date</label>
+          <input type="date" value={form.date} onChange={e=>s("date",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Engineer Name</label>
+          <input value={form.engineerName} onChange={e=>s("engineerName",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>G3 Qualification Number</label>
+          <input value={form.g3QualNo} onChange={e=>s("g3QualNo",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>WRAS Number</label>
+          <input value={form.wrasNumber} onChange={e=>s("wrasNumber",e.target.value)} style={inputStyle}/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>📍 Site Details</div>
+          <label style={labelStyle}>Address</label>
+          <input value={form.siteAddress} onChange={e=>s("siteAddress",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Postcode</label>
+          <input value={form.sitePostcode} onChange={e=>s("sitePostcode",e.target.value)} style={inputStyle}/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>🔵 Cylinder Details</div>
+          <label style={labelStyle}>Manufacturer</label>
+          <input value={form.cylManufacturer} onChange={e=>s("cylManufacturer",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Model</label>
+          <input value={form.cylModel} onChange={e=>s("cylModel",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Serial Number</label>
+          <input value={form.cylSerial} onChange={e=>s("cylSerial",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Capacity (litres)</label>
+          <input value={form.cylCapacity} onChange={e=>s("cylCapacity",e.target.value)} style={inputStyle} placeholder="e.g. 210"/>
+          <label style={labelStyle}>Max Pressure (bar)</label>
+          <input value={form.cylMaxPressure} onChange={e=>s("cylMaxPressure",e.target.value)} style={inputStyle} placeholder="e.g. 6"/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>🛡️ Safety Devices</div>
+          <label style={labelStyle}>T&P Valve</label>
+          <select value={form.tpValve} onChange={e=>s("tpValve",e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select>
+          <label style={labelStyle}>Expansion Vessel</label>
+          <select value={form.expansionVessel} onChange={e=>s("expansionVessel",e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select>
+          <label style={labelStyle}>PRV</label>
+          <select value={form.prv} onChange={e=>s("prv",e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select>
+          <label style={labelStyle}>Tundish Details</label>
+          <input value={form.tundishDetails} onChange={e=>s("tundishDetails",e.target.value)} style={inputStyle} placeholder="Size, location, discharge pipe details"/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>🔍 Commissioning Checks</div>
+          <label style={labelStyle}>Thermostat Cutout Test</label>
+          <select value={form.thermostatCutout} onChange={e=>s("thermostatCutout",e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select>
+          <label style={labelStyle}>Discharge Test</label>
+          <select value={form.dischargeTest} onChange={e=>s("dischargeTest",e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select>
+          <label style={labelStyle}>Flow Rates</label>
+          <input value={form.flowRates} onChange={e=>s("flowRates",e.target.value)} style={inputStyle} placeholder="l/min at outlets"/>
+          <label style={labelStyle}>Pressures</label>
+          <input value={form.pressures} onChange={e=>s("pressures",e.target.value)} style={inputStyle} placeholder="Static/dynamic pressure readings (bar)"/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>✅ Compliance</div>
+          <label style={labelStyle}>Competent Person Scheme Reference</label>
+          <input value={form.competentPersonScheme} onChange={e=>s("competentPersonScheme",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Operating Instructions Given to Customer</label>
+          <select value={form.operatingInstructionsGiven} onChange={e=>s("operatingInstructionsGiven",e.target.value)} style={selectStyle}><option>Yes</option><option>No</option></select>
+          <label style={labelStyle}>Result</label>
+          <select value={form.result} onChange={e=>s("result",e.target.value)} style={selectStyle}><option>Satisfactory</option><option>Unsatisfactory</option></select>
+          <label style={labelStyle}>Notes</label>
+          <textarea value={form.notes} onChange={e=>s("notes",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Additional notes..."/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>✍️ Signature</div>
+          <PlumbingSigPad onSign={dataUrl=>s("sigImage",dataUrl)}/>
+        </div>
+
+        <div style={{ display:"flex", gap:10, marginTop:8 }}>
+          <button onClick={handleSave} style={{ flex:1, padding:"14px 0", background:"#00b4d8", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>💾 Save Certificate</button>
+          <button onClick={()=>setShowPDF(true)} style={{ flex:1, padding:"14px 0", background:"#0d1f2d", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>📄 Generate PDF</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── TMV Service Record Form ─────────────────────────────────────────────────
+function PlumbingTMVForm({ onBack, onSave, currentUser }) {
+  const [form, setForm] = useState({
+    certRef: "TMV-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().slice(0,10),
+    siteName: "", siteAddress: "",
+    tmvId: "", tmvLocation: "",
+    tmvType: "TMV2", manufacturer: "", model: "", serialNo: "",
+    mixedOutletTemp: "", hotSupplyTemp: "", coldSupplyTemp: "",
+    failSafeTest: "Pass",
+    actionTaken: "",
+    nextServiceDue: "",
+    recommendations: "",
+    engineerName: "",
+    notes: "", result: "Satisfactory", sigImage: ""
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const s = (k,v) => setForm(f=>({...f,[k]:v}));
+  const labelStyle = { display:"block", fontSize:12, fontWeight:600, color:"#334", marginBottom:4 };
+  const inputStyle = { width:"100%", padding:"10px 12px", border:"1px solid #d0d5dd", borderRadius:8, fontSize:14, boxSizing:"border-box", marginBottom:12 };
+  const sectionStyle = { background:"#fff", borderRadius:14, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" };
+  const sectionTitleStyle = { fontSize:15, fontWeight:700, color:"#0d1f2d", marginBottom:12, display:"flex", alignItems:"center", gap:8 };
+  const selectStyle = { ...inputStyle, background:"#fff" };
+
+  if (showPDF) {
+    const fields = [
+      { title: "Service Details", rows: [
+        { label: "Reference", value: form.certRef },
+        { label: "Date", value: form.date },
+        { label: "Engineer", value: form.engineerName },
+      ]},
+      { title: "Site", rows: [
+        { label: "Site Name", value: form.siteName },
+        { label: "Address", value: form.siteAddress },
+      ]},
+      { title: "TMV Details", rows: [
+        { label: "TMV ID", value: form.tmvId },
+        { label: "Location", value: form.tmvLocation },
+        { label: "Type", value: form.tmvType },
+        { label: "Manufacturer", value: form.manufacturer },
+        { label: "Model", value: form.model },
+        { label: "Serial No.", value: form.serialNo },
+      ]},
+      { title: "Temperature Readings", rows: [
+        { label: "Mixed Outlet Temp (°C)", value: form.mixedOutletTemp },
+        { label: "Hot Supply Temp (°C)", value: form.hotSupplyTemp },
+        { label: "Cold Supply Temp (°C)", value: form.coldSupplyTemp },
+      ]},
+      { title: "Test Results", rows: [
+        { label: "Fail-Safe Test", value: form.failSafeTest },
+        { label: "Action Taken", value: form.actionTaken },
+        { label: "Result", value: form.result },
+        { label: "Next Service Due", value: form.nextServiceDue },
+        { label: "Recommendations", value: form.recommendations },
+        { label: "Notes", value: form.notes },
+      ]},
+    ];
+    return <PlumbingPDFPreview title="TMV Service Record" form={form} fields={fields} onClose={()=>setShowPDF(false)} />;
+  }
+
+  const handleSave = () => {
+    const rec = { ...form, trade:"plumbing", type:"tmv", savedAt:new Date().toISOString() };
+    if (onSave) onSave(rec);
+    alert("TMV Service Record saved!");
+  };
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ background:"linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div style={{ flex:1 }}>
+          <div style={{ color:"#fff", fontWeight:800, fontSize:16 }}>TMV Service Record</div>
+          <div style={{ color:"rgba(255,255,255,0.6)", fontSize:11 }}>TMV2 / TMV3 Service</div>
+        </div>
+      </div>
+
+      <div style={{ padding:"12px 16px 100px", maxWidth:600, margin:"0 auto" }}>
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>📋 Service Details</div>
+          <label style={labelStyle}>Reference</label>
+          <input value={form.certRef} onChange={e=>s("certRef",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Date</label>
+          <input type="date" value={form.date} onChange={e=>s("date",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Engineer Name</label>
+          <input value={form.engineerName} onChange={e=>s("engineerName",e.target.value)} style={inputStyle}/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>🏢 Site Details</div>
+          <label style={labelStyle}>Site Name</label>
+          <input value={form.siteName} onChange={e=>s("siteName",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Address</label>
+          <input value={form.siteAddress} onChange={e=>s("siteAddress",e.target.value)} style={inputStyle}/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>🔧 TMV Details</div>
+          <label style={labelStyle}>TMV ID / Reference</label>
+          <input value={form.tmvId} onChange={e=>s("tmvId",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Location</label>
+          <input value={form.tmvLocation} onChange={e=>s("tmvLocation",e.target.value)} style={inputStyle} placeholder="e.g. Bathroom basin"/>
+          <label style={labelStyle}>TMV Type</label>
+          <select value={form.tmvType} onChange={e=>s("tmvType",e.target.value)} style={selectStyle}>
+            <option>TMV2</option><option>TMV3</option>
+          </select>
+          <label style={labelStyle}>Manufacturer</label>
+          <input value={form.manufacturer} onChange={e=>s("manufacturer",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Model</label>
+          <input value={form.model} onChange={e=>s("model",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Serial Number</label>
+          <input value={form.serialNo} onChange={e=>s("serialNo",e.target.value)} style={inputStyle}/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>🌡️ Temperature Readings</div>
+          <label style={labelStyle}>Mixed Outlet Temperature (°C)</label>
+          <input type="number" step="0.1" value={form.mixedOutletTemp} onChange={e=>s("mixedOutletTemp",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Hot Supply Temperature at Inlet (°C)</label>
+          <input type="number" step="0.1" value={form.hotSupplyTemp} onChange={e=>s("hotSupplyTemp",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Cold Supply Temperature (°C)</label>
+          <input type="number" step="0.1" value={form.coldSupplyTemp} onChange={e=>s("coldSupplyTemp",e.target.value)} style={inputStyle}/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>✅ Test & Results</div>
+          <label style={labelStyle}>Fail-Safe Test</label>
+          <select value={form.failSafeTest} onChange={e=>s("failSafeTest",e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select>
+          <label style={labelStyle}>Action Taken</label>
+          <textarea value={form.actionTaken} onChange={e=>s("actionTaken",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Describe any action taken..."/>
+          <label style={labelStyle}>Result</label>
+          <select value={form.result} onChange={e=>s("result",e.target.value)} style={selectStyle}><option>Satisfactory</option><option>Unsatisfactory</option></select>
+          <label style={labelStyle}>Next Service Due</label>
+          <input type="date" value={form.nextServiceDue} onChange={e=>s("nextServiceDue",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Recommendations</label>
+          <textarea value={form.recommendations} onChange={e=>s("recommendations",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Any recommendations..."/>
+          <label style={labelStyle}>Notes</label>
+          <textarea value={form.notes} onChange={e=>s("notes",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Additional notes..."/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>✍️ Signature</div>
+          <PlumbingSigPad onSign={dataUrl=>s("sigImage",dataUrl)}/>
+        </div>
+
+        <div style={{ display:"flex", gap:10, marginTop:8 }}>
+          <button onClick={handleSave} style={{ flex:1, padding:"14px 0", background:"#00b4d8", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>💾 Save Record</button>
+          <button onClick={()=>setShowPDF(true)} style={{ flex:1, padding:"14px 0", background:"#0d1f2d", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>📄 Generate PDF</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── RPZ Valve Test Certificate Form ─────────────────────────────────────────
+function PlumbingRPZForm({ onBack, onSave, currentUser }) {
+  const [form, setForm] = useState({
+    certRef: "RPZ-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().slice(0,10),
+    siteAddress: "", sitePostcode: "",
+    testerName: "", wiapsQualNo: "",
+    valveMake: "", valveModel: "", valveSize: "", valveLocation: "",
+    fluidCategory: "4",
+    cv1DiffPressure: "", cv2DiffPressure: "", reliefValveOpeningPressure: "",
+    overallResult: "Pass",
+    nextTestDue: "",
+    notes: "", sigImage: ""
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const s = (k,v) => setForm(f=>({...f,[k]:v}));
+  const labelStyle = { display:"block", fontSize:12, fontWeight:600, color:"#334", marginBottom:4 };
+  const inputStyle = { width:"100%", padding:"10px 12px", border:"1px solid #d0d5dd", borderRadius:8, fontSize:14, boxSizing:"border-box", marginBottom:12 };
+  const sectionStyle = { background:"#fff", borderRadius:14, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" };
+  const sectionTitleStyle = { fontSize:15, fontWeight:700, color:"#0d1f2d", marginBottom:12, display:"flex", alignItems:"center", gap:8 };
+  const selectStyle = { ...inputStyle, background:"#fff" };
+
+  if (showPDF) {
+    const fields = [
+      { title: "Test Details", rows: [
+        { label: "Reference", value: form.certRef },
+        { label: "Date", value: form.date },
+        { label: "Tester Name", value: form.testerName },
+        { label: "WIAPS Qualification No.", value: form.wiapsQualNo },
+      ]},
+      { title: "Site", rows: [
+        { label: "Address", value: form.siteAddress },
+        { label: "Postcode", value: form.sitePostcode },
+      ]},
+      { title: "Valve Details", rows: [
+        { label: "Make", value: form.valveMake },
+        { label: "Model", value: form.valveModel },
+        { label: "Size", value: form.valveSize },
+        { label: "Location", value: form.valveLocation },
+        { label: "Fluid Category", value: form.fluidCategory },
+      ]},
+      { title: "Test Readings", rows: [
+        { label: "CV1 Differential Pressure", value: form.cv1DiffPressure ? form.cv1DiffPressure + " bar" : "" },
+        { label: "CV2 Differential Pressure", value: form.cv2DiffPressure ? form.cv2DiffPressure + " bar" : "" },
+        { label: "Relief Valve Opening Pressure", value: form.reliefValveOpeningPressure ? form.reliefValveOpeningPressure + " bar" : "" },
+      ]},
+      { title: "Result", rows: [
+        { label: "Overall Result", value: form.overallResult },
+        { label: "Next Test Due", value: form.nextTestDue },
+        { label: "Notes", value: form.notes },
+      ]},
+    ];
+    return <PlumbingPDFPreview title="RPZ Valve Test Certificate" form={form} fields={fields} onClose={()=>setShowPDF(false)} />;
+  }
+
+  const handleSave = () => {
+    const rec = { ...form, trade:"plumbing", type:"rpz", savedAt:new Date().toISOString() };
+    if (onSave) onSave(rec);
+    alert("RPZ Valve Test Certificate saved!");
+  };
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ background:"linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div style={{ flex:1 }}>
+          <div style={{ color:"#fff", fontWeight:800, fontSize:16 }}>RPZ Valve Test</div>
+          <div style={{ color:"rgba(255,255,255,0.6)", fontSize:11 }}>Backflow Prevention Certificate</div>
+        </div>
+      </div>
+
+      <div style={{ padding:"12px 16px 100px", maxWidth:600, margin:"0 auto" }}>
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>📋 Test Details</div>
+          <label style={labelStyle}>Reference</label>
+          <input value={form.certRef} onChange={e=>s("certRef",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Date</label>
+          <input type="date" value={form.date} onChange={e=>s("date",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Tester Name</label>
+          <input value={form.testerName} onChange={e=>s("testerName",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>WIAPS Qualification Number</label>
+          <input value={form.wiapsQualNo} onChange={e=>s("wiapsQualNo",e.target.value)} style={inputStyle}/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>📍 Site Details</div>
+          <label style={labelStyle}>Address</label>
+          <input value={form.siteAddress} onChange={e=>s("siteAddress",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Postcode</label>
+          <input value={form.sitePostcode} onChange={e=>s("sitePostcode",e.target.value)} style={inputStyle}/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>🔧 Valve Details</div>
+          <label style={labelStyle}>Make</label>
+          <input value={form.valveMake} onChange={e=>s("valveMake",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Model</label>
+          <input value={form.valveModel} onChange={e=>s("valveModel",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Size</label>
+          <input value={form.valveSize} onChange={e=>s("valveSize",e.target.value)} style={inputStyle} placeholder="e.g. 15mm, 25mm"/>
+          <label style={labelStyle}>Location</label>
+          <input value={form.valveLocation} onChange={e=>s("valveLocation",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Fluid Category</label>
+          <select value={form.fluidCategory} onChange={e=>s("fluidCategory",e.target.value)} style={selectStyle}>
+            <option value="4">Category 4</option><option value="5">Category 5</option>
+          </select>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>📊 Test Readings</div>
+          <label style={labelStyle}>CV1 Differential Pressure (bar)</label>
+          <input type="number" step="0.01" value={form.cv1DiffPressure} onChange={e=>s("cv1DiffPressure",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>CV2 Differential Pressure (bar)</label>
+          <input type="number" step="0.01" value={form.cv2DiffPressure} onChange={e=>s("cv2DiffPressure",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Relief Valve Opening Pressure (bar)</label>
+          <input type="number" step="0.01" value={form.reliefValveOpeningPressure} onChange={e=>s("reliefValveOpeningPressure",e.target.value)} style={inputStyle}/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>✅ Result</div>
+          <label style={labelStyle}>Overall Result</label>
+          <select value={form.overallResult} onChange={e=>s("overallResult",e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select>
+          <label style={labelStyle}>Next Test Due</label>
+          <input type="date" value={form.nextTestDue} onChange={e=>s("nextTestDue",e.target.value)} style={inputStyle}/>
+          <label style={labelStyle}>Notes</label>
+          <textarea value={form.notes} onChange={e=>s("notes",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Additional notes..."/>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>✍️ Signature</div>
+          <PlumbingSigPad onSign={dataUrl=>s("sigImage",dataUrl)}/>
+        </div>
+
+        <div style={{ display:"flex", gap:10, marginTop:8 }}>
+          <button onClick={handleSave} style={{ flex:1, padding:"14px 0", background:"#00b4d8", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>💾 Save Certificate</button>
+          <button onClick={()=>setShowPDF(true)} style={{ flex:1, padding:"14px 0", background:"#0d1f2d", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>📄 Generate PDF</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PlumbingDashboard ───────────────────────────────────────────────────────
+function PlumbingDashboard({ onBack, currentUser, onNewJob, onRecords, onReport, onProfile, onPayment, onClientDetails, onBankStatements, onJobSheets, onEngineerManagement, onCombine, records, invoices, quotes, accountReports, yearlyReports }) {
+  const [plumbScreen, setPlumbScreen] = useState(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [showFeatureSuggest, setShowFeatureSuggest] = useState(false);
+
+  const handleSaveCert = (rec) => {
+    // Save to localStorage certs array
+    try {
+      const existing = JSON.parse(localStorage.getItem(sk("gsc_records")) || "[]");
+      existing.push(rec);
+      localStorage.setItem(sk("gsc_records"), JSON.stringify(existing));
+    } catch(e) { console.error("Failed to save plumbing cert:", e); }
+    setPlumbScreen(null);
+  };
+
+  if (plumbScreen === "lra") return <PlumbingLRAForm onBack={()=>setPlumbScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
+  if (plumbScreen === "tempLog") return <PlumbingTempLogForm onBack={()=>setPlumbScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
+  if (plumbScreen === "g3") return <PlumbingG3Form onBack={()=>setPlumbScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
+  if (plumbScreen === "tmv") return <PlumbingTMVForm onBack={()=>setPlumbScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
+  if (plumbScreen === "rpz") return <PlumbingRPZForm onBack={()=>setPlumbScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
+
+  // PillBtn (same pattern as ElectricalDashboard)
+  function PlumbPillBtn({ onClick, label, color="#00b4d8", iconBg, children }) {
+    const [hov, setHov] = useState(false);
+    const textColor = "#fff";
+    const circleBg = iconBg || color;
+    const btnGradient = `linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, ${color} 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), ${color}`;
+    const circleGradient = `linear-gradient(180deg, rgba(255,255,255,0.22) 0%, ${circleBg} 50%, rgba(0,0,0,0.22) 100%)`;
+    return (
+      <div onClick={onClick} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+        style={{
+          display:"flex", alignItems:"center", cursor:"pointer", borderRadius:999, overflow:"hidden",
+          background: btnGradient,
+          boxShadow: hov ? "0 8px 28px rgba(0,0,0,0.42), 0 2px 10px rgba(0,0,0,0.22)" : "0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)",
+          transition:"all 0.16s ease",
+          transform: hov ? "translateY(-2px) scale(1.018)" : "translateY(0) scale(1)",
+          position:"relative", width:"100%", maxWidth:360, height:76,
+        }}>
+        <div style={{
+          width:58, height:58, borderRadius:"50%", flexShrink:0,
+          background: circleGradient,
+          border:"2.5px solid rgba(255,255,255,0.45)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          margin:"0 0 0 9px",
+          boxShadow:"0 3px 10px rgba(0,0,0,0.30), inset 0 1px 3px rgba(255,255,255,0.25)",
+          position:"relative", zIndex:3, boxSizing:"border-box",
+        }}>{children}</div>
+        <span style={{
+          flex:1, color: textColor, fontSize:15, fontWeight:800,
+          fontFamily:"'Segoe UI',sans-serif",
+          paddingLeft:18, paddingRight:8,
+          letterSpacing:0.8, textTransform:"uppercase",
+          textShadow:"0 1px 4px rgba(0,0,0,0.35)",
+          position:"relative", zIndex:3,
+        }}>{label}</span>
+        <svg style={{ flexShrink:0, marginRight:22, opacity:0.85, position:"relative", zIndex:3 }} width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M4 2.5L9.5 7L4 11.5" stroke={textColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+    );
+  }
+
+  // Finance stats (same logic as electrical/gas dashboard)
+  const now=new Date(), tm=now.getMonth(), ty=now.getFullYear();
+  const lm=tm===0?11:tm-1, ly=tm===0?ty-1:ty;
+  const isT=d=>{try{const x=new Date(d);return x.getMonth()===tm&&x.getFullYear()===ty;}catch{return false;}};
+  const isL=d=>{try{const x=new Date(d);return x.getMonth()===lm&&x.getFullYear()===ly;}catch{return false;}};
+  const aR=(records||[]).filter(r=>!r.isDemo&&r.trade==="plumbing"),aI=(invoices||[]).filter(r=>!r.isDemo),aQ=(quotes||[]).filter(r=>!r.isDemo);
+  const rT=aR.filter(r=>isT(r.savedAt)).length,rL=aR.filter(r=>isL(r.savedAt)).length;
+  const iT=aI.filter(r=>isT(r.createdAt)).length,iL=aI.filter(r=>isL(r.createdAt)).length;
+  const qT=aQ.filter(r=>isT(r.createdAt)).length,qL=aQ.filter(r=>isL(r.createdAt)).length;
+  const pct=(c,p)=>p===0?(c>0?100:0):Math.round(((c-p)/p)*100);
+  const FinCard=({label,count,prev})=>{const ch=pct(count,prev),up=ch>0,nl=ch===0;return(
+    <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:14,padding:"10px 10px 8px",backdropFilter:"blur(4px)",minWidth:0}}>
+      <div style={{color:"rgba(255,255,255,0.55)",fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:6,lineHeight:1.3}}>{label}</div>
+      <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:4}}>
+        <span style={{color:nl?"#00b4d8":up?"#4ade80":"#f87171",fontSize:12}}>{nl?"→":up?"↑":"↓"}</span>
+        <span style={{color:"#fff",fontWeight:800,fontSize:22,lineHeight:1}}>{count}</span>
+      </div>
+      <div style={{color:nl?"rgba(255,255,255,0.45)":up?"#4ade80":"#f87171",fontSize:9,fontWeight:600}}>{ch===0?"0% from last month":`${Math.abs(ch)}% ${up?"▲":"▼"} last month`}</div>
+    </div>);};
+
+  // Plumbing cert stats
+  const allPlumbCerts = (records||[]).filter(r=>r.trade==="plumbing"&&!r.isDemo);
+  const totalCerts = allPlumbCerts.length;
+  const thisMonthCerts = allPlumbCerts.filter(r=>isT(r.savedAt)).length;
+  const pendingReviews = allPlumbCerts.filter(r=>{
+    const rd = r.reviewDate || r.nextServiceDue || r.nextTestDue;
+    if (!rd) return false;
+    try { return new Date(rd) <= new Date(Date.now() + 30*24*60*60*1000); } catch { return false; }
+  }).length;
+
+  return (
+    <div style={{ minHeight:"100dvh", background:`linear-gradient(160deg,${DARK_BLUE} 0%,${BLUE} 60%,${DARK_BLUE} 100%)`, display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      {/* Header */}
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack}
+          style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Gas Safety App"/>
+        <div style={{ flex:1 }}>
+          <div style={{ color:"#fff", fontWeight:800, fontSize:18 }}>Plumbing & Legionella</div>
+          <div style={{ color:"rgba(255,255,255,0.7)", fontSize:12 }}>WaterSafe Approved</div>
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
+          <span style={{ color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600 }}>{currentUser?.displayName || currentUser?.username}</span>
+          <span style={{ background:"#00b4d8", color:"#fff", fontSize:9, fontWeight:800, padding:"2px 8px", borderRadius:6, letterSpacing:0.8 }}>PRO</span>
+        </div>
+      </div>
+
+      {/* Stat widgets */}
+      <div style={{width:"100%",display:"flex",gap:6,marginBottom:8,padding:"0 12px",boxSizing:"border-box"}}>
+        <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:14,padding:"10px 10px 8px",backdropFilter:"blur(4px)",minWidth:0}}>
+          <div style={{color:"rgba(255,255,255,0.55)",fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>Total Certs</div>
+          <div style={{color:"#fff",fontWeight:800,fontSize:22}}>{totalCerts}</div>
+        </div>
+        <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:14,padding:"10px 10px 8px",backdropFilter:"blur(4px)",minWidth:0}}>
+          <div style={{color:"rgba(255,255,255,0.55)",fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>This Month</div>
+          <div style={{color:"#fff",fontWeight:800,fontSize:22}}>{thisMonthCerts}</div>
+        </div>
+        <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:14,padding:"10px 10px 8px",backdropFilter:"blur(4px)",minWidth:0}}>
+          <div style={{color:"rgba(255,255,255,0.55)",fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>Pending Reviews</div>
+          <div style={{color:"#fff",fontWeight:800,fontSize:22}}>{pendingReviews}</div>
+        </div>
+      </div>
+
+      {/* Finance widgets */}
+      <div style={{width:"100%",display:"flex",gap:6,marginBottom:8,padding:"0 12px",boxSizing:"border-box"}}>
+        <FinCard label="Plumbing Certs" count={rT} prev={rL}/>
+        <FinCard label="Invoices Created" count={iT} prev={iL}/>
+        <FinCard label="Quotes Created" count={qT} prev={qL}/>
+      </div>
+
+      {/* Charts row */}
+      <div style={{width:"100%",display:"flex",gap:6,marginBottom:4,marginTop:4,padding:"0 12px",boxSizing:"border-box"}}>
+        <div style={{flex:1.2,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 10px 8px",backdropFilter:"blur(4px)",minWidth:0}}>
+          <div style={{color:"rgba(255,255,255,0.6)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Monthly Overview</div>
+          <div style={{color:"rgba(255,255,255,0.35)",fontSize:11,textAlign:"center",padding:"12px 4px",lineHeight:1.6}}>No reports yet.<br/>Import bank statements<br/>to see your chart.</div>
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,background:"#4ade80",borderRadius:2}}/><span style={{fontSize:9,color:"rgba(255,255,255,0.55)"}}>Income</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,background:"#f87171",borderRadius:2}}/><span style={{fontSize:9,color:"rgba(255,255,255,0.55)"}}>Expenses</span></div>
+          </div>
+        </div>
+        <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 12px",backdropFilter:"blur(4px)",display:"flex",flexDirection:"column",minWidth:0}}>
+          <div style={{color:"rgba(255,255,255,0.6)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Annual Turnover</div>
+          <div style={{color:"rgba(255,255,255,0.35)",fontSize:11,textAlign:"center",flex:1,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1.6}}>No yearly report yet.<br/>Import bank statements<br/>to see your company turnover.</div>
+        </div>
+      </div>
+
+      {/* Pill Buttons */}
+      <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 88px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, marginBottom:4, textAlign:"center", letterSpacing:0.3, textTransform:"uppercase", fontWeight:600 }}>What would you like to do?</p>
+
+        <PlumbPillBtn onClick={() => setPlumbScreen("lra")} label="Legionella Risk Assessment" color="#00b4d8" iconBg="#0077b6">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+        </PlumbPillBtn>
+
+        <PlumbPillBtn onClick={() => setPlumbScreen("tempLog")} label="Water Temperature Log" color="#00b4d8" iconBg="#0096c7">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M15 13V5c0-1.66-1.34-3-3-3S9 3.34 9 5v8c-1.21.91-2 2.37-2 4 0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.63-.79-3.09-2-4zm-4-8c0-.55.45-1 1-1s1 .45 1 1h-1v1h1v2h-1v1h1v2h-2V5z"/></svg>
+        </PlumbPillBtn>
+
+        <PlumbPillBtn onClick={() => setPlumbScreen("g3")} label="G3 Unvented Cylinder" color="#00b4d8" iconBg="#023e8a">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.65 0-3 1.35-3 3s1.35 3 3 3 3-1.35 3-3-1.35-3-3-3z"/></svg>
+        </PlumbPillBtn>
+
+        <PlumbPillBtn onClick={() => setPlumbScreen("tmv")} label="TMV Service Record" color="#00b4d8" iconBg="#0077b6">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M17 6.1H7c-.6 0-1 .4-1 1s.4 1 1 1h3.1v2.5c-3.1.4-5.6 2.8-6 5.9-.1.6.4 1.1 1 1.1h13.8c.6 0 1.1-.5 1-1.1-.4-3.1-2.9-5.5-6-5.9V8.1H17c.6 0 1-.4 1-1s-.4-1-1-1zM12 4c.8 0 1.5-.7 1.5-1.5S12.8 1 12 1s-1.5.7-1.5 1.5S11.2 4 12 4z"/></svg>
+        </PlumbPillBtn>
+
+        <PlumbPillBtn onClick={() => setPlumbScreen("rpz")} label="RPZ Valve Test Certificate" color="#00b4d8" iconBg="#023e8a">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        </PlumbPillBtn>
+
+        <PlumbPillBtn onClick={onNewJob} label="New Job" color="#00b4d8">
+          <svg width="28" height="28" viewBox="0 0 52 52" fill="none"><rect x="22" y="4" width="8" height="44" rx="4" fill="#fff"/><rect x="4" y="22" width="44" height="8" rx="4" fill="#fff"/></svg>
+        </PlumbPillBtn>
+        <PlumbPillBtn onClick={onJobSheets} label="Job Sheets" color="#00b4d8" iconBg="#0077b6">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        </PlumbPillBtn>
+        <PlumbPillBtn onClick={onRecords} label="Records" color="#00b4d8" iconBg="#023e8a">
+          <svg width="30" height="26" viewBox="0 0 56 48" fill="none"><rect x="2" y="10" width="52" height="36" rx="5" fill="white"/><rect x="2" y="6" width="22" height="14" rx="5" fill="white"/><rect x="8" y="18" width="40" height="24" rx="3" fill="rgba(0,180,216,0.3)"/></svg>
+        </PlumbPillBtn>
+        <PlumbPillBtn onClick={onReport} label="Reports" color="#00b4d8" iconBg="#0096c7">
+          <svg width="30" height="30" viewBox="0 0 52 52" fill="none"><rect x="10" y="28" width="8" height="16" rx="2" fill="white"/><rect x="22" y="18" width="8" height="26" rx="2" fill="white"/><rect x="34" y="10" width="8" height="34" rx="2" fill="white"/></svg>
+        </PlumbPillBtn>
+        <PlumbPillBtn onClick={onBankStatements} label="Bank Statements" color="#00b4d8" iconBg="#0077b6">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="white" strokeWidth="1.8"/><path d="M3 10H21" stroke="white" strokeWidth="1.8"/><rect x="6" y="13" width="5" height="3" rx="1" fill="white"/></svg>
+        </PlumbPillBtn>
+        <PlumbPillBtn onClick={onProfile} label="My Profile" color="#00b4d8" iconBg="#023e8a">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </PlumbPillBtn>
+
+        {getUserPlan() === "proplus" && (
+          <PlumbPillBtn onClick={onEngineerManagement} label="My Engineers" color="#00b4d8" iconBg="#023e8a">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="3" stroke="white" strokeWidth="1.8"/><circle cx="17" cy="9" r="2.5" stroke="white" strokeWidth="1.5"/><path d="M2 20c0-3.31 2.69-6 6-6h2c3.31 0 6 2.69 6 6" stroke="white" strokeWidth="1.8" strokeLinecap="round"/><path d="M17 14c2.21 0 4 1.79 4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          </PlumbPillBtn>
+        )}
+        <PlumbPillBtn onClick={onCombine} label="Combine Certs / Reports" color="#00b4d8" iconBg="#0077b6">
+          <svg width="30" height="28" viewBox="0 0 52 48" fill="none">
+            <rect x="4" y="4" width="26" height="34" rx="3" fill="rgba(255,255,255,0.35)" stroke="white" strokeWidth="2"/>
+            <rect x="16" y="10" width="26" height="34" rx="3" fill="rgba(255,255,255,0.6)" stroke="white" strokeWidth="2"/>
+            <rect x="22" y="6" width="26" height="34" rx="3" fill="white" stroke="white" strokeWidth="1"/>
+            <polyline points="29,20 35,26 42,16" fill="none" stroke="#023e8a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </PlumbPillBtn>
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding:"14px 20px 20px", display:"flex", alignItems:"center", justifyContent:"center", gap:10, flexWrap:"wrap" }}>
+        <p style={{ color:"rgba(255,255,255,0.5)", fontSize:12, margin:0 }}>WaterSafe Approved · Plumbing & Legionella</p>
+        <button onClick={() => setShowFeedback(true)}
+          style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:20, padding:"6px 16px", color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="white" strokeWidth="1.5"/><rect x="6.25" y="6" width="1.5" height="4.5" rx=".75" fill="white"/><circle cx="7" cy="4" r=".85" fill="white"/></svg>
+          Support
+        </button>
+        <button onClick={() => setShowFeatureSuggest(true)}
+          style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:20, padding:"6px 16px", color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#00b4d8" strokeWidth="1.5"/><path d="M7 4v3M7 9v.5" stroke="#00b4d8" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          Suggest a Feature
+        </button>
+      </div>
+      {showFeatureSuggest && <SuggestFeatureModal onClose={() => setShowFeatureSuggest(false)} />}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── END MULTI-TRADE COMPONENTS ──────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ██ OIL & RENEWABLES MODULE
+// ══════════════════════════════════════════════════════════════════════════════
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── OIL & RENEWABLES TRADE MODULE ──────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Oil & Renewables PDF Generation ─────────────────────────────────────────
+function generateOilCertPDF(certData, certType, certTitle) {
+  const canvas = document.createElement("canvas");
+  const W = 800, pageH = 1132;
+  canvas.width = W;
+  const ctx = canvas.getContext("2d");
+  const pages = [];
+  let y = 0;
+  const startPage = () => { canvas.height = pageH; ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, pageH); y = 30; };
+  const checkPage = (need) => { if (y + need > pageH - 40) { pages.push(canvas.toDataURL("image/png")); startPage(); } };
+  const drawText = (text, x, _y, opts = {}) => {
+    ctx.font = `${opts.bold ? "bold " : ""}${opts.size || 13}px 'Segoe UI', sans-serif`;
+    ctx.fillStyle = opts.color || "#222";
+    ctx.textAlign = opts.align || "left";
+    ctx.fillText(text || "", x, _y);
+    ctx.textAlign = "left";
+  };
+  const drawLine = (_y) => { ctx.strokeStyle = "#ddd"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(30, _y); ctx.lineTo(W - 30, _y); ctx.stroke(); };
+  const drawSection = (title) => { checkPage(40); ctx.fillStyle = "#2d6a4f"; ctx.fillRect(30, y, W - 60, 28); drawText(title, 42, y + 19, { bold: true, size: 13, color: "#fff" }); y += 38; };
+  const drawField = (label, value) => { checkPage(24); drawText(label + ":", 40, y, { bold: true, size: 11, color: "#555" }); drawText(String(value || "N/A"), 220, y, { size: 11 }); y += 22; };
+
+  startPage();
+  // Header
+  ctx.fillStyle = "#2d6a4f"; ctx.fillRect(0, 0, W, 80);
+  drawText("Oil & Renewables", 40, 35, { bold: true, size: 22, color: "#fff" });
+  drawText(certTitle, 40, 60, { size: 14, color: "rgba(255,255,255,0.85)" });
+  drawText("Ref: " + (certData.certRef || "N/A"), W - 40, 35, { align: "right", size: 12, color: "rgba(255,255,255,0.8)" });
+  drawText("Date: " + (certData.date || new Date().toLocaleDateString()), W - 40, 55, { align: "right", size: 11, color: "rgba(255,255,255,0.7)" });
+  y = 100;
+
+  // Engineer details
+  drawSection("Engineer Details");
+  drawField("Engineer Name", certData.engineerName);
+  drawField("OFTEC Registration", certData.oftecReg || certData.mcsNumber || "N/A");
+  drawField("Company", certData.company);
+  drawField("Company Address", certData.companyAddress);
+  drawField("Telephone", certData.telephone);
+
+  // Client details
+  drawSection("Client / Site Details");
+  drawField("Client Name", certData.clientName);
+  drawField("Site Address", certData.siteAddress);
+  drawField("Postcode", certData.postcode);
+  drawField("Client Tel", certData.clientTel);
+  drawField("Client Email", certData.clientEmail);
+  if (certData.landlordName) drawField("Landlord Name", certData.landlordName);
+  if (certData.landlordAddress) drawField("Landlord Address", certData.landlordAddress);
+
+  // Type-specific fields
+  if (certType === "cd11" || certType === "cd10") {
+    drawSection("Appliance Details");
+    drawField("Make", certData.applianceMake);
+    drawField("Model", certData.applianceModel);
+    drawField("Serial Number", certData.applianceSerial);
+    drawField("Burner Type", certData.burnerType);
+    drawField("Fuel Type", certData.fuelType);
+    drawField("Heat Output (kW)", certData.heatOutput);
+  }
+
+  if (certType === "cd11") {
+    drawSection("Service Checklist");
+    const checks = ["oilStorage", "oilSupply", "airSupply", "chimneyFlue", "electricalSafety", "heatExchanger", "combustionChamber", "pressureJetBurner", "safetyControls", "controlsCheck", "systemCheck"];
+    const checkLabels = ["Oil Storage", "Oil Supply", "Air Supply", "Chimney/Flue", "Electrical Safety", "Heat Exchanger", "Combustion Chamber", "Pressure Jet Burner", "Safety Controls", "Controls Check", "System Check"];
+    checks.forEach((c, i) => { drawField(checkLabels[i], certData[c] || "N/A"); });
+    drawSection("Combustion Analysis");
+    drawField("CO (ppm)", certData.coPPM);
+    drawField("CO₂ (%)", certData.co2Percent);
+    drawField("Flue Temp (°C)", certData.flueTemp);
+    drawField("Efficiency (%)", certData.efficiency);
+    drawField("Smoke Number", certData.smokeNumber);
+  }
+
+  if (certType === "cd10") {
+    drawSection("Installation Checklist");
+    const instChecks = ["oilStorageInst", "oilSupplyInst", "flueSysInst", "ventilationInst", "electricalInst", "controlsInst", "commissioningInst"];
+    const instLabels = ["Oil Storage", "Oil Supply", "Flue System", "Ventilation", "Electrical", "Controls", "Commissioning"];
+    instChecks.forEach((c, i) => { drawField(instLabels[i], certData[c] || "N/A"); });
+    if (certData.nonCompliances) { drawSection("Non-Compliances"); checkPage(40); drawText(certData.nonCompliances, 40, y, { size: 11 }); y += 30; }
+  }
+
+  if (certType === "cd12") {
+    drawSection("Oil Installation Details");
+    drawField("Appliance Make", certData.applianceMake);
+    drawField("Appliance Model", certData.applianceModel);
+    drawField("Location", certData.applianceLocation);
+    drawSection("Landlord Safety Check");
+    const ldChecks = ["oilStorageCheck", "oilSupplyCheck", "flueCheck", "ventilationCheck", "safetyDevicesCheck", "combustionCheck", "generalCondition"];
+    const ldLabels = ["Oil Storage", "Oil Supply", "Flue/Chimney", "Ventilation", "Safety Devices", "Combustion", "General Condition"];
+    ldChecks.forEach((c, i) => { drawField(ldLabels[i], certData[c] || "N/A"); });
+    drawField("CO Alarm Present", certData.coAlarm);
+    drawField("Risk Assessment", certData.riskAssessment);
+  }
+
+  if (certType === "cd14") {
+    drawSection("Warning Notice Details");
+    drawField("Risk Category", certData.riskCategory);
+    drawField("Identified Risks", certData.identifiedRisks);
+    drawField("Recommended Action", certData.recommendedAction);
+    drawField("Appliance Isolated", certData.applianceIsolated);
+  }
+
+  if (certType === "ti133d") {
+    drawSection("Tank Details");
+    drawField("Tank Capacity (litres)", certData.tankCapacity);
+    drawField("Tank Material", certData.tankMaterial);
+    drawField("Tank Age (years)", certData.tankAge);
+    drawField("Tank Base Type", certData.tankBase);
+    drawSection("Environmental Hazards");
+    drawField("Proximity to Water", certData.proximityWater);
+    drawField("Nearby Drains", certData.nearbyDrains);
+    drawField("Borehole Nearby", certData.boreholeNearby);
+    drawField("Flood Risk Area", certData.floodRisk);
+    drawSection("Fire Hazards");
+    drawField("Boundary Distance", certData.boundaryDistance);
+    drawField("Eaves Distance", certData.eavesDistance);
+    drawField("Ignition Sources", certData.ignitionSources);
+    drawField("Flue Termination", certData.flueTermination);
+  }
+
+  if (certType === "heatpump") {
+    drawSection("Heat Pump Details");
+    drawField("Make", certData.hpMake);
+    drawField("Model", certData.hpModel);
+    drawField("MCS Product Ref", certData.mcsProductRef);
+    drawField("Installed Capacity (kW)", certData.installedCapacity);
+    drawField("Flow Temperature (°C)", certData.flowTemp);
+    drawField("Weather Compensation", certData.weatherComp);
+    drawSection("Commissioning Checks");
+    const hpChecks = ["functionalTest", "pressureTest", "flowRateTest", "electricalTest", "controlsTest", "refrigerantCheck"];
+    const hpLabels = ["Functional Test", "Pressure Test", "Flow Rate Test", "Electrical Test", "Controls Test", "Refrigerant Check"];
+    hpChecks.forEach((c, i) => { drawField(hpLabels[i], certData[c] || "N/A"); });
+    drawField("Customer Handover", certData.customerHandover);
+    drawField("MIS 3005 Compliance", certData.mis3005Compliance);
+  }
+
+  if (certType === "solarthermal") {
+    drawSection("Solar Thermal Details");
+    drawField("Collector Make", certData.collectorMake);
+    drawField("Collector Model", certData.collectorModel);
+    drawField("MCS Product Ref", certData.mcsProductRef);
+    drawField("Collector Area (m²)", certData.collectorArea);
+    drawField("System Type", certData.systemType);
+    drawField("Annual Yield Estimate (kWh/yr)", certData.annualYield);
+    drawSection("Commissioning Checks");
+    const stChecks = ["pressureTest", "flowRateCheck", "pumpOperation", "controllerSetup", "glycolConcentration", "insulationCheck"];
+    const stLabels = ["Pressure Test", "Flow Rate Check", "Pump Operation", "Controller Setup", "Glycol Concentration", "Insulation Check"];
+    stChecks.forEach((c, i) => { drawField(stLabels[i], certData[c] || "N/A"); });
+  }
+
+  // Notes
+  if (certData.notes) {
+    drawSection("Notes / Observations");
+    checkPage(50);
+    const noteLines = certData.notes.match(/.{1,90}/g) || [certData.notes];
+    noteLines.forEach(line => { checkPage(20); drawText(line, 40, y, { size: 11 }); y += 18; });
+  }
+
+  // Result
+  drawSection("Result");
+  drawField("Overall Result", certData.result);
+  if (certData.nextInspection) drawField("Next Inspection", certData.nextInspection);
+
+  // Signature
+  if (certData.signatureData) {
+    checkPage(100);
+    drawSection("Signature");
+    try {
+      const sigImg = new Image();
+      sigImg.src = certData.signatureData;
+      ctx.drawImage(sigImg, 40, y, 200, 60);
+      y += 70;
+    } catch (e) { drawText("[Signature captured]", 40, y, { size: 11 }); y += 20; }
+  }
+
+  // Footer
+  checkPage(40);
+  drawLine(y); y += 15;
+  drawText("Generated by Gas Safety App — Oil & Renewables Module", 40, y, { size: 9, color: "#999" });
+  drawText(certData.certRef || "", W - 40, y, { align: "right", size: 9, color: "#999" });
+
+  pages.push(canvas.toDataURL("image/png"));
+
+  // Open PDF
+  const w = window.open("", "_blank");
+  if (w) {
+    w.document.write("<html><head><title>" + certTitle + " - " + (certData.certRef || "") + "</title><style>@media print{@page{margin:0}body{margin:0}img{page-break-after:always}}</style></head><body style='margin:0;background:#333;text-align:center'>");
+    pages.forEach((p, i) => { w.document.write("<img src='" + p + "' style='width:100%;max-width:800px;" + (i > 0 ? "margin-top:10px;" : "") + "display:block;margin-left:auto;margin-right:auto'/>"); });
+    w.document.write("</body></html>");
+    w.document.close();
+  }
+}
+
+// ── Oil & Renewables Certificate Form Component ─────────────────────────────
+function OilCertForm({ certType, certTitle, onBack, currentUser }) {
+  const [formData, setFormData] = useState(() => {
+    const profile = (() => { try { const p = JSON.parse(localStorage.getItem(sk("profile")) || "{}"); return p; } catch { return {}; } })();
+    return {
+      certRef: certType.toUpperCase() + "-" + Date.now().toString(36).toUpperCase(),
+      date: new Date().toISOString().split("T")[0],
+      engineerName: profile.displayName || profile.name || currentUser?.displayName || "",
+      oftecReg: profile.oftecReg || profile.gasId || "",
+      mcsNumber: profile.mcsNumber || "",
+      company: profile.company || "",
+      companyAddress: profile.companyAddress || profile.address || "",
+      telephone: profile.telephone || profile.phone || "",
+      clientName: "", siteAddress: "", postcode: "", clientTel: "", clientEmail: "",
+      landlordName: "", landlordAddress: "",
+      // CD/11 fields
+      applianceMake: "", applianceModel: "", applianceSerial: "", burnerType: "Pressure Jet", fuelType: "Kerosene", heatOutput: "",
+      oilStorage: "Pass", oilSupply: "Pass", airSupply: "Pass", chimneyFlue: "Pass", electricalSafety: "Pass",
+      heatExchanger: "Pass", combustionChamber: "Pass", pressureJetBurner: "Pass", safetyControls: "Pass", controlsCheck: "Pass", systemCheck: "Pass",
+      coPPM: "", co2Percent: "", flueTemp: "", efficiency: "", smokeNumber: "",
+      // CD/10 fields
+      oilStorageInst: "Pass", oilSupplyInst: "Pass", flueSysInst: "Pass", ventilationInst: "Pass", electricalInst: "Pass", controlsInst: "Pass", commissioningInst: "Pass",
+      nonCompliances: "",
+      // CD/12 fields
+      applianceLocation: "",
+      oilStorageCheck: "Pass", oilSupplyCheck: "Pass", flueCheck: "Pass", ventilationCheck: "Pass", safetyDevicesCheck: "Pass", combustionCheck: "Pass", generalCondition: "Pass",
+      coAlarm: "Yes", riskAssessment: "Low",
+      // CD/14 fields
+      riskCategory: "Potential Risk", identifiedRisks: "", recommendedAction: "", applianceIsolated: "No",
+      // TI/133D fields
+      tankCapacity: "", tankMaterial: "Plastic", tankAge: "", tankBase: "Concrete",
+      proximityWater: "No", nearbyDrains: "No", boreholeNearby: "No", floodRisk: "No",
+      boundaryDistance: "", eavesDistance: "", ignitionSources: "No", flueTermination: "N/A",
+      // Heat pump fields
+      hpMake: "", hpModel: "", mcsProductRef: "", installedCapacity: "", flowTemp: "", weatherComp: "Yes",
+      functionalTest: "Pass", pressureTest: "Pass", flowRateTest: "Pass", electricalTest: "Pass", controlsTest: "Pass", refrigerantCheck: "Pass",
+      customerHandover: "Yes", mis3005Compliance: "Yes",
+      // Solar thermal fields
+      collectorMake: "", collectorModel: "", collectorArea: "", systemType: "Pressurised", annualYield: "",
+      pumpOperation: "Pass", controllerSetup: "Pass", glycolConcentration: "Pass", insulationCheck: "Pass", flowRateCheck: "Pass",
+      // Common
+      notes: "", result: "Satisfactory", nextInspection: "", signatureData: null,
+    };
+  });
+
+  const [showSigPad, setShowSigPad] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const set = (k, v) => setFormData(p => ({ ...p, [k]: v }));
+
+  const inputStyle = { width: "100%", padding: "10px 12px", border: "2px solid #e5e7eb", borderRadius: 10, fontSize: 14, boxSizing: "border-box", fontFamily: "inherit", outline: "none", background: "#fff" };
+  const selectStyle = { ...inputStyle, appearance: "auto" };
+  const labelStyle = { fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 4, display: "block" };
+  const sectionStyle = { background: "#2d6a4f", color: "#fff", padding: "8px 14px", borderRadius: 10, fontSize: 14, fontWeight: 700, margin: "16px 0 10px", letterSpacing: 0.3 };
+  const passFailOpts = ["Pass", "Fail", "Advisory", "N/A"];
+
+  const PassFailSelect = ({ label, field }) => (
+    <div style={{ marginBottom: 10 }}>
+      <label style={labelStyle}>{label}</label>
+      <select value={formData[field]} onChange={e => set(field, e.target.value)} style={{ ...selectStyle, borderColor: formData[field] === "Pass" ? "#22c55e" : formData[field] === "Fail" ? "#ef4444" : formData[field] === "Advisory" ? "#f59e0b" : "#e5e7eb" }}>
+        {passFailOpts.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+
+  const Field = ({ label, field, type = "text", placeholder = "" }) => (
+    <div style={{ marginBottom: 10 }}>
+      <label style={labelStyle}>{label}</label>
+      <input type={type} value={formData[field]} onChange={e => set(field, e.target.value)} placeholder={placeholder} style={inputStyle} />
+    </div>
+  );
+
+  const TextArea = ({ label, field, rows = 3 }) => (
+    <div style={{ marginBottom: 10 }}>
+      <label style={labelStyle}>{label}</label>
+      <textarea value={formData[field]} onChange={e => set(field, e.target.value)} rows={rows} style={{ ...inputStyle, resize: "vertical" }} />
+    </div>
+  );
+
+  const SelectField = ({ label, field, options }) => (
+    <div style={{ marginBottom: 10 }}>
+      <label style={labelStyle}>{label}</label>
+      <select value={formData[field]} onChange={e => set(field, e.target.value)} style={selectStyle}>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+
+  // Simple inline signature pad
+  const SigPad = () => {
+    const canvasRef = React.useRef(null);
+    const drawing = React.useRef(false);
+    const onStart = (e) => { drawing.current = true; const c = canvasRef.current, ctx = c.getContext("2d"), rect = c.getBoundingClientRect(); const pt = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(pt.clientX - rect.left, pt.clientY - rect.top); };
+    const onMove = (e) => { if (!drawing.current) return; e.preventDefault(); const c = canvasRef.current, ctx = c.getContext("2d"), rect = c.getBoundingClientRect(); const pt = e.touches ? e.touches[0] : e; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#222"; ctx.lineTo(pt.clientX - rect.left, pt.clientY - rect.top); ctx.stroke(); };
+    const onEnd = () => { drawing.current = false; };
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }} onClick={() => setShowSigPad(false)}>
+        <div style={{ background: "#fff", borderRadius: 16, padding: 20, width: "100%", maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+          <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 700 }}>Sign Below</h3>
+          <canvas ref={canvasRef} width={360} height={150} style={{ border: "2px solid #e5e7eb", borderRadius: 10, width: "100%", touchAction: "none" }}
+            onMouseDown={onStart} onMouseMove={onMove} onMouseUp={onEnd} onMouseLeave={onEnd}
+            onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd} />
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button onClick={() => { const c = canvasRef.current; c.getContext("2d").clearRect(0, 0, c.width, c.height); }}
+              style={{ flex: 1, padding: 10, background: "#f3f4f6", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>Clear</button>
+            <button onClick={() => { set("signatureData", canvasRef.current.toDataURL()); setShowSigPad(false); }}
+              style={{ flex: 1, padding: 10, background: "#2d6a4f", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }}>Confirm</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const handleSave = () => {
+    const cert = { ...formData, trade: "oil", type: certType, savedAt: new Date().toISOString() };
+    try {
+      const existing = JSON.parse(localStorage.getItem(sk("gsc_records")) || "[]");
+      existing.push(cert);
+      localStorage.setItem(sk("gsc_records"), JSON.stringify(existing));
+    } catch {}
+    setSaved(true);
+  };
+
+  const handlePDF = () => { generateOilCertPDF(formData, certType, certTitle); };
+
+  if (saved) {
+    return (
+      <div style={{ minHeight: "100dvh", background: "linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI',sans-serif", padding: 24 }}>
+        <div style={{ width: 80, height: 80, borderRadius: 20, background: "#2d6a4f", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="#fff"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" /></svg>
+        </div>
+        <h2 style={{ color: "#e8edf2", fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Certificate Saved</h2>
+        <p style={{ color: "#8b9db0", fontSize: 14, marginBottom: 24, textAlign: "center" }}>{certTitle} has been saved successfully.</p>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+          <button onClick={handlePDF} style={{ padding: "12px 24px", background: "#2d6a4f", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Generate PDF</button>
+          <button onClick={onBack} style={{ padding: "12px 24px", background: "#1e3044", color: "#8b9db0", border: "1px solid #2a4058", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Back to Dashboard</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: "100dvh", background: "#f5f6fa", fontFamily: "'Segoe UI',sans-serif" }}>
+      {/* Header */}
+      <div style={{ background: "linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+        <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.15)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", flexShrink: 0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>{certTitle}</div>
+          <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>Ref: {formData.certRef}</div>
+        </div>
+      </div>
+
+      <div style={{ padding: "12px 16px 100px", maxWidth: 480, margin: "0 auto" }}>
+        {/* Engineer Details */}
+        <div style={sectionStyle}>Engineer Details</div>
+        <Field label="Engineer Name" field="engineerName" />
+        {(certType === "heatpump" || certType === "solarthermal") ? (
+          <Field label="MCS Accreditation Number" field="mcsNumber" />
+        ) : (
+          <Field label="OFTEC Registration Number" field="oftecReg" />
+        )}
+        <Field label="Company" field="company" />
+        <Field label="Company Address" field="companyAddress" />
+        <Field label="Telephone" field="telephone" />
+
+        {/* Client Details */}
+        <div style={sectionStyle}>Client / Site Details</div>
+        <Field label="Client Name" field="clientName" />
+        <Field label="Site Address" field="siteAddress" />
+        <Field label="Postcode" field="postcode" />
+        <Field label="Client Telephone" field="clientTel" />
+        <Field label="Client Email" field="clientEmail" type="email" />
+        {(certType === "cd12" || certType === "cd10") && <>
+          <Field label="Landlord Name" field="landlordName" />
+          <Field label="Landlord Address" field="landlordAddress" />
+        </>}
+
+        {/* CD/11 Service Report */}
+        {certType === "cd11" && <>
+          <div style={sectionStyle}>Appliance Details</div>
+          <Field label="Make" field="applianceMake" />
+          <Field label="Model" field="applianceModel" />
+          <Field label="Serial Number" field="applianceSerial" />
+          <SelectField label="Burner Type" field="burnerType" options={["Pressure Jet", "Vaporising", "Wall Flame"]} />
+          <SelectField label="Fuel Type" field="fuelType" options={["Kerosene", "Gas Oil (35 sec)", "Biodiesel Blend"]} />
+          <Field label="Heat Output (kW)" field="heatOutput" />
+
+          <div style={sectionStyle}>Service Checklist</div>
+          <PassFailSelect label="Oil Storage" field="oilStorage" />
+          <PassFailSelect label="Oil Supply" field="oilSupply" />
+          <PassFailSelect label="Air Supply" field="airSupply" />
+          <PassFailSelect label="Chimney / Flue" field="chimneyFlue" />
+          <PassFailSelect label="Electrical Safety" field="electricalSafety" />
+          <PassFailSelect label="Heat Exchanger" field="heatExchanger" />
+          <PassFailSelect label="Combustion Chamber" field="combustionChamber" />
+          <PassFailSelect label="Pressure Jet Burner" field="pressureJetBurner" />
+          <PassFailSelect label="Appliance Safety Controls" field="safetyControls" />
+          <PassFailSelect label="Controls Check" field="controlsCheck" />
+          <PassFailSelect label="System Check" field="systemCheck" />
+
+          <div style={sectionStyle}>Combustion Analysis</div>
+          <Field label="CO (ppm)" field="coPPM" type="number" />
+          <Field label="CO₂ (%)" field="co2Percent" type="number" />
+          <Field label="Flue Temperature (°C)" field="flueTemp" type="number" />
+          <Field label="Efficiency (%)" field="efficiency" type="number" />
+          <Field label="Smoke Number" field="smokeNumber" type="number" />
+        </>}
+
+        {/* CD/10 Installation Report */}
+        {certType === "cd10" && <>
+          <div style={sectionStyle}>Appliance Details</div>
+          <Field label="Make" field="applianceMake" />
+          <Field label="Model" field="applianceModel" />
+          <Field label="Serial Number" field="applianceSerial" />
+          <SelectField label="Burner Type" field="burnerType" options={["Pressure Jet", "Vaporising", "Wall Flame"]} />
+          <SelectField label="Fuel Type" field="fuelType" options={["Kerosene", "Gas Oil (35 sec)", "Biodiesel Blend"]} />
+          <Field label="Heat Output (kW)" field="heatOutput" />
+
+          <div style={sectionStyle}>Installation Checklist</div>
+          <PassFailSelect label="Oil Storage" field="oilStorageInst" />
+          <PassFailSelect label="Oil Supply" field="oilSupplyInst" />
+          <PassFailSelect label="Flue System" field="flueSysInst" />
+          <PassFailSelect label="Ventilation" field="ventilationInst" />
+          <PassFailSelect label="Electrical" field="electricalInst" />
+          <PassFailSelect label="Controls" field="controlsInst" />
+          <PassFailSelect label="Commissioning" field="commissioningInst" />
+
+          <div style={sectionStyle}>Non-Compliances & Remedial Work</div>
+          <TextArea label="Non-Compliances" field="nonCompliances" rows={4} />
+        </>}
+
+        {/* CD/12 Landlord Check */}
+        {certType === "cd12" && <>
+          <div style={sectionStyle}>Oil Installation Details</div>
+          <Field label="Appliance Make" field="applianceMake" />
+          <Field label="Appliance Model" field="applianceModel" />
+          <Field label="Location" field="applianceLocation" />
+
+          <div style={sectionStyle}>Safety Checklist</div>
+          <PassFailSelect label="Oil Storage" field="oilStorageCheck" />
+          <PassFailSelect label="Oil Supply" field="oilSupplyCheck" />
+          <PassFailSelect label="Flue / Chimney" field="flueCheck" />
+          <PassFailSelect label="Ventilation" field="ventilationCheck" />
+          <PassFailSelect label="Safety Devices" field="safetyDevicesCheck" />
+          <PassFailSelect label="Combustion" field="combustionCheck" />
+          <PassFailSelect label="General Condition" field="generalCondition" />
+
+          <SelectField label="CO Alarm Present" field="coAlarm" options={["Yes", "No"]} />
+          <SelectField label="Risk Assessment" field="riskAssessment" options={["Low", "Medium", "High"]} />
+        </>}
+
+        {/* CD/14 Warning Notice */}
+        {certType === "cd14" && <>
+          <div style={sectionStyle}>Warning Notice</div>
+          <SelectField label="Risk Category" field="riskCategory" options={["Potential Risk", "Immediate Risk"]} />
+          <TextArea label="Identified Risks" field="identifiedRisks" rows={4} />
+          <TextArea label="Recommended Action" field="recommendedAction" rows={3} />
+          <SelectField label="Appliance Isolated" field="applianceIsolated" options={["No", "Yes"]} />
+        </>}
+
+        {/* TI/133D Tank Risk Assessment */}
+        {certType === "ti133d" && <>
+          <div style={sectionStyle}>Tank Details</div>
+          <Field label="Tank Capacity (litres)" field="tankCapacity" type="number" />
+          <SelectField label="Tank Material" field="tankMaterial" options={["Plastic", "Steel", "GRP", "Bunded Plastic", "Bunded Steel"]} />
+          <Field label="Tank Age (approx. years)" field="tankAge" type="number" />
+          <SelectField label="Tank Base" field="tankBase" options={["Concrete", "Paving Slabs", "Compacted Hardcore", "Bare Earth", "Other"]} />
+
+          <div style={sectionStyle}>Environmental Hazards</div>
+          <SelectField label="Proximity to Watercourse" field="proximityWater" options={["No", "Within 10m", "Within 50m"]} />
+          <SelectField label="Nearby Drains" field="nearbyDrains" options={["No", "Yes - Protected", "Yes - Unprotected"]} />
+          <SelectField label="Borehole Nearby" field="boreholeNearby" options={["No", "Yes"]} />
+          <SelectField label="Flood Risk Area" field="floodRisk" options={["No", "Yes"]} />
+
+          <div style={sectionStyle}>Fire Hazards</div>
+          <Field label="Boundary Distance (m)" field="boundaryDistance" />
+          <Field label="Eaves Distance (m)" field="eavesDistance" />
+          <SelectField label="Ignition Sources Nearby" field="ignitionSources" options={["No", "Yes"]} />
+          <Field label="Flue Termination Distance" field="flueTermination" />
+        </>}
+
+        {/* MCS Heat Pump Commissioning */}
+        {certType === "heatpump" && <>
+          <div style={sectionStyle}>Heat Pump Details</div>
+          <Field label="Make" field="hpMake" />
+          <Field label="Model" field="hpModel" />
+          <Field label="MCS Product Reference" field="mcsProductRef" />
+          <Field label="Installed Capacity (kW)" field="installedCapacity" type="number" />
+          <Field label="Flow Temperature (°C)" field="flowTemp" type="number" />
+          <SelectField label="Weather Compensation" field="weatherComp" options={["Yes", "No"]} />
+
+          <div style={sectionStyle}>Commissioning Checks</div>
+          <PassFailSelect label="Functional Test" field="functionalTest" />
+          <PassFailSelect label="Pressure Test" field="pressureTest" />
+          <PassFailSelect label="Flow Rate Test" field="flowRateTest" />
+          <PassFailSelect label="Electrical Test" field="electricalTest" />
+          <PassFailSelect label="Controls Test" field="controlsTest" />
+          <PassFailSelect label="Refrigerant Check" field="refrigerantCheck" />
+          <SelectField label="Customer Handover Complete" field="customerHandover" options={["Yes", "No"]} />
+          <SelectField label="MIS 3005 Compliance" field="mis3005Compliance" options={["Yes", "No"]} />
+        </>}
+
+        {/* Solar Thermal Commissioning */}
+        {certType === "solarthermal" && <>
+          <div style={sectionStyle}>Solar Thermal Collector</div>
+          <Field label="Collector Make" field="collectorMake" />
+          <Field label="Collector Model" field="collectorModel" />
+          <Field label="MCS Product Reference" field="mcsProductRef" />
+          <Field label="Collector Area (m²)" field="collectorArea" type="number" />
+          <SelectField label="System Type" field="systemType" options={["Pressurised", "Drain-back"]} />
+          <Field label="Annual Yield Estimate (kWh/yr)" field="annualYield" type="number" />
+
+          <div style={sectionStyle}>Commissioning Checks</div>
+          <PassFailSelect label="Pressure Test" field="pressureTest" />
+          <PassFailSelect label="Flow Rate Check" field="flowRateCheck" />
+          <PassFailSelect label="Pump Operation" field="pumpOperation" />
+          <PassFailSelect label="Controller Setup" field="controllerSetup" />
+          <PassFailSelect label="Glycol Concentration" field="glycolConcentration" />
+          <PassFailSelect label="Insulation Check" field="insulationCheck" />
+        </>}
+
+        {/* Common: Notes, Result, Next Inspection */}
+        <div style={sectionStyle}>Notes & Result</div>
+        <TextArea label="Notes / Observations" field="notes" rows={4} />
+        <SelectField label="Overall Result" field="result" options={["Satisfactory", "Unsatisfactory"]} />
+        <Field label="Next Inspection Date" field="nextInspection" type="date" />
+
+        {/* Signature */}
+        <div style={sectionStyle}>Signature</div>
+        {formData.signatureData ? (
+          <div style={{ marginBottom: 10 }}>
+            <img src={formData.signatureData} alt="Signature" style={{ width: "100%", maxWidth: 300, border: "2px solid #e5e7eb", borderRadius: 10, background: "#fff" }} />
+            <button onClick={() => set("signatureData", null)} style={{ marginTop: 6, padding: "6px 14px", background: "#f3f4f6", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Clear Signature</button>
+          </div>
+        ) : (
+          <button onClick={() => setShowSigPad(true)} style={{ width: "100%", padding: 14, background: "#fff", border: "2px dashed #ccc", borderRadius: 10, fontSize: 14, fontWeight: 600, color: "#666", cursor: "pointer", marginBottom: 10 }}>
+            Tap to Sign
+          </button>
+        )}
+      </div>
+
+      {/* Bottom action bar */}
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", borderTop: "1px solid #e5e7eb", padding: "10px 16px", display: "flex", gap: 10, zIndex: 100 }}>
+        <button onClick={handleSave} style={{ flex: 1, padding: 14, background: "#2d6a4f", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Save Certificate</button>
+        <button onClick={handlePDF} style={{ flex: 1, padding: 14, background: "#1a1a2e", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Generate PDF</button>
+      </div>
+
+      {showSigPad && <SigPad />}
+    </div>
+  );
+}
+
+// ── Oil & Renewables Dashboard ──────────────────────────────────────────────
+function OilRenewablesDashboard({ onBack, currentUser, onNewJob, onRecords, onReport, onProfile, onPayment, onClientDetails, onBankStatements, onJobSheets, onEngineerManagement, onCombine, records, invoices, quotes, accountReports, yearlyReports }) {
+  const [oilScreen, setOilScreen] = useState(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [showFeatureSuggest, setShowFeatureSuggest] = useState(false);
+
+  // Certificate form routing
+  const certForms = {
+    oilCD11: { type: "cd11", title: "OFTEC CD/11 Service Report" },
+    oilCD10: { type: "cd10", title: "OFTEC CD/10 Installation Report" },
+    oilCD12: { type: "cd12", title: "OFTEC CD/12 Landlord Check" },
+    oilCD14: { type: "cd14", title: "OFTEC CD/14 Warning Notice" },
+    oilTI133D: { type: "ti133d", title: "Oil Tank Risk Assessment (TI/133D)" },
+    oilHeatPump: { type: "heatpump", title: "MCS Heat Pump Commissioning" },
+    oilSolarThermal: { type: "solarthermal", title: "Solar Thermal Commissioning" },
+  };
+
+  if (oilScreen && certForms[oilScreen]) {
+    return <OilCertForm certType={certForms[oilScreen].type} certTitle={certForms[oilScreen].title} onBack={() => setOilScreen(null)} currentUser={currentUser} />;
+  }
+
+  // PillBtn matching Electrical style exactly
+  function OilPillBtn({ onClick, label, color = "#2d6a4f", iconBg, children }) {
+    const [hov, setHov] = useState(false);
+    const textColor = "#fff";
+    const circleBg = iconBg || color;
+    const btnGradient = `linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, ${color} 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), ${color}`;
+    const circleGradient = `linear-gradient(180deg, rgba(255,255,255,0.22) 0%, ${circleBg} 50%, rgba(0,0,0,0.22) 100%)`;
+    return (
+      <div onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+        style={{
+          display: "flex", alignItems: "center", cursor: "pointer", borderRadius: 999, overflow: "hidden",
+          background: btnGradient,
+          boxShadow: hov ? "0 8px 28px rgba(0,0,0,0.42), 0 2px 10px rgba(0,0,0,0.22)" : "0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)",
+          transition: "all 0.16s ease",
+          transform: hov ? "translateY(-2px) scale(1.018)" : "translateY(0) scale(1)",
+          position: "relative", width: "100%", maxWidth: 360, height: 76,
+        }}>
+        <div style={{
+          width: 58, height: 58, borderRadius: "50%", flexShrink: 0,
+          background: circleGradient,
+          border: "2.5px solid rgba(255,255,255,0.45)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          margin: "0 0 0 9px",
+          boxShadow: "0 3px 10px rgba(0,0,0,0.30), inset 0 1px 3px rgba(255,255,255,0.25)",
+          position: "relative", zIndex: 3, boxSizing: "border-box",
+        }}>{children}</div>
+        <span style={{
+          flex: 1, color: textColor, fontSize: 15, fontWeight: 800,
+          fontFamily: "'Segoe UI',sans-serif",
+          paddingLeft: 18, paddingRight: 8,
+          letterSpacing: 0.8, textTransform: "uppercase",
+          textShadow: "0 1px 4px rgba(0,0,0,0.35)",
+          position: "relative", zIndex: 3,
+        }}>{label}</span>
+        <svg style={{ flexShrink: 0, marginRight: 22, opacity: 0.85, position: "relative", zIndex: 3 }} width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M4 2.5L9.5 7L4 11.5" stroke={textColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+    );
+  }
+
+  // Finance stats
+  const now = new Date(), tm = now.getMonth(), ty = now.getFullYear();
+  const lm = tm === 0 ? 11 : tm - 1, ly = tm === 0 ? ty - 1 : ty;
+  const isT = d => { try { const x = new Date(d); return x.getMonth() === tm && x.getFullYear() === ty; } catch { return false; } };
+  const isL = d => { try { const x = new Date(d); return x.getMonth() === lm && x.getFullYear() === ly; } catch { return false; } };
+
+  // Filter oil trade certs
+  const allRecords = (records || []).filter(r => !r.isDemo);
+  const oilRecords = allRecords.filter(r => r.trade === "oil");
+  const oilThisMonth = oilRecords.filter(r => isT(r.savedAt)).length;
+  const oilLastMonth = oilRecords.filter(r => isL(r.savedAt)).length;
+  const pendingReviews = oilRecords.filter(r => {
+    if (!r.nextInspection) return false;
+    const due = new Date(r.nextInspection);
+    const daysUntil = (due - now) / (1000 * 60 * 60 * 24);
+    return daysUntil <= 30 && daysUntil >= -30;
+  }).length;
+
+  const aI = (invoices || []).filter(r => !r.isDemo), aQ = (quotes || []).filter(r => !r.isDemo);
+  const rT = oilThisMonth, rL = oilLastMonth;
+  const iT = aI.filter(r => isT(r.createdAt)).length, iL = aI.filter(r => isL(r.createdAt)).length;
+  const qT = aQ.filter(r => isT(r.createdAt)).length, qL = aQ.filter(r => isL(r.createdAt)).length;
+  const pct = (c, p) => p === 0 ? (c > 0 ? 100 : 0) : Math.round(((c - p) / p) * 100);
+  const FinCard = ({ label, count, prev }) => { const ch = pct(count, prev), up = ch > 0, nl = ch === 0; return (
+    <div style={{ flex: 1, background: "rgba(255,255,255,0.10)", borderRadius: 14, padding: "10px 10px 8px", backdropFilter: "blur(4px)", minWidth: 0 }}>
+      <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6, lineHeight: 1.3 }}>{label}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
+        <span style={{ color: nl ? "#fff200" : up ? "#4ade80" : "#f87171", fontSize: 12 }}>{nl ? "\u2192" : up ? "\u2191" : "\u2193"}</span>
+        <span style={{ color: "#fff", fontWeight: 800, fontSize: 22, lineHeight: 1 }}>{count}</span>
+      </div>
+      <div style={{ color: nl ? "rgba(255,255,255,0.45)" : up ? "#4ade80" : "#f87171", fontSize: 9, fontWeight: 600 }}>{ch === 0 ? "0% from last month" : `${Math.abs(ch)}% ${up ? "\u25b2" : "\u25bc"} last month`}</div>
+    </div>); };
+
+  // Stat widgets for oil trade
+  const StatCard = ({ label, count, icon }) => (
+    <div style={{ flex: 1, background: "rgba(255,255,255,0.10)", borderRadius: 14, padding: "10px 10px 8px", backdropFilter: "blur(4px)", minWidth: 0 }}>
+      <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6, lineHeight: 1.3 }}>{label}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
+        <span style={{ fontSize: 14 }}>{icon}</span>
+        <span style={{ color: "#fff", fontWeight: 800, fontSize: 22, lineHeight: 1 }}>{count}</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight: "100dvh", background: `linear-gradient(160deg,${DARK_BLUE} 0%,${BLUE} 60%,${DARK_BLUE} 100%)`, display: "flex", flexDirection: "column", fontFamily: "'Segoe UI',sans-serif" }}>
+      {/* Header */}
+      <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+        <button onClick={onBack}
+          style={{ width: 36, height: 36, borderRadius: 10, background: "#1e3044", border: "1px solid #2a4058", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#8b9db0", flexShrink: 0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+        <img src={APP_LOGO_SVG} style={{ height: 32, objectFit: "contain" }} alt="Gas Safety App" />
+        <div style={{ flex: 1 }}>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: 18 }}>Oil & Renewables</div>
+          <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 12 }}>OFTEC / MCS Registered</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+          <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 600 }}>{currentUser?.displayName || currentUser?.username}</span>
+          <span style={{ background: "#2d6a4f", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 6, letterSpacing: 0.8 }}>PRO</span>
+        </div>
+      </div>
+
+      {/* Stat widgets */}
+      <div style={{ width: "100%", display: "flex", gap: 6, marginBottom: 8, padding: "0 12px", boxSizing: "border-box" }}>
+        <StatCard label="Total Certs" count={oilRecords.length} icon={"\ud83d\udcdc"} />
+        <StatCard label="This Month" count={oilThisMonth} icon={"\ud83d\udcc5"} />
+        <StatCard label="Pending Reviews" count={pendingReviews} icon={"\u23f0"} />
+      </div>
+
+      {/* Finance widgets */}
+      <div style={{ width: "100%", display: "flex", gap: 6, marginBottom: 8, padding: "0 12px", boxSizing: "border-box" }}>
+        <FinCard label="Oil Certs Created" count={rT} prev={rL} />
+        <FinCard label="Invoices Created" count={iT} prev={iL} />
+        <FinCard label="Quotes Created" count={qT} prev={qL} />
+      </div>
+
+      {/* Charts row */}
+      <div style={{ width: "100%", display: "flex", gap: 6, marginBottom: 4, marginTop: 4, padding: "0 12px", boxSizing: "border-box" }}>
+        <div style={{ flex: 1.2, background: "rgba(255,255,255,0.10)", borderRadius: 16, padding: "10px 10px 8px", backdropFilter: "blur(4px)", minWidth: 0 }}>
+          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Monthly Overview</div>
+          <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, textAlign: "center", padding: "12px 4px", lineHeight: 1.6 }}>No reports yet.<br />Import bank statements<br />to see your chart.</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 8, background: "#4ade80", borderRadius: 2 }} /><span style={{ fontSize: 9, color: "rgba(255,255,255,0.55)" }}>Income</span></div>
+            <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 8, background: "#f87171", borderRadius: 2 }} /><span style={{ fontSize: 9, color: "rgba(255,255,255,0.55)" }}>Expenses</span></div>
+          </div>
+        </div>
+        <div style={{ flex: 1, background: "rgba(255,255,255,0.10)", borderRadius: 16, padding: "10px 12px", backdropFilter: "blur(4px)", display: "flex", flexDirection: "column", minWidth: 0 }}>
+          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Annual Turnover</div>
+          <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, textAlign: "center", flex: 1, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1.6 }}>No yearly report yet.<br />Import bank statements<br />to see your company turnover.</div>
+        </div>
+      </div>
+
+      {/* Pill Buttons */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "8px 20px 88px", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+        <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, marginBottom: 4, textAlign: "center", letterSpacing: 0.3, textTransform: "uppercase", fontWeight: 600 }}>What would you like to do today?</p>
+
+        <OilPillBtn onClick={() => setOilScreen("oilCD11")} label="OFTEC CD/11 Service" color="#2d6a4f" iconBg="#1b4332">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z" /></svg>
+        </OilPillBtn>
+        <OilPillBtn onClick={() => setOilScreen("oilCD10")} label="OFTEC CD/10 Install" color="#2d6a4f" iconBg="#1b4332">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z" /></svg>
+        </OilPillBtn>
+        <OilPillBtn onClick={() => setOilScreen("oilCD12")} label="OFTEC CD/12 Landlord" color="#2d6a4f" iconBg="#1b4332">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" /></svg>
+        </OilPillBtn>
+        <OilPillBtn onClick={() => setOilScreen("oilCD14")} label="OFTEC CD/14 Warning" color="#dc2626" iconBg="#991b1b">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" /></svg>
+        </OilPillBtn>
+        <OilPillBtn onClick={() => setOilScreen("oilTI133D")} label="Tank Risk TI/133D" color="#2d6a4f" iconBg="#1b4332">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
+        </OilPillBtn>
+        <OilPillBtn onClick={() => setOilScreen("oilHeatPump")} label="MCS Heat Pump" color="#2d6a4f" iconBg="#065f46">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9z" /></svg>
+        </OilPillBtn>
+        <OilPillBtn onClick={() => setOilScreen("oilSolarThermal")} label="Solar Thermal" color="#2d6a4f" iconBg="#065f46">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="#fff" strokeWidth="1.5" fill="none" /></svg>
+        </OilPillBtn>
+
+        <OilPillBtn onClick={onNewJob} label="New Job" color="#2d6a4f">
+          <svg width="28" height="28" viewBox="0 0 52 52" fill="none"><rect x="22" y="4" width="8" height="44" rx="4" fill="#fff" /><rect x="4" y="22" width="44" height="8" rx="4" fill="#fff" /></svg>
+        </OilPillBtn>
+        <OilPillBtn onClick={onJobSheets} label="Job Sheets" color="#2d6a4f" iconBg="#1b4332">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8" /><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round" /></svg>
+        </OilPillBtn>
+        <OilPillBtn onClick={onRecords} label="Records" color="#2d6a4f" iconBg="#1b4332">
+          <svg width="30" height="26" viewBox="0 0 56 48" fill="none"><rect x="2" y="10" width="52" height="36" rx="5" fill="white" /><rect x="2" y="6" width="22" height="14" rx="5" fill="white" /><rect x="8" y="18" width="40" height="24" rx="3" fill="rgba(45,106,79,0.3)" /></svg>
+        </OilPillBtn>
+        <OilPillBtn onClick={onReport} label="Reports" color="#2d6a4f" iconBg="#1b4332">
+          <svg width="30" height="30" viewBox="0 0 52 52" fill="none"><rect x="10" y="28" width="8" height="16" rx="2" fill="white" /><rect x="22" y="18" width="8" height="26" rx="2" fill="white" /><rect x="34" y="10" width="8" height="34" rx="2" fill="white" /></svg>
+        </OilPillBtn>
+        <OilPillBtn onClick={onBankStatements} label="Bank Statements" color="#2d6a4f" iconBg="#1b4332">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="white" strokeWidth="1.8" /><path d="M3 10H21" stroke="white" strokeWidth="1.8" /><rect x="6" y="13" width="5" height="3" rx="1" fill="white" /></svg>
+        </OilPillBtn>
+        <OilPillBtn onClick={onProfile} label="My Profile" color="#2d6a4f" iconBg="#1b4332">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>
+        </OilPillBtn>
+
+        {getUserPlan() === "proplus" && (
+          <OilPillBtn onClick={onEngineerManagement} label="My Engineers" color="#2d6a4f" iconBg="#1b4332">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="3" stroke="white" strokeWidth="1.8" /><circle cx="17" cy="9" r="2.5" stroke="white" strokeWidth="1.5" /><path d="M2 20c0-3.31 2.69-6 6-6h2c3.31 0 6 2.69 6 6" stroke="white" strokeWidth="1.8" strokeLinecap="round" /><path d="M17 14c2.21 0 4 1.79 4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" /></svg>
+          </OilPillBtn>
+        )}
+        <OilPillBtn onClick={onCombine} label="Combine Certs / Reports" color="#2d6a4f" iconBg="#1b4332">
+          <svg width="30" height="28" viewBox="0 0 52 48" fill="none">
+            <rect x="4" y="4" width="26" height="34" rx="3" fill="rgba(255,255,255,0.35)" stroke="white" strokeWidth="2" />
+            <rect x="16" y="10" width="26" height="34" rx="3" fill="rgba(255,255,255,0.6)" stroke="white" strokeWidth="2" />
+            <rect x="22" y="6" width="26" height="34" rx="3" fill="white" stroke="white" strokeWidth="1" />
+            <polyline points="29,20 35,26 42,16" fill="none" stroke="#1b4332" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </OilPillBtn>
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding: "14px 20px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+        <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, margin: 0 }}>OFTEC / MCS Registered · Oil & Renewables</p>
+        <button onClick={() => setShowFeedback(true)}
+          style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 20, padding: "6px 16px", color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="white" strokeWidth="1.5" /><rect x="6.25" y="6" width="1.5" height="4.5" rx=".75" fill="white" /><circle cx="7" cy="4" r=".85" fill="white" /></svg>
+          Support
+        </button>
+        <button onClick={() => setShowFeatureSuggest(true)}
+          style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 20, padding: "6px 16px", color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#fff200" strokeWidth="1.5" /><path d="M7 4v3M7 9v.5" stroke="#fff200" strokeWidth="1.5" strokeLinecap="round" /></svg>
+          Suggest a Feature
+        </button>
+      </div>
+      {showFeatureSuggest && <SuggestFeatureModal onClose={() => setShowFeatureSuggest(false)} />}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ─── END MULTI-TRADE COMPONENTS ──────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -22794,6 +25883,9 @@ function App({ onLogout }) {
     onSelectTrade={(trade) => {
       if (trade === "gas") { setActiveTrade("gas"); }
       else if (trade === "electrical") { setActiveTrade("electrical"); }
+      else if (trade === "fire") { setActiveTrade("fire"); }
+      else if (trade === "plumbing") { setActiveTrade("plumbing"); }
+      else if (trade === "oil") { setActiveTrade("oil"); }
       else if (trade === "compliance") { setActiveTrade("compliance"); }
     }} />;
 
@@ -22808,6 +25900,29 @@ function App({ onLogout }) {
     onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}
     onCombine={()=>setScreen("combineCerts")}
     records={records} invoices={invoices} quotes={quotes} accountReports={accountReports} yearlyReports={yearlyReports} />;
+
+  // ── Fire Safety Dashboard ──────────────────────────────────────────────
+  if (screen === "home" && activeTrade === "fire") return <FireSafetyDashboard onBack={goTradeHome} currentUser={currentUser}
+    onSaveCert={(rec) => setRecords(prev => [...prev, rec])}
+    records={records} invoices={invoices} quotes={quotes} accountReports={accountReports} yearlyReports={yearlyReports} />;
+  // ── Plumbing & Legionella Dashboard ─────────────────────────────────────
+  if (screen === "home" && activeTrade === "plumbing") return <PlumbingDashboard onBack={goTradeHome} currentUser={currentUser}
+    onNewJob={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")}
+    onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")}
+    onClientDetails={()=>setScreen("contacts")} onBankStatements={()=>setScreen("bankStatements")}
+    onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}
+    onCombine={()=>setScreen("combineCerts")}
+    records={records} invoices={invoices} quotes={quotes} accountReports={accountReports} yearlyReports={yearlyReports} />;
+
+  // ── Oil & Renewables Dashboard ─────────────────────────────────────────
+  if (screen === "home" && activeTrade === "oil") return <OilRenewablesDashboard onBack={goTradeHome} currentUser={currentUser}
+    onNewJob={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")}
+    onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")}
+    onClientDetails={()=>setScreen("contacts")} onBankStatements={()=>setScreen("bankStatements")}
+    onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}
+    onCombine={()=>setScreen("combineCerts")}
+    records={records} invoices={invoices} quotes={quotes} accountReports={accountReports} yearlyReports={yearlyReports} />;
+
 
   // ── Gas Dashboard (existing HomeScreen with back button) ────────────────
   if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("\u2705 "+n+" demo records added!\n\nGo to Records \u2192 Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")} onAdminDashboard={()=>setScreen("adminDashboard")} onPSC={()=>setScreen("psc")} onBankStatements={()=>setScreen("bankStatements")} onGasRateCalc={()=>setScreen("gasRateCalc")} onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")} onBackToTrades={goTradeHome}/>;
