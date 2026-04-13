@@ -44,8 +44,8 @@ The non-VITE ones are only available in Netlify Functions (server-side).
 1. Go to **Authentication** → **Providers** (left sidebar)
 2. **Email** should be enabled by default
 3. Under **Authentication** → **Settings**:
-   - Set **Site URL** to `https://gas-safe-app.co.uk`
-   - Add `https://gas-safe-app.netlify.app` to **Redirect URLs**
+   - Set **Site URL** to `https://gas-safety-app.com`
+   - Add `https://gas-safety-app.com` to **Redirect URLs**
 
 ## Step 6: Redeploy
 

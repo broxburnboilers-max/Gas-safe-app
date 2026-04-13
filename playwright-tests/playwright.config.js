@@ -17,7 +17,7 @@ import { defineConfig, devices } from "@playwright/test";
 // NOTE: The React app lives at /app — the root URL is now a static marketing page.
 // Tests navigate to /app (or /app#signin) explicitly.
 // For local dev: BASE_URL=http://localhost:5173 npx playwright test
-const BASE_URL = process.env.BASE_URL || "https://gas-safe-app.netlify.app";
+const BASE_URL = process.env.BASE_URL || "https://gas-safety-app.com";
 
 export default defineConfig({
   testDir: "./tests",

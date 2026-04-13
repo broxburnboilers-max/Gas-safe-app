@@ -3,4 +3,4 @@ Allow: /
 Disallow: /app
 Disallow: /app/
 
-Sitemap: https://gas-safe-app.co.uk/sitemap.xml
+Sitemap: https://gas-safety-app.com/sitemap.xml
