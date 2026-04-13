@@ -23922,7 +23922,11 @@ function userNeedsPlanSelection(user) {
 function AppWithAuth() {
   const [authed, setAuthed] = useState(() => !!getCurrentUser());
   // "landing" | "login" | "profileSetup"
-  const [screen, setScreen] = useState(window.location.hash === "#signin" ? "login" : "landing");
+  const [screen, setScreen] = useState(
+    window.location.hash === "#signin" ? "login" :
+    window.location.hash === "#register" ? "profileSetup" :
+    "landing"
+  );
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [showPlanSelection, setShowPlanSelection] = useState(false);
   const [showContactImport, setShowContactImport] = useState(false);
