@@ -5098,7 +5098,7 @@ function EngineerManagementScreen({ onBack, onHome }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 
-function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine, onAdminDashboard, onPSC, onBankStatements, onGasRateCalc, onJobSheets, onEngineerManagement }) {
+function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine, onAdminDashboard, onPSC, onBankStatements, onGasRateCalc, onJobSheets, onEngineerManagement, onBackToTrades }) {
   const trialStatus = getTrialStatus();
   const daysLeft = getTrialDaysLeft();
   const [showFeedback, setShowFeedback] = useState(false);
@@ -5265,14 +5265,20 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
   return (
     <div style={{ minHeight:"100dvh", background:`linear-gradient(160deg,${DARK_BLUE} 0%,${BLUE} 60%,${DARK_BLUE} 100%)`, display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
       {/* Header */}
-      <div style={{ padding:"28px 24px 20px", display:"flex", alignItems:"center", gap:12 }}>
+      <div style={{ padding:"12px 16px 12px", display:"flex", alignItems:"center", gap:10 }}>
+        {onBackToTrades && (
+          <button onClick={onBackToTrades}
+            style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+        )}
         <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Gas Safety App"/>
         <div style={{ flex:1 }}>
           <div style={{ color:"#fff", fontWeight:800, fontSize:18 }}>Gas Safety</div>
           <div style={{ color:"rgba(255,255,255,0.7)", fontSize:12 }}>West Lothian Gas Ltd</div>
         </div>
         <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
-          <span style={{ color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600 }}>👤 {currentUser?.displayName || currentUser?.username}</span>
+          <span style={{ color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600 }}>{currentUser?.displayName || currentUser?.username}</span>
           {(() => { const _p = getUserPlan(); const badge = _p === "lite" ? "LITE" : _p === "pro" ? "PRO" : "PRO+"; const bg = _p === "lite" ? "#f59e0b" : _p === "pro" ? "#3b82f6" : "#fff200"; const col = _p === "proplus" ? "#0d1f2d" : "#fff"; return (
             <span style={{ background:bg, color:col, fontSize:9, fontWeight:800, padding:"2px 8px", borderRadius:6, letterSpacing:0.8 }}>{badge}</span>
           ); })()}
@@ -21272,11 +21278,717 @@ function CombineRunnerQueue({ items, onProgress, onDone }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── MULTI-TRADE HOME SCREEN ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function TradeHomeScreen({ currentUser, onSelectTrade, onLogout }) {
+  const [lockedTrade, setLockedTrade] = useState(null);
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const displayName = currentUser?.displayName || currentUser?.username || "Engineer";
+
+  // Compliance notification count — documents expiring within 90 days
+  const complianceBadge = (() => {
+    try {
+      const docs = JSON.parse(localStorage.getItem(sk("compliance_documents")) || "[]");
+      const now = new Date();
+      return docs.filter(d => {
+        if (!d.expiry_date) return false;
+        const exp = new Date(d.expiry_date);
+        const daysUntil = (exp - now) / (1000 * 60 * 60 * 24);
+        return daysUntil <= 90;
+      }).length;
+    } catch { return 0; }
+  })();
+
+  // Gas notification — reminders due count
+  const gasBadge = (() => {
+    try {
+      const records = JSON.parse(localStorage.getItem(sk("gsc_records")) || "[]");
+      const now = new Date();
+      return records.filter(r => {
+        if (!r.nextDueDate && !r.certData?.nextInspection) return false;
+        const due = new Date(r.nextDueDate || r.certData?.nextInspection);
+        const daysUntil = (due - now) / (1000 * 60 * 60 * 24);
+        return daysUntil <= 30 && daysUntil >= -30;
+      }).length;
+    } catch { return 0; }
+  })();
+
+  const trades = [
+    { id: "gas", name: "Gas", color: "#f59e0b", active: true, badge: gasBadge,
+      icon: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 5 10 5 15C5 18.87 8.13 22 12 22C15.87 22 19 18.87 19 15C19 10 12 2 12 2Z"/></svg> },
+    { id: "electrical", name: "Electrical", color: "#3b82f6", active: true, badge: 0,
+      icon: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg> },
+    { id: "fire", name: "Fire Safety", color: "#ef4444", active: false, badge: 0,
+      icon: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12.9l-2.13 2.09C9.31 15.55 9 16.28 9 17.06 9 18.68 10.35 20 12 20s3-1.32 3-2.94c0-.78-.31-1.52-.87-2.07L12 12.9z"/><path d="M16 6l-.44.55C14.38 8.02 12 7.19 12 5.3V2S4 7 4 13c0 4.42 3.58 8 8 8s8-3.58 8-8c0-2.96-1.61-5.62-4-7z" opacity="0.6"/></svg> },
+    { id: "plumbing", name: "Plumbing", color: "#06b6d4", active: false, badge: 0,
+      icon: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg> },
+    { id: "oil", name: "Oil &\nRenewables", color: "#22c55e", active: false, badge: 0,
+      icon: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9z"/></svg> },
+    { id: "compliance", name: "Compliance", color: "#a855f7", active: true, badge: complianceBadge,
+      icon: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg> },
+  ];
+
+  const TRADE_INFO = {
+    fire: { name: "Fire Safety", desc: "Fire risk assessments, fire alarm certificates, emergency lighting tests, and fire extinguisher service records.", monthly: "£9.99", annual: "£99.99", color: "#ef4444" },
+    plumbing: { name: "Plumbing", desc: "Unvented hot water certificates, water regulations compliance, legionella risk assessments, and plumbing job records.", monthly: "£9.99", annual: "£99.99", color: "#06b6d4" },
+    oil: { name: "Oil & Renewables", desc: "OFTEC oil boiler certificates, heat pump commissioning sheets, solar thermal reports, and biomass records.", monthly: "£9.99", annual: "£99.99", color: "#22c55e" },
+  };
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Inter','Segoe UI',sans-serif" }}>
+      {/* Header with sign out */}
+      <div style={{ padding:"16px 20px 0", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <img src={APP_LOGO_SVG} style={{ height:28, objectFit:"contain" }} alt="Gas Safety App"/>
+          <span style={{ color:"#fff200", fontWeight:800, fontSize:14 }}>Gas Safety App</span>
+        </div>
+        <button onClick={onLogout}
+          style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.25)", borderRadius:8, padding:"5px 14px", color:"rgba(255,255,255,0.8)", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+          Sign Out
+        </button>
+      </div>
+
+      <div style={{ padding:"40px 20px 8px" }}>
+        <div style={{ color:"#8b9db0", fontSize:14, marginBottom:8 }}>{greeting}, {displayName}</div>
+        <div style={{ color:"#e8edf2", fontSize:24, fontWeight:700, lineHeight:1.25, marginBottom:48 }}>What do you want<br/>to do today?</div>
+      </div>
+
+      {/* 3x2 Grid */}
+      <div style={{ padding:"0 20px", flex:1 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:14, alignContent:"start" }}>
+          {trades.map(t => (
+            <div key={t.id}
+              onClick={() => t.active ? onSelectTrade(t.id) : setLockedTrade(t.id)}
+              style={{
+                aspectRatio:"1", background:"#1e3044", border:"1px solid #2a4058", borderRadius:20,
+                display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10,
+                cursor:"pointer", transition:"all 0.25s cubic-bezier(0.16,1,0.3,1)", position:"relative",
+                opacity: t.active ? 1 : 0.35,
+              }}>
+              {/* Badge or lock icon */}
+              {!t.active && (
+                <span style={{ position:"absolute", top:8, right:8, width:18, height:18, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <svg viewBox="0 0 24 24" fill="#5a7088" width="12" height="12"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>
+                </span>
+              )}
+              {t.active && t.badge > 0 && (
+                <span style={{
+                  position:"absolute", top:8, right:8, width:20, height:20,
+                  background:"#ef4444", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:10, fontWeight:700, color:"#fff", border:"2px solid #1e3044",
+                }}>{t.badge}</span>
+              )}
+              <div style={{
+                width:48, height:48, borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center",
+                background: t.active ? t.color : "#243a4e",
+              }}>
+                <span style={{ width:26, height:26, display:"flex", alignItems:"center", justifyContent:"center", color:"#fff" }}>{t.icon}</span>
+              </div>
+              <div style={{ fontSize:12, fontWeight:600, textAlign:"center", lineHeight:1.25, color: t.active ? "#e8edf2" : "#5a7088", whiteSpace:"pre-line" }}>{t.name}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ textAlign:"center", padding:"16px 0 24px", fontSize:11, color:"#5a7088" }}>
+        Gas Safety App &middot; Multi-Trade Platform
+      </div>
+
+      {/* Locked trade modal */}
+      {lockedTrade && TRADE_INFO[lockedTrade] && (
+        <LockedTradeModal trade={TRADE_INFO[lockedTrade]} onClose={() => setLockedTrade(null)} />
+      )}
+    </div>
+  );
+}
+
+// ─── Locked Trade Modal ─────────────────────────────────────────────────────
+function LockedTradeModal({ trade, onClose }) {
+  const [toast, setToast] = useState(false);
+  useEffect(() => {
+    if (document.getElementById("wlg-modal-anim-style")) return;
+    const s = document.createElement("style");
+    s.id = "wlg-modal-anim-style";
+    s.textContent = "@keyframes modalIn{from{opacity:0;transform:scale(0.9) translateY(20px);}to{opacity:1;transform:scale(1) translateY(0);}}";
+    document.head.appendChild(s);
+  }, []);
+  return (
+    <div style={{
+      position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", backdropFilter:"blur(8px)",
+      display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:20,
+    }} onClick={onClose}>
+      <div style={{
+        background:"#1e3044", border:"1px solid #2a4058", borderRadius:20, padding:"28px 24px",
+        width:"100%", maxWidth:320, textAlign:"center",
+        animation:"modalIn 0.3s cubic-bezier(0.16,1,0.3,1)",
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{
+          width:56, height:56, borderRadius:16, display:"flex", alignItems:"center", justifyContent:"center",
+          margin:"0 auto 16px", background: trade.color,
+        }}>
+          <svg viewBox="0 0 24 24" fill="#fff" width="28" height="28"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>
+        </div>
+        <h3 style={{ fontSize:18, fontWeight:700, marginBottom:8, color:"#e8edf2" }}>{trade.name}</h3>
+        <p style={{ fontSize:13, color:"#8b9db0", lineHeight:1.5, marginBottom:20 }}>{trade.desc}</p>
+        <div style={{ display:"flex", gap:8, marginBottom:20 }}>
+          <div style={{ flex:1, background:"#243a4e", border:"1px solid #2a4058", borderRadius:12, padding:"12px 8px" }}>
+            <div style={{ fontSize:10, color:"#8b9db0", textTransform:"uppercase", letterSpacing:0.5, fontWeight:600 }}>Monthly</div>
+            <div style={{ fontSize:20, fontWeight:700, margin:"4px 0 2px", color:"#e8edf2" }}>{trade.monthly}</div>
+            <div style={{ fontSize:10, color:"#5a7088" }}>per month</div>
+          </div>
+          <div style={{ flex:1, background:"#243a4e", border:"1px solid #2a4058", borderRadius:12, padding:"12px 8px" }}>
+            <div style={{ fontSize:10, color:"#8b9db0", textTransform:"uppercase", letterSpacing:0.5, fontWeight:600 }}>Annual</div>
+            <div style={{ fontSize:20, fontWeight:700, margin:"4px 0 2px", color:"#e8edf2" }}>{trade.annual}</div>
+            <div style={{ fontSize:10, color:"#5a7088" }}>per year</div>
+            <span style={{ display:"inline-block", background:"#22c55e", color:"#000", fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:4, marginTop:4 }}>SAVE 17%</span>
+          </div>
+        </div>
+        <button onClick={() => { setToast(true); setTimeout(() => setToast(false), 2000); }}
+          style={{ width:"100%", padding:14, borderRadius:12, border:"none", fontSize:14, fontWeight:700, cursor:"pointer", color:"#000", background: trade.color }}>
+          Unlock Module
+        </button>
+        <button onClick={onClose} style={{ display:"block", margin:"12px auto 0", background:"none", border:"none", color:"#8b9db0", fontSize:13, cursor:"pointer" }}>
+          Maybe later
+        </button>
+        {toast && (
+          <div style={{ position:"fixed", bottom:40, left:"50%", transform:"translateX(-50%)", background:"#1e3044", border:"1px solid #2a4058", borderRadius:12, padding:"10px 20px", color:"#e8edf2", fontSize:13, fontWeight:600, boxShadow:"0 8px 32px rgba(0,0,0,0.4)", zIndex:2000 }}>
+            Coming Soon — Stay tuned!
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── COMPLIANCE HUB ──────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function ComplianceHub({ onBack, currentUser }) {
+  const [docs, setDocs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(sk("compliance_documents")) || "[]"); } catch { return []; }
+  });
+  const [showUpload, setShowUpload] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [uploadStep, setUploadStep] = useState(1);
+  const [uploadType, setUploadType] = useState("");
+  const [uploadSubtype, setUploadSubtype] = useState("");
+  const [uploadData, setUploadData] = useState({ name:"", provider:"", reference_number:"", expiry_date:"", coverage_amount:"", notes:"" });
+  const [expandedCat, setExpandedCat] = useState(null);
+
+  // Persist docs
+  useEffect(() => {
+    try { localStorage.setItem(sk("compliance_documents"), JSON.stringify(docs)); } catch {}
+  }, [docs]);
+
+  const now = new Date();
+  const expiringCount = docs.filter(d => {
+    if (!d.expiry_date) return false;
+    const days = (new Date(d.expiry_date) - now) / (1000*60*60*24);
+    return days <= 90 && days > 0;
+  }).length;
+  const expiredCount = docs.filter(d => d.expiry_date && new Date(d.expiry_date) < now).length;
+  const attentionCount = docs.filter(d => {
+    if (!d.expiry_date) return false;
+    const days = (new Date(d.expiry_date) - now) / (1000*60*60*24);
+    return days <= 30;
+  }).length;
+  const isCompliant = expiredCount === 0;
+
+  const DOC_TYPES = [
+    { id: "insurance", label: "Insurance", icon: "\uD83D\uDEE1\uFE0F" },
+    { id: "registration", label: "Registration", icon: "\uD83C\uDFEB" },
+    { id: "qualification", label: "Qualification", icon: "\uD83C\uDF93" },
+    { id: "training", label: "Training Certificate", icon: "\uD83D\uDCDC" },
+    { id: "vehicle", label: "Vehicle & Equipment", icon: "\uD83D\uDE90" },
+  ];
+
+  const SUBTYPES = {
+    insurance: [
+      { id: "pli", label: "Public Liability Insurance" },
+      { id: "eli", label: "Employers' Liability Insurance" },
+      { id: "pi", label: "Professional Indemnity" },
+      { id: "tools", label: "Tools & Equipment Insurance" },
+    ],
+    registration: [
+      { id: "gas_safe", label: "Gas Safe Registration" },
+      { id: "niceic", label: "NICEIC Registration" },
+      { id: "napit", label: "NAPIT Registration" },
+      { id: "oftec", label: "OFTEC Registration" },
+      { id: "part_p", label: "Part P Registration" },
+    ],
+    qualification: [
+      { id: "acs_ccn1", label: "ACS CCN1" },
+      { id: "acs_cenwat", label: "ACS CENWAT" },
+      { id: "acs_ckr1", label: "ACS CKR1" },
+      { id: "acs_cpa1", label: "ACS CPA1" },
+      { id: "acs_other", label: "Other ACS Certificate" },
+      { id: "nvq", label: "NVQ / Diploma" },
+      { id: "18th_edition", label: "18th Edition (BS 7671)" },
+      { id: "g3", label: "G3 Unvented Hot Water" },
+      { id: "cscs", label: "CSCS Card" },
+    ],
+    training: [
+      { id: "first_aid", label: "First Aid" },
+      { id: "asbestos", label: "Asbestos Awareness" },
+      { id: "working_heights", label: "Working at Heights" },
+      { id: "manual_handling", label: "Manual Handling" },
+      { id: "other_training", label: "Other Training" },
+    ],
+    vehicle: [
+      { id: "van_insurance", label: "Van Insurance" },
+      { id: "mot", label: "MOT Certificate" },
+      { id: "breakdown", label: "Breakdown Cover" },
+      { id: "equipment_cal", label: "Equipment Calibration" },
+    ],
+  };
+
+  function saveDocument() {
+    const subtypeObj = (SUBTYPES[uploadType] || []).find(s => s.id === uploadSubtype);
+    const doc = {
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2),
+      type: uploadType,
+      subtype: uploadSubtype,
+      name: uploadData.name || subtypeObj?.label || "",
+      provider: uploadData.provider,
+      reference_number: uploadData.reference_number,
+      expiry_date: uploadData.expiry_date,
+      coverage_amount: uploadType === "insurance" ? uploadData.coverage_amount : null,
+      document_url: null,
+      notes: uploadData.notes,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setDocs(prev => [...prev, doc]);
+    setShowUpload(false);
+    setUploadStep(1);
+    setUploadType("");
+    setUploadSubtype("");
+    setUploadData({ name:"", provider:"", reference_number:"", expiry_date:"", coverage_amount:"", notes:"" });
+  }
+
+  function deleteDoc(id) {
+    if (confirm("Delete this document?")) {
+      setDocs(prev => prev.filter(d => d.id !== id));
+    }
+  }
+
+  function getDocStatus(doc) {
+    if (!doc.expiry_date) return "valid";
+    const days = (new Date(doc.expiry_date) - now) / (1000*60*60*24);
+    if (days < 0) return "expired";
+    if (days <= 90) return "warning";
+    return "valid";
+  }
+
+  const statusIcon = (status) => {
+    if (status === "expired") return <span style={{ color:"#ef4444", fontWeight:700 }}>✗</span>;
+    if (status === "warning") return <span style={{ color:"#f97316", fontWeight:700 }}>⚠</span>;
+    return <span style={{ color:"#22c55e", fontWeight:700 }}>✓</span>;
+  };
+
+  // Category buttons for the main hub
+  const categories = [
+    { key: "gas_safe", label: "Gas Safe Registration", filter: d => d.subtype === "gas_safe" },
+    { key: "acs", label: "ACS Certificates", filter: d => d.subtype?.startsWith("acs_") },
+    { key: "pli", label: "Public Liability Insurance", filter: d => d.subtype === "pli" },
+    { key: "eli", label: "Employers' Liability", filter: d => d.subtype === "eli" },
+    { key: "qualifications", label: "Qualifications", filter: d => d.type === "qualification" },
+    { key: "registrations", label: "Trade Registrations", filter: d => d.type === "registration" },
+  ];
+
+  // Upload modal
+  if (showUpload) {
+    return (
+      <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+        <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+          <button onClick={() => { if (uploadStep > 1) setUploadStep(s => s - 1); else setShowUpload(false); }}
+            style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div style={{ flex:1 }}>
+            <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", lineHeight:1.2 }}>Upload Document</h2>
+            <span style={{ fontSize:11, color:"#8b9db0" }}>Step {uploadStep} of 3</span>
+          </div>
+        </div>
+        <div style={{ flex:1, padding:"20px 16px", overflowY:"auto" }}>
+          {uploadStep === 1 && (
+            <div>
+              <p style={{ color:"#8b9db0", fontSize:14, marginBottom:16 }}>Select document type:</p>
+              {DOC_TYPES.map(t => (
+                <button key={t.id} onClick={() => { setUploadType(t.id); setUploadStep(2); }}
+                  style={{ display:"flex", alignItems:"center", gap:12, width:"100%", padding:"14px 16px", marginBottom:8, background: uploadType===t.id ? "#243a4e" : "#1e3044", border:"1px solid #2a4058", borderRadius:12, cursor:"pointer", color:"#e8edf2", fontSize:14, fontWeight:600, textAlign:"left" }}>
+                  <span style={{ fontSize:20 }}>{t.icon}</span> {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {uploadStep === 2 && (
+            <div>
+              <p style={{ color:"#8b9db0", fontSize:14, marginBottom:16 }}>Select specific type:</p>
+              {(SUBTYPES[uploadType] || []).map(s => (
+                <button key={s.id} onClick={() => { setUploadSubtype(s.id); setUploadData(prev => ({ ...prev, name: s.label })); setUploadStep(3); }}
+                  style={{ display:"block", width:"100%", padding:"14px 16px", marginBottom:8, background: uploadSubtype===s.id ? "#243a4e" : "#1e3044", border:"1px solid #2a4058", borderRadius:12, cursor:"pointer", color:"#e8edf2", fontSize:14, fontWeight:600, textAlign:"left" }}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {uploadStep === 3 && (
+            <div>
+              <p style={{ color:"#8b9db0", fontSize:14, marginBottom:16 }}>Enter document details:</p>
+              {[
+                { key:"name", label:"Document Name", type:"text" },
+                { key:"provider", label:"Provider / Issuer", type:"text" },
+                { key:"reference_number", label:"Reference Number", type:"text" },
+                { key:"expiry_date", label:"Expiry Date", type:"date" },
+                ...(uploadType === "insurance" ? [{ key:"coverage_amount", label:"Coverage Amount (£)", type:"number" }] : []),
+                { key:"notes", label:"Notes (optional)", type:"text" },
+              ].map(f => (
+                <div key={f.key} style={{ marginBottom:12 }}>
+                  <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#8b9db0", marginBottom:4 }}>{f.label}</label>
+                  <input type={f.type} value={uploadData[f.key]} onChange={e => setUploadData(prev => ({ ...prev, [f.key]: e.target.value }))}
+                    style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, outline:"none" }}/>
+                </div>
+              ))}
+              <button onClick={saveDocument}
+                style={{ width:"100%", padding:14, background:"#a855f7", color:"#fff", border:"none", borderRadius:12, fontSize:14, fontWeight:700, cursor:"pointer", marginTop:8 }}>
+                Save Document
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Main compliance hub view
+  return (
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      {/* Header */}
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack}
+          style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div style={{ flex:1 }}>
+          <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", lineHeight:1.2 }}>Compliance Hub</h2>
+          <span style={{ fontSize:11, color:"#8b9db0" }}>{attentionCount > 0 ? `${attentionCount} item${attentionCount!==1?"s":""} need${attentionCount===1?"s":""} attention` : "All documents up to date"}</span>
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <span style={{ color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600 }}>{currentUser?.displayName || currentUser?.username}</span>
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div style={{ display:"flex", gap:8, padding:"0 16px 12px" }}>
+        <div style={{ flex:1, background:"rgba(255,255,255,0.10)", borderRadius:14, padding:"10px 10px 8px", backdropFilter:"blur(4px)" }}>
+          <div style={{ color:"rgba(255,255,255,0.55)", fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6, marginBottom:4 }}>Docs on File</div>
+          <div style={{ color:"#fff", fontWeight:800, fontSize:22 }}>{docs.length}</div>
+        </div>
+        <div style={{ flex:1, background:"rgba(255,255,255,0.10)", borderRadius:14, padding:"10px 10px 8px", backdropFilter:"blur(4px)" }}>
+          <div style={{ color:"rgba(255,255,255,0.55)", fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6, marginBottom:4 }}>Expiring Soon</div>
+          <div style={{ color: expiringCount > 0 ? "#f97316" : "#fff", fontWeight:800, fontSize:22 }}>{expiringCount}</div>
+        </div>
+        <div style={{ flex:1, background:"rgba(255,255,255,0.10)", borderRadius:14, padding:"10px 10px 8px", backdropFilter:"blur(4px)" }}>
+          <div style={{ color:"rgba(255,255,255,0.55)", fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6, marginBottom:4 }}>Status</div>
+          <div style={{ color: isCompliant ? "#22c55e" : "#ef4444", fontWeight:800, fontSize:14, marginTop:4 }}>{isCompliant ? "Compliant" : "Non-Compliant"}</div>
+        </div>
+      </div>
+
+      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 88px" }}>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, marginBottom:12, textAlign:"center", letterSpacing:0.3, textTransform:"uppercase", fontWeight:600 }}>Compliance Overview</p>
+
+        {/* Attention items at top */}
+        {docs.filter(d => { if (!d.expiry_date) return false; const days = (new Date(d.expiry_date) - now)/(1000*60*60*24); return days <= 30; }).map(d => (
+          <div key={d.id + "_alert"} style={{ display:"flex", alignItems:"center", padding:"14px 16px", marginBottom:8, background:"linear-gradient(180deg, #f97316 0%, #ea580c 100%)", borderRadius:30, cursor:"pointer" }}
+            onClick={() => setExpandedCat(d.type)}>
+            <span style={{ fontSize:16, marginRight:12 }}>⚠️</span>
+            <span style={{ flex:1, color:"#fff", fontSize:14, fontWeight:700 }}>{d.name} — {new Date(d.expiry_date) < now ? "EXPIRED" : `Expires ${new Date(d.expiry_date).toLocaleDateString("en-GB")}`}</span>
+          </div>
+        ))}
+
+        {/* Upload Document button */}
+        <div onClick={() => setShowUpload(true)}
+          style={{ display:"flex", alignItems:"center", padding:"14px 16px", marginBottom:8, background:"linear-gradient(180deg, rgba(255,255,255,0.30) 0%, #a855f7 50%, rgba(0,0,0,0.28) 100%), #a855f7", borderRadius:30, cursor:"pointer" }}>
+          <span style={{ fontSize:20, marginRight:12, display:"flex", alignItems:"center", justifyContent:"center", width:38, height:38, borderRadius:"50%", background:"rgba(255,255,255,0.2)" }}>+</span>
+          <span style={{ flex:1, color:"#fff", fontSize:15, fontWeight:800, textTransform:"uppercase", letterSpacing:0.8 }}>Upload Document</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 2.5L9.5 7L4 11.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </div>
+
+        {/* Category buttons */}
+        {categories.map(cat => {
+          const catDocs = docs.filter(cat.filter);
+          return (
+            <div key={cat.key}>
+              <div onClick={() => setExpandedCat(expandedCat === cat.key ? null : cat.key)}
+                style={{ display:"flex", alignItems:"center", padding:"14px 16px", marginBottom:8, background:"linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, #fff200 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), #fff200", borderRadius:30, cursor:"pointer" }}>
+                <span style={{ flex:1, color:"#111", fontSize:15, fontWeight:800, textTransform:"uppercase", letterSpacing:0.8 }}>{cat.label}</span>
+                <span style={{ color:"#444", fontSize:12, fontWeight:600, marginRight:8 }}>{catDocs.length}</span>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ transform: expandedCat===cat.key ? "rotate(90deg)" : "none", transition:"transform 0.2s" }}>
+                  <path d="M4 2.5L9.5 7L4 11.5" stroke="#111" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              {expandedCat === cat.key && (
+                <div style={{ padding:"0 8px 8px" }}>
+                  {catDocs.length === 0 ? (
+                    <div style={{ padding:"12px 16px", color:"#5a7088", fontSize:13, textAlign:"center" }}>No documents uploaded yet</div>
+                  ) : catDocs.map(d => {
+                    const st = getDocStatus(d);
+                    return (
+                      <div key={d.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", marginBottom:4, background:"#1e3044", border:"1px solid #2a4058", borderRadius:12 }}>
+                        {statusIcon(st)}
+                        <div style={{ flex:1 }}>
+                          <div style={{ color:"#e8edf2", fontSize:13, fontWeight:600 }}>{d.name}</div>
+                          <div style={{ color:"#5a7088", fontSize:11 }}>
+                            {d.reference_number && `Ref: ${d.reference_number} · `}
+                            {d.expiry_date ? `Expires: ${new Date(d.expiry_date).toLocaleDateString("en-GB")}` : "No expiry set"}
+                          </div>
+                        </div>
+                        <button onClick={() => deleteDoc(d.id)}
+                          style={{ background:"none", border:"none", color:"#ef4444", fontSize:16, cursor:"pointer", padding:4 }}>✗</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding:"14px 20px 20px", display:"flex", alignItems:"center", justifyContent:"center", gap:16 }}>
+        <p style={{ color:"rgba(255,255,255,0.5)", fontSize:12, margin:0 }}>Compliance Hub · Document Management</p>
+        <button onClick={() => setShowFeedback(true)}
+          style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:20, padding:"6px 16px", color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="white" strokeWidth="1.5"/><rect x="6.25" y="6" width="1.5" height="4.5" rx=".75" fill="white"/><circle cx="7" cy="4" r=".85" fill="white"/></svg>
+          Support
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── ELECTRICAL DASHBOARD ────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function ElectricalPlaceholderScreen({ certName, onBack }) {
+  return (
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack}
+          style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2" }}>{certName}</h2>
+      </div>
+      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ width:80, height:80, borderRadius:20, background:"#3b82f6", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px" }}>
+            <svg viewBox="0 0 24 24" fill="#fff" width="40" height="40"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
+          </div>
+          <h3 style={{ color:"#e8edf2", fontSize:20, fontWeight:700, marginBottom:8 }}>{certName}</h3>
+          <p style={{ color:"#8b9db0", fontSize:14, lineHeight:1.5, maxWidth:300 }}>Coming Soon — Full certificate form in development. This will include all BS 7671 compliant fields.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onReport, onProfile, onPayment, onClientDetails, onBankStatements, onJobSheets, onEngineerManagement, onCombine, records, invoices, quotes, accountReports, yearlyReports }) {
+  const [elecScreen, setElecScreen] = useState(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+
+  if (elecScreen) {
+    return <ElectricalPlaceholderScreen certName={elecScreen} onBack={() => setElecScreen(null)} />;
+  }
+
+  // Reuse the PillBtn pattern inline for electrical
+  function ElecPillBtn({ onClick, label, color="#fff200", iconBg, children }) {
+    const [hov, setHov] = useState(false);
+    const textColor = color === "#fff200" ? "#111" : "#fff";
+    const circleBg = iconBg || color;
+    const btnGradient = `linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, ${color} 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), ${color}`;
+    const circleGradient = `linear-gradient(180deg, rgba(255,255,255,0.22) 0%, ${circleBg} 50%, rgba(0,0,0,0.22) 100%)`;
+    return (
+      <div onClick={onClick} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+        style={{
+          display:"flex", alignItems:"center", cursor:"pointer", borderRadius:999, overflow:"hidden",
+          background: btnGradient,
+          boxShadow: hov ? "0 8px 28px rgba(0,0,0,0.42), 0 2px 10px rgba(0,0,0,0.22)" : "0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)",
+          transition:"all 0.16s ease",
+          transform: hov ? "translateY(-2px) scale(1.018)" : "translateY(0) scale(1)",
+          position:"relative", width:"100%", maxWidth:360, height:76,
+        }}>
+        <div style={{
+          width:58, height:58, borderRadius:"50%", flexShrink:0,
+          background: circleGradient,
+          border:"2.5px solid rgba(255,255,255,0.45)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          margin:"0 0 0 9px",
+          boxShadow:"0 3px 10px rgba(0,0,0,0.30), inset 0 1px 3px rgba(255,255,255,0.25)",
+          position:"relative", zIndex:3, boxSizing:"border-box",
+        }}>{children}</div>
+        <span style={{
+          flex:1, color: textColor, fontSize:15, fontWeight:800,
+          fontFamily:"'Segoe UI',sans-serif",
+          paddingLeft:18, paddingRight:8,
+          letterSpacing:0.8, textTransform:"uppercase",
+          textShadow: textColor==="#111" ? "0 1px 2px rgba(255,255,255,0.4)" : "0 1px 4px rgba(0,0,0,0.35)",
+          position:"relative", zIndex:3,
+        }}>{label}</span>
+        <svg style={{ flexShrink:0, marginRight:22, opacity:0.85, position:"relative", zIndex:3 }} width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M4 2.5L9.5 7L4 11.5" stroke={textColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+    );
+  }
+
+  // Finance stats (same logic as gas dashboard)
+  const now=new Date(), tm=now.getMonth(), ty=now.getFullYear();
+  const lm=tm===0?11:tm-1, ly=tm===0?ty-1:ty;
+  const isT=d=>{try{const x=new Date(d);return x.getMonth()===tm&&x.getFullYear()===ty;}catch{return false;}};
+  const isL=d=>{try{const x=new Date(d);return x.getMonth()===lm&&x.getFullYear()===ly;}catch{return false;}};
+  const aR=(records||[]).filter(r=>!r.isDemo),aI=(invoices||[]).filter(r=>!r.isDemo),aQ=(quotes||[]).filter(r=>!r.isDemo);
+  const rT=aR.filter(r=>isT(r.savedAt)).length,rL=aR.filter(r=>isL(r.savedAt)).length;
+  const iT=aI.filter(r=>isT(r.createdAt)).length,iL=aI.filter(r=>isL(r.createdAt)).length;
+  const qT=aQ.filter(r=>isT(r.createdAt)).length,qL=aQ.filter(r=>isL(r.createdAt)).length;
+  const pct=(c,p)=>p===0?(c>0?100:0):Math.round(((c-p)/p)*100);
+  const FinCard=({label,count,prev})=>{const ch=pct(count,prev),up=ch>0,nl=ch===0;return(
+    <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:14,padding:"10px 10px 8px",backdropFilter:"blur(4px)",minWidth:0}}>
+      <div style={{color:"rgba(255,255,255,0.55)",fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:0.6,marginBottom:6,lineHeight:1.3}}>{label}</div>
+      <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:4}}>
+        <span style={{color:nl?"#fff200":up?"#4ade80":"#f87171",fontSize:12}}>{nl?"→":up?"↑":"↓"}</span>
+        <span style={{color:"#fff",fontWeight:800,fontSize:22,lineHeight:1}}>{count}</span>
+      </div>
+      <div style={{color:nl?"rgba(255,255,255,0.45)":up?"#4ade80":"#f87171",fontSize:9,fontWeight:600}}>{ch===0?"0% from last month":`${Math.abs(ch)}% ${up?"▲":"▼"} last month`}</div>
+    </div>);};
+
+  return (
+    <div style={{ minHeight:"100dvh", background:`linear-gradient(160deg,${DARK_BLUE} 0%,${BLUE} 60%,${DARK_BLUE} 100%)`, display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      {/* Header */}
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack}
+          style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div style={{ flex:1 }}>
+          <div style={{ color:"#fff", fontWeight:800, fontSize:18 }}>Electrical</div>
+          <div style={{ color:"rgba(255,255,255,0.7)", fontSize:12 }}>NICEIC Registered</div>
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
+          <span style={{ color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600 }}>{currentUser?.displayName || currentUser?.username}</span>
+          <span style={{ background:"#3b82f6", color:"#fff", fontSize:9, fontWeight:800, padding:"2px 8px", borderRadius:6, letterSpacing:0.8 }}>PRO</span>
+        </div>
+      </div>
+
+      {/* Finance widgets */}
+      <div style={{width:"100%",maxWidth:440,display:"flex",gap:8,marginBottom:8,padding:"0 16px"}}>
+        <FinCard label="Reports Created" count={rT} prev={rL}/>
+        <FinCard label="Invoices Created" count={iT} prev={iL}/>
+        <FinCard label="Quotes Created" count={qT} prev={qL}/>
+      </div>
+
+      {/* Charts row */}
+      <div style={{width:"100%",maxWidth:440,display:"flex",gap:10,marginBottom:4,marginTop:4,padding:"0 16px"}}>
+        <div style={{flex:1.2,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 10px 8px",backdropFilter:"blur(4px)"}}>
+          <div style={{color:"rgba(255,255,255,0.6)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Monthly Overview</div>
+          <div style={{color:"rgba(255,255,255,0.35)",fontSize:11,textAlign:"center",padding:"12px 4px",lineHeight:1.6}}>No reports yet.<br/>Import bank statements<br/>to see your chart.</div>
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,background:"#4ade80",borderRadius:2}}/><span style={{fontSize:9,color:"rgba(255,255,255,0.55)"}}>Income</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,background:"#f87171",borderRadius:2}}/><span style={{fontSize:9,color:"rgba(255,255,255,0.55)"}}>Expenses</span></div>
+          </div>
+        </div>
+        <div style={{flex:1,background:"rgba(255,255,255,0.10)",borderRadius:16,padding:"10px 12px",backdropFilter:"blur(4px)",display:"flex",flexDirection:"column"}}>
+          <div style={{color:"rgba(255,255,255,0.6)",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Annual Turnover</div>
+          <div style={{color:"rgba(255,255,255,0.35)",fontSize:11,textAlign:"center",flex:1,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1.6}}>No yearly report yet.<br/>Import bank statements<br/>to see your company turnover.</div>
+        </div>
+      </div>
+
+      {/* Buttons */}
+      <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 88px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, marginBottom:4, textAlign:"center", letterSpacing:0.3, textTransform:"uppercase", fontWeight:600 }}>What would you like to do?</p>
+
+        <ElecPillBtn onClick={() => setElecScreen("New EICR")} label="New EICR" color="#3b82f6" iconBg="#1d4ed8">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
+        </ElecPillBtn>
+        <ElecPillBtn onClick={() => setElecScreen("Minor Works Certificate")} label="Minor Works Certificate" color="#fff200" iconBg="#0d1f2d">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+        </ElecPillBtn>
+        <ElecPillBtn onClick={() => setElecScreen("EV Charger Certificate")} label="EV Charger Certificate" color="#fff200" iconBg="#1a3a4a">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
+        </ElecPillBtn>
+        <ElecPillBtn onClick={() => setElecScreen("PAT Testing")} label="PAT Testing" color="#fff200" iconBg="#0d3320">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        </ElecPillBtn>
+        <ElecPillBtn onClick={onNewJob} label="New Job" color="#fff200">
+          <svg width="28" height="28" viewBox="0 0 52 52" fill="none"><rect x="22" y="4" width="8" height="44" rx="4" fill="#0d1f2d"/><rect x="4" y="22" width="44" height="8" rx="4" fill="#0d1f2d"/></svg>
+        </ElecPillBtn>
+        <ElecPillBtn onClick={onJobSheets} label="Job Sheets" color="#fff200" iconBg="#0d3320">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        </ElecPillBtn>
+        <ElecPillBtn onClick={onRecords} label="Records" color="#fff200" iconBg="#0d1f2d">
+          <svg width="30" height="26" viewBox="0 0 56 48" fill="none"><rect x="2" y="10" width="52" height="36" rx="5" fill="white"/><rect x="2" y="6" width="22" height="14" rx="5" fill="white"/><rect x="8" y="18" width="40" height="24" rx="3" fill="rgba(3,105,161,0.3)"/></svg>
+        </ElecPillBtn>
+        <ElecPillBtn onClick={onReport} label="Reports" color="#fff200" iconBg="#1a3a26">
+          <svg width="30" height="30" viewBox="0 0 52 52" fill="none"><rect x="10" y="28" width="8" height="16" rx="2" fill="white"/><rect x="22" y="18" width="8" height="26" rx="2" fill="white"/><rect x="34" y="10" width="8" height="34" rx="2" fill="white"/></svg>
+        </ElecPillBtn>
+        <ElecPillBtn onClick={onBankStatements} label="Bank Statements" color="#fff200" iconBg="#0d3320">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="white" strokeWidth="1.8"/><path d="M3 10H21" stroke="white" strokeWidth="1.8"/><rect x="6" y="13" width="5" height="3" rx="1" fill="white"/></svg>
+        </ElecPillBtn>
+        <ElecPillBtn onClick={onProfile} label="My Profile" color="#fff200" iconBg="#35463d">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </ElecPillBtn>
+        <ElecPillBtn onClick={onPayment} label="Payment Details" color="#fff200" iconBg="#0d1f2d">
+          <span style={{ fontSize:26 }}>💳</span>
+        </ElecPillBtn>
+        <ElecPillBtn onClick={onClientDetails} label="Client Details" color="#fff200" iconBg="#1a3a5c">
+          <span style={{ fontSize:26 }}>👥</span>
+        </ElecPillBtn>
+        {getUserPlan() === "proplus" && (
+          <ElecPillBtn onClick={onEngineerManagement} label="My Engineers" color="#fff200" iconBg="#1a3a5c">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="3" stroke="white" strokeWidth="1.8"/><circle cx="17" cy="9" r="2.5" stroke="white" strokeWidth="1.5"/><path d="M2 20c0-3.31 2.69-6 6-6h2c3.31 0 6 2.69 6 6" stroke="white" strokeWidth="1.8" strokeLinecap="round"/><path d="M17 14c2.21 0 4 1.79 4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          </ElecPillBtn>
+        )}
+        <ElecPillBtn onClick={onCombine} label="Combine Certs / Reports" color="#fff200" iconBg="#1a3a26">
+          <svg width="30" height="28" viewBox="0 0 52 48" fill="none">
+            <rect x="4" y="4" width="26" height="34" rx="3" fill="rgba(255,255,255,0.35)" stroke="white" strokeWidth="2"/>
+            <rect x="16" y="10" width="26" height="34" rx="3" fill="rgba(255,255,255,0.6)" stroke="white" strokeWidth="2"/>
+            <rect x="22" y="6" width="26" height="34" rx="3" fill="white" stroke="white" strokeWidth="1"/>
+            <polyline points="29,20 35,26 42,16" fill="none" stroke="#1a3a26" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </ElecPillBtn>
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding:"14px 20px 20px", display:"flex", alignItems:"center", justifyContent:"center", gap:16 }}>
+        <p style={{ color:"rgba(255,255,255,0.5)", fontSize:12, margin:0 }}>NICEIC Registered · Electrical Safety</p>
+        <button onClick={() => setShowFeedback(true)}
+          style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.3)", borderRadius:20, padding:"6px 16px", color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="white" strokeWidth="1.5"/><rect x="6.25" y="6" width="1.5" height="4.5" rx=".75" fill="white"/><circle cx="7" cy="4" r=".85" fill="white"/></svg>
+          Support
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── END MULTI-TRADE COMPONENTS ──────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
 
 function App({ onLogout }) {
   const currentUser = getCurrentUser();
 
   const [screen, setScreen] = useState("home");
+  const [activeTrade, setActiveTrade] = useState(null);
   const [subScreen, setSubScreen] = useState(null);
   const [wnSubScreen, setWnSubScreen] = useState(null);
   const [wnShowOptions, setWnShowOptions] = useState(false);
@@ -21845,6 +22557,7 @@ function App({ onLogout }) {
   });
 
   const goHome = () => { setScreen("home"); setSubScreen(null); };
+  const goTradeHome = () => { setActiveTrade(null); setScreen("home"); setSubScreen(null); };
 
   // If no profile set up yet, show profile setup first
   if (!userProfile && screen !== "profileSetup") {
@@ -21977,7 +22690,28 @@ function App({ onLogout }) {
       onPaymentSubmitted={()=>{ /* profile updated by markPaymentSubmitted, force re-render */ setScreen("home"); }}
     />;
   }
-  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("✅ "+n+" demo records added!\n\nGo to Records → Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")} onAdminDashboard={()=>setScreen("adminDashboard")} onPSC={()=>setScreen("psc")} onBankStatements={()=>setScreen("bankStatements")} onGasRateCalc={()=>setScreen("gasRateCalc")} onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}/>;
+  // ── Multi-Trade Home Screen (activeTrade routing) ────────────────────────
+  if (screen === "home" && !activeTrade) return <TradeHomeScreen currentUser={currentUser} onLogout={onLogout}
+    onSelectTrade={(trade) => {
+      if (trade === "gas") { setActiveTrade("gas"); }
+      else if (trade === "electrical") { setActiveTrade("electrical"); }
+      else if (trade === "compliance") { setActiveTrade("compliance"); }
+    }} />;
+
+  // ── Compliance Hub ──────────────────────────────────────────────────────
+  if (screen === "home" && activeTrade === "compliance") return <ComplianceHub onBack={goTradeHome} currentUser={currentUser} />;
+
+  // ── Electrical Dashboard ────────────────────────────────────────────────
+  if (screen === "home" && activeTrade === "electrical") return <ElectricalDashboard onBack={goTradeHome} currentUser={currentUser}
+    onNewJob={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")}
+    onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")}
+    onClientDetails={()=>setScreen("contacts")} onBankStatements={()=>setScreen("bankStatements")}
+    onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}
+    onCombine={()=>setScreen("combineCerts")}
+    records={records} invoices={invoices} quotes={quotes} accountReports={accountReports} yearlyReports={yearlyReports} />;
+
+  // ── Gas Dashboard (existing HomeScreen with back button) ────────────────
+  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("\u2705 "+n+" demo records added!\n\nGo to Records \u2192 Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")} onAdminDashboard={()=>setScreen("adminDashboard")} onPSC={()=>setScreen("psc")} onBankStatements={()=>setScreen("bankStatements")} onGasRateCalc={()=>setScreen("gasRateCalc")} onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")} onBackToTrades={goTradeHome}/>;
   if (screen === "psc") return <PSCScreen onHome={goHome} engineerData={profileDefaults()} onSave={(rec)=>{ setRecords(prev=>[...prev, rec]); }}/>;
   if (screen === "adminDashboard") return <AdminDashboardScreen onBack={()=>setScreen("home")} onHome={goHome} records={records} invoices={invoices} quotes={quotes}/>;
   if (screen === "contacts") return <ClientContactsScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
