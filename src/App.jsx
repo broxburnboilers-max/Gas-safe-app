@@ -21873,24 +21873,731 @@ function ComplianceHub({ onBack, currentUser }) {
 // ─── ELECTRICAL DASHBOARD ────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function ElectricalPlaceholderScreen({ certName, onBack }) {
+// ─── ELECTRICAL PDF PREVIEW ─────────────────────────────────────────────────
+function ElectricalPDFPreview({ certData, certType, certTitle, onClose }) {
+  const [downloading, setDownloading] = useState(false);
+  const certRef = useRef(null);
+
+  const downloadPDF = async () => {
+    setDownloading(true);
+    try {
+      await Promise.all([
+        new Promise((res, rej) => { if (window.html2canvas) return res(); const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; s.onload = res; s.onerror = rej; document.head.appendChild(s); }),
+        new Promise((res, rej) => { if (window.jspdf) return res(); const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload = res; s.onerror = rej; document.head.appendChild(s); })
+      ]);
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+      const el = certRef.current;
+      const prevW = el.style.width; el.style.width = "800px"; el.style.maxWidth = "800px";
+      await new Promise(r => setTimeout(r, 150));
+      const canvas = await window.html2canvas(el, { scale:2, useCORS:true, logging:false, width:800, height:el.scrollHeight, windowWidth:800 });
+      el.style.width = prevW; el.style.maxWidth = prevW;
+      const pdfW = 210, pdfH = 297;
+      const imgR = canvas.width / canvas.height;
+      const pgR = pdfW / pdfH;
+      let dW, dH, dX, dY;
+      if (imgR > pgR) { dW = pdfW - 10; dH = dW / imgR; dX = 5; dY = 5; }
+      else { dH = pdfH - 10; dW = dH * imgR; dX = (pdfW - dW) / 2; dY = 5; }
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", dX, dY, dW, dH);
+      const fn = (certData.clientName || certType).replace(/[^a-zA-Z0-9 ]/g,"").trim().replace(/\s+/g,"_") + ".pdf";
+      pdf.save(fn);
+    } catch(e) { console.error(e); alert("Could not generate PDF: " + e.message); }
+    setDownloading(false);
+  };
+
+  const sectionStyle = { marginBottom:16, padding:"12px 16px", background:"#f8f9fa", borderRadius:8, border:"1px solid #e0e0e0" };
+  const labelStyle = { color:"#555", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
+  const valueStyle = { color:"#1a1a2e", fontSize:13, fontWeight:500 };
+  const headerBg = { background:"linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)", padding:"20px 24px", color:"#fff" };
+
+  const renderField = (label, value) => {
+    if (!value || value === "N/A") return null;
+    return <div style={{ marginBottom:8 }}><div style={labelStyle}>{label}</div><div style={valueStyle}>{value}</div></div>;
+  };
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onClose} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2" }}>PDF Preview</h2>
+        <div style={{ flex:1 }}/>
+        <button onClick={downloadPDF} disabled={downloading} style={{ background:"#3b82f6", color:"#fff", border:"none", borderRadius:10, padding:"8px 18px", fontWeight:700, fontSize:13, cursor:"pointer", opacity: downloading ? 0.6 : 1 }}>
+          {downloading ? "Generating..." : "Download PDF"}
+        </button>
+      </div>
+      <div style={{ padding:"12px", overflowY:"auto" }}>
+        <div ref={certRef} style={{ background:"#fff", borderRadius:12, overflow:"hidden", maxWidth:800, margin:"0 auto" }}>
+          <div style={headerBg}>
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:8 }}>
+              <img src={APP_LOGO_SVG} style={{ height:40, objectFit:"contain" }} alt="Logo"/>
+              <div>
+                <div style={{ fontSize:18, fontWeight:800 }}>{certTitle}</div>
+                <div style={{ fontSize:12, opacity:0.9 }}>Ref: {certData.certRef} | Date: {certData.date}</div>
+              </div>
+            </div>
+          </div>
+          <div style={{ padding:"20px 24px" }}>
+            <div style={sectionStyle}>
+              <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Client Details</div>
+              {renderField("Client Name", certData.clientName)}
+              {renderField("Address", [certData.clientAddress || certData.siteAddr1, certData.siteAddr2, certData.clientPostcode || certData.sitePostcode].filter(Boolean).join(", "))}
+              {renderField("Email", certData.clientEmail)}
+              {renderField("Telephone", certData.clientTel)}
+            </div>
+            {certType === "eicr" && <>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Installation Details</div>
+                {renderField("Description", certData.installDescription)}
+                {renderField("Age of Wiring", certData.wiringAge)}
+                {renderField("Last Inspection", certData.lastInspection)}
+                {renderField("Additions/Alterations", certData.additionsAlterations)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Supply Characteristics</div>
+                {renderField("System Type", certData.systemType)}
+                {renderField("Phases", certData.numPhases)}
+                {renderField("Protective Device", [certData.supplyProtectiveType, certData.supplyProtectiveRating ? certData.supplyProtectiveRating + "A" : ""].filter(Boolean).join(" — "))}
+                {renderField("Nominal Voltage", certData.nominalVoltage ? certData.nominalVoltage + "V" : "")}
+                {renderField("Prospective Fault Current", certData.prospectiveFaultCurrent ? certData.prospectiveFaultCurrent + " kA" : "")}
+                {renderField("Ze", certData.ze ? certData.ze + " Ω" : "")}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Observations</div>
+                <div style={valueStyle}>{certData.observations || "—"}</div>
+                {renderField("Classification", certData.observationCode)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Overall Result</div>
+                <div style={{ fontSize:16, fontWeight:800, color: certData.result === "Satisfactory" ? "#22c55e" : "#ef4444" }}>{certData.result}</div>
+                {renderField("Next Inspection", certData.nextInspectionDate)}
+              </div>
+            </>}
+            {certType === "minor_works" && <>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Description of Work</div>
+                {renderField("Location", certData.workLocation)}
+                {renderField("Description", certData.workDescription)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Circuit Details</div>
+                {renderField("Circuit Reference", certData.circuitRef)}
+                {renderField("Circuit Type", certData.circuitType)}
+                {renderField("Protective Device", [certData.protectiveDeviceType, certData.protectiveDeviceRating ? certData.protectiveDeviceRating + "A" : ""].filter(Boolean).join(" — "))}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Test Results</div>
+                {renderField("R1+R2", certData.r1r2 ? certData.r1r2 + " Ω" : "")}
+                {renderField("R2", certData.r2 ? certData.r2 + " Ω" : "")}
+                {renderField("Insulation Resistance", certData.insulationResistance ? certData.insulationResistance + " MΩ" : "")}
+                {renderField("Polarity", certData.polarity)}
+                {renderField("Zs", certData.zs ? certData.zs + " Ω" : "")}
+                {renderField("RCD Operation Time", certData.rcdTime ? certData.rcdTime + " ms" : "")}
+                {renderField("RCD Type", certData.rcdType)}
+              </div>
+            </>}
+            {certType === "ev_charger" && <>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Charger Details</div>
+                {renderField("Make", certData.chargerMake)}
+                {renderField("Model", certData.chargerModel)}
+                {renderField("Serial Number", certData.chargerSerial)}
+                {renderField("Max Charging Current", certData.maxChargingCurrent ? certData.maxChargingCurrent + " A" : "")}
+                {renderField("Charging Mode", certData.chargingMode)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Installation & RCD Details</div>
+                {renderField("Earthing Arrangement", certData.earthingArrangement)}
+                {renderField("Cable Type", certData.cableType)}
+                {renderField("Cable Size", certData.cableSize ? certData.cableSize + " mm²" : "")}
+                {renderField("Cable Length", certData.cableLength ? certData.cableLength + " m" : "")}
+                {renderField("RCD Type", certData.rcdType)}
+                {renderField("RCD Rating", certData.rcdRating ? certData.rcdRating + " mA" : "")}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>PME Assessment</div>
+                {renderField("PME Supply", certData.pmeSupply)}
+                {renderField("Earth Electrode Installed", certData.earthElectrode)}
+                {renderField("Earth Electrode Resistance", certData.earthElectrodeResistance ? certData.earthElectrodeResistance + " Ω" : "")}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Test Results</div>
+                {renderField("Ze", certData.ze ? certData.ze + " Ω" : "")}
+                {renderField("Zs", certData.zs ? certData.zs + " Ω" : "")}
+                {renderField("R1+R2", certData.r1r2 ? certData.r1r2 + " Ω" : "")}
+                {renderField("Insulation Resistance", certData.insulationResistance ? certData.insulationResistance + " MΩ" : "")}
+                {renderField("Polarity", certData.polarity)}
+                {renderField("RCD Operation", certData.rcdOperation ? certData.rcdOperation + " ms" : "")}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Overall Result</div>
+                <div style={{ fontSize:16, fontWeight:800, color: certData.result === "Satisfactory" ? "#22c55e" : "#ef4444" }}>{certData.result}</div>
+              </div>
+            </>}
+            {certType === "pat_testing" && <>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Equipment Details</div>
+                {renderField("Test Number", certData.testNumber)}
+                {renderField("Description", certData.equipDescription)}
+                {renderField("Make / Model / Serial", [certData.equipMake, certData.equipModel, certData.equipSerial].filter(Boolean).join(" / "))}
+                {renderField("Location", certData.equipLocation)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Test Results</div>
+                {renderField("Visual Inspection", certData.visualInspection)}
+                {renderField("Earth Continuity", certData.earthContinuity ? certData.earthContinuity + " Ω" : "")}
+                {renderField("Insulation Resistance", certData.insulationResistance ? certData.insulationResistance + " MΩ" : "")}
+                {renderField("Leakage Current", certData.leakageCurrent ? certData.leakageCurrent + " mA" : "")}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Overall Result</div>
+                <div style={{ fontSize:16, fontWeight:800, color: certData.result === "PASS" ? "#22c55e" : "#ef4444" }}>{certData.result}</div>
+                {renderField("Next Test Due", certData.nextTestDate)}
+              </div>
+            </>}
+            {renderField("Notes", certData.notes)}
+            <div style={sectionStyle}>
+              <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Inspector</div>
+              {renderField("Name", certData.engineerName)}
+              {renderField("Company", certData.companyName)}
+              {renderField("Scheme", certData.scheme)}
+              {renderField("Scheme Number", certData.schemeNumber)}
+              {certData.signatureData && <div style={{ marginTop:8 }}><div style={labelStyle}>Signature</div><img src={certData.signatureData} alt="Signature" style={{ maxWidth:200, border:"1px solid #ddd", borderRadius:4 }}/></div>}
+            </div>
+            <div style={{ textAlign:"center", padding:"12px 0", borderTop:"1px solid #e0e0e0", marginTop:16 }}>
+              <div style={{ fontSize:10, color:"#888" }}>Ref: {certData.certRef} | Generated: {new Date().toLocaleDateString()}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── EICR FORM ──────────────────────────────────────────────────────────────
+function EICRForm({ onBack, onSave, currentUser }) {
+  const [certData, setCertData] = useState({
+    certRef: "EICR-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().split("T")[0],
+    clientName: "", clientAddress: "", clientPostcode: "", clientEmail: "", clientTel: "",
+    installDescription: "", wiringAge: "", lastInspection: "", additionsAlterations: "",
+    systemType: "", numPhases: "1", supplyProtectiveType: "", supplyProtectiveRating: "",
+    nominalVoltage: "230", nominalFrequency: "50", prospectiveFaultCurrent: "", ze: "",
+    extentOfInspection: "", agreedLimitations: "", operationalLimitations: "",
+    observations: "", observationCode: "",
+    result: "Satisfactory", nextInspectionDate: "",
+    engineerName: "", qualifications: "", scheme: "", schemeNumber: "",
+    notes: "", signatureData: null,
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const sigCanvasRef = useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
+      setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", schemeNumber: p.schemeNumber || "" }));
+    } catch {}
+  }, [currentUser]);
+
+  const update = (k, v) => setCertData(prev => {
+    const next = { ...prev, [k]: v };
+    if (k === "observationCode" && (v === "C1" || v === "C2")) next.result = "Unsatisfactory";
+    return next;
+  });
+
+  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
+  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
+  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
+  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
+  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+
+  const handleSave = () => {
+    const record = { ...certData, trade:"electrical", type:"eicr", savedAt: new Date().toISOString() };
+    if (onSave) onSave(record);
+    alert("EICR saved!");
+    onBack();
+  };
+
+  if (showPDF) return <ElectricalPDFPreview certData={certData} certType="eicr" certTitle="Electrical Installation Condition Report — BS 7671" onClose={() => setShowPDF(false)} />;
+
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
+  const sectionTitleStyle = { color:"#3b82f6", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(59,130,246,0.3)", paddingBottom:6 };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+
   return (
     <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
       <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
-        <button onClick={onBack}
-          style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2" }}>{certName}</h2>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>EICR — Condition Report</h2>
       </div>
-      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
-        <div style={{ textAlign:"center" }}>
-          <div style={{ width:80, height:80, borderRadius:20, background:"#3b82f6", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px" }}>
-            <svg viewBox="0 0 24 24" fill="#fff" width="40" height="40"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
-          </div>
-          <h3 style={{ color:"#e8edf2", fontSize:20, fontWeight:700, marginBottom:8 }}>{certName}</h3>
-          <p style={{ color:"#8b9db0", fontSize:14, lineHeight:1.5, maxWidth:300 }}>Coming Soon — Full certificate form in development. This will include all BS 7671 compliant fields.</p>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
+        <div style={sectionTitleStyle}>Client Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Address</div><input style={inputStyle} value={certData.clientAddress} onChange={e => update("clientAddress", e.target.value)} placeholder="Full address"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.clientPostcode} onChange={e => update("clientPostcode", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Telephone</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Installation Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Description of Installation</div><input style={inputStyle} value={certData.installDescription} onChange={e => update("installDescription", e.target.value)} placeholder="e.g. Domestic dwelling, 3-bed semi"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Age of Wiring</div><input style={inputStyle} value={certData.wiringAge} onChange={e => update("wiringAge", e.target.value)} placeholder="e.g. 1990s"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Date of Last Inspection</div><input type="date" style={inputStyle} value={certData.lastInspection} onChange={e => update("lastInspection", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Evidence of Additions / Alterations</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.additionsAlterations} onChange={e => update("additionsAlterations", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Supply Characteristics</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>System Type</div><select style={selectStyle} value={certData.systemType} onChange={e => update("systemType", e.target.value)}><option value="">Select...</option><option>TN-S</option><option>TN-C-S</option><option>TT</option><option>IT</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Number of Phases</div><select style={selectStyle} value={certData.numPhases} onChange={e => update("numPhases", e.target.value)}><option>1</option><option>3</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Supply Protective Device Type</div><input style={inputStyle} value={certData.supplyProtectiveType} onChange={e => update("supplyProtectiveType", e.target.value)} placeholder="e.g. BS 1361 fuse"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Supply Protective Device Rating (A)</div><input type="number" style={inputStyle} value={certData.supplyProtectiveRating} onChange={e => update("supplyProtectiveRating", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Nominal Voltage (V)</div><input type="number" style={inputStyle} value={certData.nominalVoltage} onChange={e => update("nominalVoltage", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Nominal Frequency (Hz)</div><input type="number" style={inputStyle} value={certData.nominalFrequency} onChange={e => update("nominalFrequency", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Prospective Fault Current (kA)</div><input type="number" step="0.01" style={inputStyle} value={certData.prospectiveFaultCurrent} onChange={e => update("prospectiveFaultCurrent", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>External Loop Impedance Ze (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.ze} onChange={e => update("ze", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Extent & Limitations</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Extent of Inspection</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.extentOfInspection} onChange={e => update("extentOfInspection", e.target.value)} placeholder="Circuits and areas covered..."/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Agreed Limitations</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.agreedLimitations} onChange={e => update("agreedLimitations", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Operational Limitations</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.operationalLimitations} onChange={e => update("operationalLimitations", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Observations</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Observations</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.observations} onChange={e => update("observations", e.target.value)} placeholder="Describe observations found during inspection..."/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Classification Code</div><select style={selectStyle} value={certData.observationCode} onChange={e => update("observationCode", e.target.value)}><option value="">Select...</option><option value="C1">C1 — Danger present</option><option value="C2">C2 — Potentially dangerous</option><option value="C3">C3 — Improvement recommended</option><option value="FI">FI — Further investigation</option></select></div>
+        <div style={{ padding:"8px 12px", borderRadius:8, background: certData.result === "Satisfactory" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: certData.result === "Satisfactory" ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(239,68,68,0.3)", marginBottom:10 }}>
+          <span style={{ fontSize:12, color:"rgba(255,255,255,0.6)" }}>Auto-result: </span>
+          <span style={{ fontSize:13, fontWeight:700, color: certData.result === "Satisfactory" ? "#22c55e" : "#ef4444" }}>{certData.result}</span>
+          <span style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginLeft:8 }}>(C1/C2 = Unsatisfactory)</span>
         </div>
+
+        <div style={sectionTitleStyle}>Next Inspection</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Recommended Next Inspection Date</div><input type="date" style={inputStyle} value={certData.nextInspectionDate} onChange={e => update("nextInspectionDate", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Notes</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Additional Notes</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Inspector Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Inspector Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Qualifications</div><input style={inputStyle} value={certData.qualifications} onChange={e => update("qualifications", e.target.value)} placeholder="e.g. C&G 2391, 18th Edition"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme</div><select style={selectStyle} value={certData.scheme} onChange={e => update("scheme", e.target.value)}><option value="">Select...</option><option>NICEIC</option><option>NAPIT</option><option>ELECSA</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme Number</div><input style={inputStyle} value={certData.schemeNumber} onChange={e => update("schemeNumber", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Signature</div>
+        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
+          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
+            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
+          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+        </div>
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
+        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
+        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── MINOR WORKS FORM ───────────────────────────────────────────────────────
+function MinorWorksForm({ onBack, onSave, currentUser }) {
+  const [certData, setCertData] = useState({
+    certRef: "MW-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().split("T")[0],
+    clientName: "", clientAddress: "", clientPostcode: "", clientEmail: "", clientTel: "",
+    workLocation: "", workDescription: "",
+    circuitRef: "", circuitType: "", protectiveDeviceType: "", protectiveDeviceRating: "",
+    earthingArrangement: "", meansOfEarthing: "",
+    r1r2: "", r2: "", insulationResistance: "", polarity: "Confirmed", zs: "", rcdTime: "", rcdType: "",
+    installerName: "", companyName: "", scheme: "", schemeNumber: "",
+    notes: "", signatureData: null,
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const sigCanvasRef = useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
+      setCertData(prev => ({ ...prev, installerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", schemeNumber: p.schemeNumber || "" }));
+    } catch {}
+  }, [currentUser]);
+
+  const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
+
+  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
+  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
+  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
+  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
+  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+
+  const handleSave = () => {
+    const record = { ...certData, trade:"electrical", type:"minor_works", engineerName: certData.installerName, savedAt: new Date().toISOString() };
+    if (onSave) onSave(record);
+    alert("Minor Works Certificate saved!");
+    onBack();
+  };
+
+  if (showPDF) return <ElectricalPDFPreview certData={{ ...certData, engineerName: certData.installerName }} certType="minor_works" certTitle="Minor Electrical Installation Works Certificate — BS 7671" onClose={() => setShowPDF(false)} />;
+
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
+  const sectionTitleStyle = { color:"#3b82f6", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(59,130,246,0.3)", paddingBottom:6 };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>Minor Works Certificate</h2>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
+        <div style={sectionTitleStyle}>Client Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Address</div><input style={inputStyle} value={certData.clientAddress} onChange={e => update("clientAddress", e.target.value)} placeholder="Full address"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.clientPostcode} onChange={e => update("clientPostcode", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Telephone</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Description of Work</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Location of Work</div><input style={inputStyle} value={certData.workLocation} onChange={e => update("workLocation", e.target.value)} placeholder="e.g. Kitchen, first floor"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Description of Minor Works</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.workDescription} onChange={e => update("workDescription", e.target.value)} placeholder="Describe the work carried out..."/></div>
+
+        <div style={sectionTitleStyle}>Circuit Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Circuit Reference</div><input style={inputStyle} value={certData.circuitRef} onChange={e => update("circuitRef", e.target.value)} placeholder="e.g. C1, Ring 1"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Circuit Type</div><input style={inputStyle} value={certData.circuitType} onChange={e => update("circuitType", e.target.value)} placeholder="e.g. Ring final, radial, lighting"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Protective Device Type</div><input style={inputStyle} value={certData.protectiveDeviceType} onChange={e => update("protectiveDeviceType", e.target.value)} placeholder="e.g. MCB Type B"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Protective Device Rating (A)</div><input type="number" style={inputStyle} value={certData.protectiveDeviceRating} onChange={e => update("protectiveDeviceRating", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Installation Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Earthing Arrangement</div><select style={selectStyle} value={certData.earthingArrangement} onChange={e => update("earthingArrangement", e.target.value)}><option value="">Select...</option><option>TN-S</option><option>TN-C-S</option><option>TT</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Means of Earthing</div><input style={inputStyle} value={certData.meansOfEarthing} onChange={e => update("meansOfEarthing", e.target.value)} placeholder="e.g. Supply company earth, earth electrode"/></div>
+
+        <div style={sectionTitleStyle}>Test Results</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>R1+R2 (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.r1r2} onChange={e => update("r1r2", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>R2 (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.r2} onChange={e => update("r2", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Insulation Resistance (MΩ)</div><input type="number" step="0.01" style={inputStyle} value={certData.insulationResistance} onChange={e => update("insulationResistance", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Polarity</div>
+          <div style={{ display:"flex", gap:8 }}>
+            {["Confirmed","Not Confirmed"].map(v => (
+              <button key={v} onClick={() => update("polarity", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.polarity === v ? (v==="Confirmed"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.polarity === v ? (v==="Confirmed"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.polarity === v ? (v==="Confirmed"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Zs (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.zs} onChange={e => update("zs", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Operation Time (ms)</div><input type="number" style={inputStyle} value={certData.rcdTime} onChange={e => update("rcdTime", e.target.value)} placeholder="If applicable"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Type</div><input style={inputStyle} value={certData.rcdType} onChange={e => update("rcdType", e.target.value)} placeholder="If applicable"/></div>
+
+        <div style={sectionTitleStyle}>Declaration</div>
+        <div style={{ padding:"12px", borderRadius:10, background:"rgba(59,130,246,0.08)", border:"1px solid rgba(59,130,246,0.2)", marginBottom:10 }}>
+          <p style={{ color:"rgba(255,255,255,0.7)", fontSize:12, lineHeight:1.5, margin:0 }}>I declare that the work described above complies with BS 7671 (IET Wiring Regulations) to the best of my knowledge and belief.</p>
+        </div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Installer Name</div><input style={inputStyle} value={certData.installerName} onChange={e => update("installerName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme</div><select style={selectStyle} value={certData.scheme} onChange={e => update("scheme", e.target.value)}><option value="">Select...</option><option>NICEIC</option><option>NAPIT</option><option>ELECSA</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme Number</div><input style={inputStyle} value={certData.schemeNumber} onChange={e => update("schemeNumber", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Notes</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Additional Notes</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Signature</div>
+        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
+          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
+            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
+          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+        </div>
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
+        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
+        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── EV CHARGER FORM ────────────────────────────────────────────────────────
+function EVChargerForm({ onBack, onSave, currentUser }) {
+  const [certData, setCertData] = useState({
+    certRef: "EV-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().split("T")[0],
+    clientName: "", clientAddress: "", clientPostcode: "", clientEmail: "", clientTel: "",
+    chargerMake: "", chargerModel: "", chargerSerial: "", maxChargingCurrent: "", chargingMode: "",
+    earthingArrangement: "", supplyType: "", supplyProtectiveDevice: "",
+    cableType: "", cableSize: "", cableLength: "", cableRoute: "", protectionMethod: "",
+    rcdType: "", rcdRating: "", rcdTestTime: "",
+    pmeSupply: "", earthElectrode: "", earthElectrodeResistance: "",
+    ze: "", zs: "", r1r2: "", insulationResistance: "", polarity: "Confirmed", rcdOperation: "",
+    ozevRef: "",
+    result: "Satisfactory",
+    engineerName: "", companyName: "", scheme: "", schemeNumber: "",
+    notes: "", signatureData: null,
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const sigCanvasRef = useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
+      setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", schemeNumber: p.schemeNumber || "" }));
+    } catch {}
+  }, [currentUser]);
+
+  const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
+
+  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
+  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
+  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
+  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
+  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+
+  const handleSave = () => {
+    const record = { ...certData, trade:"electrical", type:"ev_charger", savedAt: new Date().toISOString() };
+    if (onSave) onSave(record);
+    alert("EV Charger Certificate saved!");
+    onBack();
+  };
+
+  if (showPDF) return <ElectricalPDFPreview certData={certData} certType="ev_charger" certTitle="EV Charger Installation Certificate" onClose={() => setShowPDF(false)} />;
+
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
+  const sectionTitleStyle = { color:"#3b82f6", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(59,130,246,0.3)", paddingBottom:6 };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>EV Charger Certificate</h2>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
+        <div style={sectionTitleStyle}>Client Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Address</div><input style={inputStyle} value={certData.clientAddress} onChange={e => update("clientAddress", e.target.value)} placeholder="Full address"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.clientPostcode} onChange={e => update("clientPostcode", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Telephone</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Charger Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Make</div><input style={inputStyle} value={certData.chargerMake} onChange={e => update("chargerMake", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Model</div><input style={inputStyle} value={certData.chargerModel} onChange={e => update("chargerModel", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Serial Number</div><input style={inputStyle} value={certData.chargerSerial} onChange={e => update("chargerSerial", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Max Charging Current (A)</div><input type="number" style={inputStyle} value={certData.maxChargingCurrent} onChange={e => update("maxChargingCurrent", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Charging Mode</div><select style={selectStyle} value={certData.chargingMode} onChange={e => update("chargingMode", e.target.value)}><option value="">Select...</option><option>Mode 1</option><option>Mode 2</option><option>Mode 3</option><option>Mode 4</option></select></div>
+
+        <div style={sectionTitleStyle}>Installation Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Earthing Arrangement</div><select style={selectStyle} value={certData.earthingArrangement} onChange={e => update("earthingArrangement", e.target.value)}><option value="">Select...</option><option>TN-S</option><option>TN-C-S</option><option>TT</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Supply Type</div><input style={inputStyle} value={certData.supplyType} onChange={e => update("supplyType", e.target.value)} placeholder="e.g. Single phase 230V"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Supply Protective Device</div><input style={inputStyle} value={certData.supplyProtectiveDevice} onChange={e => update("supplyProtectiveDevice", e.target.value)} placeholder="e.g. 100A BS 1361"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Cable Type</div><input style={inputStyle} value={certData.cableType} onChange={e => update("cableType", e.target.value)} placeholder="e.g. SWA, Twin & Earth"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Cable Size (mm²)</div><input type="number" step="0.5" style={inputStyle} value={certData.cableSize} onChange={e => update("cableSize", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Cable Length (m)</div><input type="number" step="0.1" style={inputStyle} value={certData.cableLength} onChange={e => update("cableLength", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Cable Route</div><input style={inputStyle} value={certData.cableRoute} onChange={e => update("cableRoute", e.target.value)} placeholder="Describe cable route"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Protection Method</div><input style={inputStyle} value={certData.protectionMethod} onChange={e => update("protectionMethod", e.target.value)} placeholder="e.g. MCB 32A Type B + RCD"/></div>
+
+        <div style={sectionTitleStyle}>RCD Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Type</div><select style={selectStyle} value={certData.rcdType} onChange={e => update("rcdType", e.target.value)}><option value="">Select...</option><option>Type A</option><option>Type B</option><option>Type F</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Rating (mA)</div><input type="number" style={inputStyle} value={certData.rcdRating} onChange={e => update("rcdRating", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Test Time (ms)</div><input type="number" style={inputStyle} value={certData.rcdTestTime} onChange={e => update("rcdTestTime", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>PME Assessment</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>PME Supply</div>
+          <div style={{ display:"flex", gap:8 }}>
+            {["Yes","No"].map(v => (
+              <button key={v} onClick={() => update("pmeSupply", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.pmeSupply === v ? "#3b82f6" : "rgba(255,255,255,0.15)", background: certData.pmeSupply === v ? "rgba(59,130,246,0.15)" : "transparent", color: certData.pmeSupply === v ? "#3b82f6" : "rgba(255,255,255,0.5)" }}>{v}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Earth Electrode Installed</div>
+          <div style={{ display:"flex", gap:8 }}>
+            {["Yes","No"].map(v => (
+              <button key={v} onClick={() => update("earthElectrode", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.earthElectrode === v ? "#3b82f6" : "rgba(255,255,255,0.15)", background: certData.earthElectrode === v ? "rgba(59,130,246,0.15)" : "transparent", color: certData.earthElectrode === v ? "#3b82f6" : "rgba(255,255,255,0.5)" }}>{v}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Earth Electrode Resistance (Ω)</div><input type="number" step="0.1" style={inputStyle} value={certData.earthElectrodeResistance} onChange={e => update("earthElectrodeResistance", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Test Results</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Ze (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.ze} onChange={e => update("ze", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Zs (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.zs} onChange={e => update("zs", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>R1+R2 (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.r1r2} onChange={e => update("r1r2", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Insulation Resistance (MΩ)</div><input type="number" step="0.01" style={inputStyle} value={certData.insulationResistance} onChange={e => update("insulationResistance", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Polarity</div>
+          <div style={{ display:"flex", gap:8 }}>
+            {["Confirmed","Not Confirmed"].map(v => (
+              <button key={v} onClick={() => update("polarity", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.polarity === v ? (v==="Confirmed"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.polarity === v ? (v==="Confirmed"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.polarity === v ? (v==="Confirmed"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Operation (ms)</div><input type="number" style={inputStyle} value={certData.rcdOperation} onChange={e => update("rcdOperation", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>OZEV Grant</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>OZEV Grant Reference (Optional)</div><input style={inputStyle} value={certData.ozevRef} onChange={e => update("ozevRef", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Result</div>
+        <div style={{ marginBottom:10 }}>
+          <div style={{ display:"flex", gap:8 }}>
+            {["Satisfactory","Unsatisfactory"].map(v => (
+              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v==="Satisfactory"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={sectionTitleStyle}>Notes</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Additional Notes</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Inspector Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Inspector Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme</div><select style={selectStyle} value={certData.scheme} onChange={e => update("scheme", e.target.value)}><option value="">Select...</option><option>NICEIC</option><option>NAPIT</option><option>ELECSA</option></select></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme Number</div><input style={inputStyle} value={certData.schemeNumber} onChange={e => update("schemeNumber", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Signature</div>
+        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
+          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
+            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
+          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+        </div>
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
+        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
+        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── PAT TESTING FORM ───────────────────────────────────────────────────────
+function PATTestingForm({ onBack, onSave, currentUser }) {
+  const [certData, setCertData] = useState({
+    certRef: "PAT-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().split("T")[0],
+    clientName: "", clientAddress: "", clientPostcode: "", clientEmail: "", clientTel: "",
+    testNumber: "1", equipDescription: "", equipMake: "", equipModel: "", equipSerial: "", equipLocation: "",
+    visualInspection: "Pass", earthContinuity: "", insulationResistance: "", leakageCurrent: "",
+    result: "PASS", nextTestDate: "",
+    engineerName: "", companyName: "", scheme: "", schemeNumber: "",
+    notes: "", signatureData: null,
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const sigCanvasRef = useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
+      setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", schemeNumber: p.schemeNumber || "" }));
+    } catch {}
+  }, [currentUser]);
+
+  const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
+
+  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
+  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
+  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
+  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
+  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+
+  const handleSave = () => {
+    const record = { ...certData, trade:"electrical", type:"pat_testing", savedAt: new Date().toISOString() };
+    if (onSave) onSave(record);
+    alert("PAT Testing Certificate saved!");
+    onBack();
+  };
+
+  if (showPDF) return <ElectricalPDFPreview certData={certData} certType="pat_testing" certTitle="Portable Appliance Testing Certificate" onClose={() => setShowPDF(false)} />;
+
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
+  const sectionTitleStyle = { color:"#3b82f6", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(59,130,246,0.3)", paddingBottom:6 };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>PAT Testing Certificate</h2>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
+        <div style={sectionTitleStyle}>Client / Site Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Address</div><input style={inputStyle} value={certData.clientAddress} onChange={e => update("clientAddress", e.target.value)} placeholder="Full address"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.clientPostcode} onChange={e => update("clientPostcode", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Telephone</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Equipment Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Test Number</div><input style={inputStyle} value={certData.testNumber} onChange={e => update("testNumber", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Equipment Description</div><input style={inputStyle} value={certData.equipDescription} onChange={e => update("equipDescription", e.target.value)} placeholder="e.g. Desktop computer, Kettle"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Make</div><input style={inputStyle} value={certData.equipMake} onChange={e => update("equipMake", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Model</div><input style={inputStyle} value={certData.equipModel} onChange={e => update("equipModel", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Serial Number</div><input style={inputStyle} value={certData.equipSerial} onChange={e => update("equipSerial", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Location</div><input style={inputStyle} value={certData.equipLocation} onChange={e => update("equipLocation", e.target.value)} placeholder="e.g. Office 1, Kitchen"/></div>
+
+        <div style={sectionTitleStyle}>Test Results</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Visual Inspection</div>
+          <div style={{ display:"flex", gap:8 }}>
+            {["Pass","Fail"].map(v => (
+              <button key={v} onClick={() => update("visualInspection", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.visualInspection === v ? (v==="Pass"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.visualInspection === v ? (v==="Pass"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.visualInspection === v ? (v==="Pass"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Earth Continuity (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.earthContinuity} onChange={e => update("earthContinuity", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Insulation Resistance (MΩ)</div><input type="number" step="0.01" style={inputStyle} value={certData.insulationResistance} onChange={e => update("insulationResistance", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Leakage Current (mA) — Optional</div><input type="number" step="0.01" style={inputStyle} value={certData.leakageCurrent} onChange={e => update("leakageCurrent", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Overall Result</div>
+        <div style={{ marginBottom:10 }}>
+          <div style={{ display:"flex", gap:8 }}>
+            {["PASS","FAIL"].map(v => (
+              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"14px", borderRadius:10, fontWeight:800, fontSize:15, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v==="PASS"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v==="PASS"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v==="PASS"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Next Test Due Date</div><input type="date" style={inputStyle} value={certData.nextTestDate} onChange={e => update("nextTestDate", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Notes</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Additional Notes</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Inspector Details</div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Inspector Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme</div><input style={inputStyle} value={certData.scheme} onChange={e => update("scheme", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme Number</div><input style={inputStyle} value={certData.schemeNumber} onChange={e => update("schemeNumber", e.target.value)}/></div>
+
+        <div style={sectionTitleStyle}>Signature</div>
+        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
+          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
+            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
+          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+        </div>
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
+        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
+        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
       </div>
     </div>
   );
@@ -21901,9 +22608,18 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
   const [showFeedback, setShowFeedback] = useState(false);
   const [showFeatureSuggest, setShowFeatureSuggest] = useState(false);
 
-  if (elecScreen) {
-    return <ElectricalPlaceholderScreen certName={elecScreen} onBack={() => setElecScreen(null)} />;
-  }
+  const handleSaveCert = (record) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem("records") || "[]");
+      existing.push(record);
+      localStorage.setItem("records", JSON.stringify(existing));
+    } catch(e) { console.error("Failed to save cert:", e); }
+  };
+
+  if (elecScreen === "eicr") return <EICRForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
+  if (elecScreen === "minorWorks") return <MinorWorksForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
+  if (elecScreen === "evCharger") return <EVChargerForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
+  if (elecScreen === "pat") return <PATTestingForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
 
   // Reuse the PillBtn pattern inline for electrical
   function ElecPillBtn({ onClick, label, color="#fff200", iconBg, children }) {
@@ -22012,16 +22728,16 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
       <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 88px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
         <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, marginBottom:4, textAlign:"center", letterSpacing:0.3, textTransform:"uppercase", fontWeight:600 }}>What would you like to do?</p>
 
-        <ElecPillBtn onClick={() => setElecScreen("New EICR")} label="New EICR" color="#3b82f6" iconBg="#1d4ed8">
+        <ElecPillBtn onClick={() => setElecScreen("eicr")} label="New EICR" color="#3b82f6" iconBg="#1d4ed8">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
         </ElecPillBtn>
-        <ElecPillBtn onClick={() => setElecScreen("Minor Works Certificate")} label="Minor Works Certificate" color="#fff200" iconBg="#0d1f2d">
+        <ElecPillBtn onClick={() => setElecScreen("minorWorks")} label="Minor Works Certificate" color="#fff200" iconBg="#0d1f2d">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
         </ElecPillBtn>
-        <ElecPillBtn onClick={() => setElecScreen("EV Charger Certificate")} label="EV Charger Certificate" color="#fff200" iconBg="#1a3a4a">
+        <ElecPillBtn onClick={() => setElecScreen("evCharger")} label="EV Charger Certificate" color="#fff200" iconBg="#1a3a4a">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
         </ElecPillBtn>
-        <ElecPillBtn onClick={() => setElecScreen("PAT Testing")} label="PAT Testing" color="#fff200" iconBg="#0d3320">
+        <ElecPillBtn onClick={() => setElecScreen("pat")} label="PAT Testing" color="#fff200" iconBg="#0d3320">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
         </ElecPillBtn>
         <ElecPillBtn onClick={onNewJob} label="New Job" color="#fff200">
