@@ -21769,8 +21769,8 @@ function ComplianceHub({ onBack, currentUser }) {
         </div>
       </div>
 
-      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 88px" }}>
-        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, marginBottom:12, textAlign:"center", letterSpacing:0.3, textTransform:"uppercase", fontWeight:600 }}>Compliance Overview</p>
+      <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 88px", display:"flex", flexDirection:"column", alignItems:"center" }}>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, marginBottom:4, textAlign:"center", letterSpacing:0.3, textTransform:"uppercase", fontWeight:600 }}>Compliance Overview</p>
 
         {/* Attention items at top */}
         {docs.filter(d => { if (!d.expiry_date) return false; const days = (new Date(d.expiry_date) - now)/(1000*60*60*24); return days <= 30; }).map(d => (
@@ -21783,22 +21783,28 @@ function ComplianceHub({ onBack, currentUser }) {
 
         {/* Upload Document button */}
         <div onClick={() => setShowUpload(true)}
-          style={{ display:"flex", alignItems:"center", padding:"14px 16px", marginBottom:8, background:"linear-gradient(180deg, rgba(255,255,255,0.30) 0%, #a855f7 50%, rgba(0,0,0,0.28) 100%), #a855f7", borderRadius:30, cursor:"pointer" }}>
-          <span style={{ fontSize:20, marginRight:12, display:"flex", alignItems:"center", justifyContent:"center", width:38, height:38, borderRadius:"50%", background:"rgba(255,255,255,0.2)" }}>+</span>
-          <span style={{ flex:1, color:"#fff", fontSize:15, fontWeight:800, textTransform:"uppercase", letterSpacing:0.8 }}>Upload Document</span>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 2.5L9.5 7L4 11.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          style={{ display:"flex", alignItems:"center", cursor:"pointer", borderRadius:999, overflow:"hidden", background:"linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, #a855f7 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), #a855f7", boxShadow:"0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)", width:"100%", maxWidth:360, height:76, margin:"0 auto 12px" }}>
+          <div style={{ width:58, height:58, borderRadius:"50%", flexShrink:0, background:"linear-gradient(180deg, rgba(255,255,255,0.22) 0%, #7c3aed 50%, rgba(0,0,0,0.22) 100%)", border:"2.5px solid rgba(255,255,255,0.45)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 0 0 9px", boxShadow:"0 3px 10px rgba(0,0,0,0.30), inset 0 1px 3px rgba(255,255,255,0.25)", boxSizing:"border-box" }}>
+            <span style={{ fontSize:26, color:"#fff", fontWeight:700 }}>+</span>
+          </div>
+          <span style={{ flex:1, color:"#fff", fontSize:15, fontWeight:800, fontFamily:"'Segoe UI',sans-serif", paddingLeft:18, paddingRight:8, letterSpacing:0.8, textTransform:"uppercase", textShadow:"0 1px 4px rgba(0,0,0,0.35)" }}>Upload Document</span>
+          <svg style={{ flexShrink:0, marginRight:22, opacity:0.85 }} width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 2.5L9.5 7L4 11.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </div>
 
         {/* Category buttons */}
         {categories.map(cat => {
           const catDocs = docs.filter(cat.filter);
+          const catIcons = { gas_safe:"🛡️", acs:"📋", pli:"🔒", eli:"🏢", qualifications:"🎓", registrations:"🏛️" };
           return (
             <div key={cat.key}>
               <div onClick={() => setExpandedCat(expandedCat === cat.key ? null : cat.key)}
-                style={{ display:"flex", alignItems:"center", padding:"14px 16px", marginBottom:8, background:"linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, #fff200 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), #fff200", borderRadius:30, cursor:"pointer" }}>
-                <span style={{ flex:1, color:"#111", fontSize:15, fontWeight:800, textTransform:"uppercase", letterSpacing:0.8 }}>{cat.label}</span>
+                style={{ display:"flex", alignItems:"center", cursor:"pointer", borderRadius:999, overflow:"hidden", background:"linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, #fff200 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), #fff200", boxShadow:"0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)", width:"100%", maxWidth:360, height:76, margin:"0 auto 12px" }}>
+                <div style={{ width:58, height:58, borderRadius:"50%", flexShrink:0, background:"linear-gradient(180deg, rgba(255,255,255,0.22) 0%, #0d3320 50%, rgba(0,0,0,0.22) 100%)", border:"2.5px solid rgba(255,255,255,0.45)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 0 0 9px", boxShadow:"0 3px 10px rgba(0,0,0,0.30), inset 0 1px 3px rgba(255,255,255,0.25)", boxSizing:"border-box" }}>
+                  <span style={{ fontSize:24 }}>{catIcons[cat.key]||"📄"}</span>
+                </div>
+                <span style={{ flex:1, color:"#111", fontSize:15, fontWeight:800, fontFamily:"'Segoe UI',sans-serif", paddingLeft:18, paddingRight:8, letterSpacing:0.8, textTransform:"uppercase", textShadow:"0 1px 2px rgba(255,255,255,0.4)" }}>{cat.label}</span>
                 <span style={{ color:"#444", fontSize:12, fontWeight:600, marginRight:8 }}>{catDocs.length}</span>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ transform: expandedCat===cat.key ? "rotate(90deg)" : "none", transition:"transform 0.2s" }}>
+                <svg style={{ flexShrink:0, marginRight:22, opacity:0.85, transform: expandedCat===cat.key ? "rotate(90deg)" : "none", transition:"transform 0.2s" }} width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <path d="M4 2.5L9.5 7L4 11.5" stroke="#111" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
