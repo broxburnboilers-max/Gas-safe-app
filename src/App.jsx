@@ -3938,7 +3938,7 @@ function PSCScreen({ onHome, onSave, engineerData: initEngData }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 
-function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine, onAdminDashboard, onPSC }) {
+function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine, onAdminDashboard, onPSC, onBankStatements }) {
   const trialStatus = getTrialStatus();
   const daysLeft = getTrialDaysLeft();
   const [showFeedback, setShowFeedback] = useState(false);
@@ -4233,6 +4233,9 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
         <PillBtn onClick={onReport} label="Reports" color="#fff200" iconBg="#1a3a26">
           <svg width="30" height="30" viewBox="0 0 52 52" fill="none"><rect x="10" y="28" width="8" height="16" rx="2" fill="white"/><rect x="22" y="18" width="8" height="26" rx="2" fill="white"/><rect x="34" y="10" width="8" height="34" rx="2" fill="white"/></svg>
         </PillBtn>
+        <PillBtn onClick={onBankStatements} label="Bank Statements" color="#fff200" iconBg="#0d3320">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="white" strokeWidth="1.8"/><path d="M3 10H21" stroke="white" strokeWidth="1.8"/><rect x="6" y="13" width="5" height="3" rx="1" fill="white"/></svg>
+        </PillBtn>
         <PillBtn onClick={onProfile} label="My Profile" color="#fff200" iconBg="#35463d">
           <img src={getCompanyLogo()} style={{ width:38, height:38, objectFit:"contain", borderRadius:6 }} alt="Company Logo"/>
         </PillBtn>
@@ -4464,6 +4467,513 @@ function UpgradeLimitScreen({ currentPlan, certCount, certLimit, onBack, onUpgra
       </div>
     </div>
   );
+}
+
+// ─── Bank Statements Screen ─────────────────────────────────────────────────
+const BANK_CATEGORIES = [
+  { key: "income", label: "Income", color: "#16a34a" },
+  { key: "gas_supplies", label: "Gas/Heating Supplies", color: "#ea580c" },
+  { key: "fuel", label: "Vehicle/Fuel", color: "#7c3aed" },
+  { key: "tools", label: "Tools & Equipment", color: "#0284c7" },
+  { key: "insurance", label: "Insurance", color: "#be185d" },
+  { key: "subscriptions", label: "Subscriptions", color: "#6366f1" },
+  { key: "phone", label: "Phone/Internet", color: "#0891b2" },
+  { key: "food", label: "Food & Subsistence", color: "#ca8a04" },
+  { key: "office", label: "Office/Admin", color: "#64748b" },
+  { key: "other_business", label: "Other Business", color: "#475569" },
+  { key: "personal", label: "Personal", color: "#9ca3af" },
+];
+
+const BANK_CAT_RULES = [
+  { keywords: ["FUEL","PETROL","DIESEL","BP ","SHELL","ESSO","TEXACO","JET ","GULF","MURCO","PACE ","TOTAL ","APPLEGREEN"], category: "fuel" },
+  { keywords: ["SCREWFIX","TOOLSTATION","PLUMBCENTER","WOLSELEY","PLUMB CENTER","CITY PLUMBING","GRAHAM PLUMBERS","HOWDEN","HOWDENS","PLUMBASE","BES","PTS","FLAME","HEAT MERCHANT"], category: "gas_supplies" },
+  { keywords: ["INSURANCE","AVIVA","DIRECT LINE","ADMIRAL","AXA","ZURICH","HISCOX"], category: "insurance" },
+  { keywords: ["O2 ","EE ","VODAFONE","THREE ","BT ","SKY ","VIRGIN MEDIA","PLUSNET","TALKTALK","GIFFGAFF","TESCO MOBILE"], category: "phone" },
+  { keywords: ["DEWALT","MAKITA","MILWAUKEE","STANLEY","BAHCO","KNIPEX","WERA","DRAPER","HALFORDS","MACHINE MART","AXMINSTER","BOSCH TOOLS"], category: "tools" },
+  { keywords: ["NETFLIX","SPOTIFY","AMAZON PRIME","APPLE.COM","GOOGLE STORAGE","MICROSOFT","DROPBOX","ADOBE","XERO","QUICKBOOKS","SAGE ","GAS SAFE REG","CORGI","OFTEC"], category: "subscriptions" },
+  { keywords: ["GREGGS","MCDONALD","SUBWAY","COSTA","STARBUCKS","KFC ","BURGER KING","PRET ","TESCO","ASDA","SAINSBURY","MORRISONS","ALDI","LIDL","CO-OP","SPAR ","M&S FOOD","MARKS FOOD"], category: "food" },
+  { keywords: ["POST OFFICE","ROYAL MAIL","STAPLES","RYMAN","WHSmith","VIKING","OFFICE DEPOT"], category: "office" },
+];
+
+function autoCategorise(description) {
+  const d = (description || "").toUpperCase();
+  for (const rule of BANK_CAT_RULES) {
+    for (const kw of rule.keywords) {
+      if (d.includes(kw)) return rule.category;
+    }
+  }
+  return "other_business";
+}
+
+function parseCSVLine(line) {
+  const fields = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') { current += '"'; i++; }
+        else inQuotes = false;
+      } else current += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ',') { fields.push(current.trim()); current = ""; }
+      else current += ch;
+    }
+  }
+  fields.push(current.trim());
+  return fields;
+}
+
+function parseDate(str) {
+  if (!str) return null;
+  const s = str.trim().replace(/['"]/g, "");
+  // DD/MM/YYYY or DD-MM-YYYY
+  let m = s.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})$/);
+  if (m) { const d = new Date(+m[3], +m[2] - 1, +m[1]); if (!isNaN(d)) return d; }
+  // YYYY-MM-DD
+  m = s.match(/^(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})$/);
+  if (m) { const d = new Date(+m[1], +m[2] - 1, +m[3]); if (!isNaN(d)) return d; }
+  // DD Mon YYYY
+  const d2 = new Date(s);
+  if (!isNaN(d2)) return d2;
+  return null;
+}
+
+function parseCSVStatement(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return { transactions: [], error: "File appears empty or has no data rows." };
+
+  // Find header row
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const lower = lines[i].toLowerCase();
+    if (lower.includes("date") && (lower.includes("amount") || lower.includes("debit") || lower.includes("credit") || lower.includes("money") || lower.includes("value"))) {
+      headerIdx = i; break;
+    }
+  }
+  if (headerIdx === -1) return { transactions: [], error: "Could not find a header row with Date and Amount/Debit/Credit columns." };
+
+  const headers = parseCSVLine(lines[headerIdx]).map(h => h.toLowerCase().trim());
+  const dateCol = headers.findIndex(h => h.includes("date") && !h.includes("post"));
+  const descCol = headers.findIndex(h => h.includes("description") || h.includes("reference") || h.includes("narrative") || h.includes("details") || h.includes("memo") || h.includes("particulars") || h.includes("transaction"));
+  const amountCol = headers.findIndex(h => h === "amount" || h === "value" || h.includes("money"));
+  const debitCol = headers.findIndex(h => h.includes("debit") || h.includes("money out") || h.includes("paid out"));
+  const creditCol = headers.findIndex(h => h.includes("credit") || h.includes("money in") || h.includes("paid in"));
+  const balanceCol = headers.findIndex(h => h.includes("balance"));
+
+  if (dateCol === -1) return { transactions: [], error: "Could not find a Date column." };
+  if (amountCol === -1 && debitCol === -1 && creditCol === -1) return { transactions: [], error: "Could not find Amount or Debit/Credit columns." };
+
+  const transactions = [];
+  for (let i = headerIdx + 1; i < lines.length; i++) {
+    const fields = parseCSVLine(lines[i]);
+    if (fields.length <= dateCol) continue;
+    const date = parseDate(fields[dateCol]);
+    if (!date) continue;
+    const desc = descCol >= 0 ? (fields[descCol] || "").trim() : "";
+    let amount = 0;
+    if (amountCol >= 0) {
+      amount = parseFloat((fields[amountCol] || "0").replace(/[^0-9.\-]/g, "")) || 0;
+    } else {
+      const debit = debitCol >= 0 ? parseFloat((fields[debitCol] || "0").replace(/[^0-9.\-]/g, "")) || 0 : 0;
+      const credit = creditCol >= 0 ? parseFloat((fields[creditCol] || "0").replace(/[^0-9.\-]/g, "")) || 0 : 0;
+      amount = credit > 0 ? credit : (debit > 0 ? -debit : -(debit));
+      if (credit > 0 && debit === 0) amount = credit;
+      else if (debit > 0 && credit === 0) amount = -debit;
+      else if (debit < 0) amount = debit;
+      else amount = credit - debit;
+    }
+    const balance = balanceCol >= 0 ? parseFloat((fields[balanceCol] || "").replace(/[^0-9.\-]/g, "")) || null : null;
+    const cat = amount > 0 ? "income" : autoCategorise(desc);
+    transactions.push({
+      date: date.toISOString().slice(0, 10),
+      description: desc,
+      amount: Math.round(amount * 100) / 100,
+      balance,
+      category: cat,
+      autoCategorised: true,
+    });
+  }
+  return { transactions, error: transactions.length === 0 ? "No valid transactions found in the file." : null };
+}
+
+function buildStatementSummary(transactions) {
+  const totalIncome = transactions.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const totalExpenses = transactions.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0);
+  const byCategory = {};
+  for (const t of transactions) {
+    byCategory[t.category] = (byCategory[t.category] || 0) + t.amount;
+  }
+  return {
+    totalIncome: Math.round(totalIncome * 100) / 100,
+    totalExpenses: Math.round(totalExpenses * 100) / 100,
+    net: Math.round((totalIncome + totalExpenses) * 100) / 100,
+    byCategory,
+  };
+}
+
+function BankStatementsScreen({ onBack, onHome }) {
+  const [view, setView] = useState("main"); // main | upload | transactions | summary | history | detail
+  const [error, setError] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [transactions, setTransactions] = useState([]);
+  const [editingTx, setEditingTx] = useState(null); // index of tx being edited
+  const [savedStatements, setSavedStatements] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(sk("bankStatements")) || "[]"); } catch { return []; }
+  });
+  const [detailStatement, setDetailStatement] = useState(null);
+  const fileRef = useRef(null);
+
+  function handleFileSelect(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".csv")) { setError("Please select a .csv file."); return; }
+    setError("");
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target.result;
+      const result = parseCSVStatement(text);
+      if (result.error) { setError(result.error); return; }
+      setTransactions(result.transactions);
+      setView("transactions");
+    };
+    reader.onerror = () => setError("Failed to read file.");
+    reader.readAsText(file);
+  }
+
+  function handleSave() {
+    if (transactions.length === 0) return;
+    const dates = transactions.map(t => t.date).sort();
+    const summary = buildStatementSummary(transactions);
+    const stmt = {
+      id: "BS-" + Date.now(),
+      fileName,
+      importDate: new Date().toISOString().slice(0, 10),
+      period: { from: dates[0], to: dates[dates.length - 1] },
+      transactions,
+      summary,
+    };
+    const updated = [stmt, ...savedStatements];
+    setSavedStatements(updated);
+    try { localStorage.setItem(sk("bankStatements"), JSON.stringify(updated)); } catch {}
+    setView("summary");
+  }
+
+  function handleDelete(id) {
+    if (!window.confirm("Delete this imported statement?")) return;
+    const updated = savedStatements.filter(s => s.id !== id);
+    setSavedStatements(updated);
+    try { localStorage.setItem(sk("bankStatements"), JSON.stringify(updated)); } catch {}
+    if (detailStatement?.id === id) { setDetailStatement(null); setView("history"); }
+  }
+
+  function catLabel(key) { return (BANK_CATEGORIES.find(c => c.key === key) || {}).label || key; }
+  function catColor(key) { return (BANK_CATEGORIES.find(c => c.key === key) || {}).color || "#888"; }
+  function fmtMoney(v) { return (v < 0 ? "-" : "") + "\u00A3" + Math.abs(v).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+  // ── Main menu ──
+  if (view === "main") return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title="Bank Statements" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto", padding:"20px 16px 100px" }}>
+        <div style={{ textAlign:"center", marginBottom:24 }}>
+          <div style={{ fontSize:48, marginBottom:8 }}>🏦</div>
+          <h2 style={{ fontSize:18, fontWeight:700, color:"#0d1f2d", margin:"0 0 6px" }}>Bank Statement Import</h2>
+          <p style={{ fontSize:13, color:"#666", margin:0, lineHeight:1.6 }}>Import CSV bank statements, auto-categorise transactions, and view expense summaries.</p>
+        </div>
+
+        <div style={{ display:"flex", flexDirection:"column", gap:10, maxWidth:400, margin:"0 auto" }}>
+          <button onClick={() => { setError(""); setFileName(""); setTransactions([]); setView("upload"); }}
+            style={{ display:"flex", alignItems:"center", gap:14, padding:"16px 18px", background:"#fff", borderRadius:14, border:"2px solid #1a3a4a", cursor:"pointer", textAlign:"left" }}>
+            <div style={{ width:44, height:44, borderRadius:12, background:"#1a3a4a", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 16V4M12 4L8 8M12 4L16 8" stroke="#fff200" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M4 14V18C4 19.1 4.9 20 6 20H18C19.1 20 20 19.1 20 18V14" stroke="#fff200" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+            <div>
+              <div style={{ fontWeight:700, fontSize:15, color:"#0d1f2d" }}>Import New Statement</div>
+              <div style={{ fontSize:12, color:"#888", marginTop:2 }}>Upload a CSV file from your bank</div>
+            </div>
+          </button>
+
+          <button onClick={() => setView("history")}
+            style={{ display:"flex", alignItems:"center", gap:14, padding:"16px 18px", background:"#fff", borderRadius:14, border:"1px solid #e2e6ea", cursor:"pointer", textAlign:"left" }}>
+            <div style={{ width:44, height:44, borderRadius:12, background:"#f0f9f0", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 8V12L15 15" stroke="#1a3a4a" strokeWidth="2" strokeLinecap="round"/><circle cx="12" cy="12" r="9" stroke="#1a3a4a" strokeWidth="2"/></svg>
+            </div>
+            <div>
+              <div style={{ fontWeight:700, fontSize:15, color:"#0d1f2d" }}>Past Imports</div>
+              <div style={{ fontSize:12, color:"#888", marginTop:2 }}>{savedStatements.length} statement{savedStatements.length !== 1 ? "s" : ""} saved</div>
+            </div>
+          </button>
+        </div>
+      </div>
+      <BottomBar onHome={onHome}/>
+    </div>
+  );
+
+  // ── Upload ──
+  if (view === "upload") return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title="Import Statement" onBack={() => setView("main")}/>
+      <div style={{ flex:1, overflowY:"auto", padding:"20px 16px 100px" }}>
+        <div style={{ maxWidth:400, margin:"0 auto" }}>
+          <div style={{ textAlign:"center", marginBottom:20 }}>
+            <div style={{ fontSize:40, marginBottom:6 }}>📄</div>
+            <p style={{ fontSize:13, color:"#666", lineHeight:1.6 }}>Select a CSV bank statement file. Most UK banks (Barclays, NatWest, Lloyds, HSBC, Starling, Monzo) export CSV files from their online banking.</p>
+          </div>
+
+          <input ref={fileRef} type="file" accept=".csv" onChange={handleFileSelect} style={{ display:"none" }}/>
+          <button onClick={() => fileRef.current?.click()}
+            style={{ width:"100%", padding:"20px 16px", background:"#fff", border:"2px dashed #1a3a4a", borderRadius:14, cursor:"pointer", textAlign:"center", marginBottom:12 }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ margin:"0 auto 8px", display:"block" }}><path d="M12 16V4M12 4L8 8M12 4L16 8" stroke="#1a3a4a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M4 14V18C4 19.1 4.9 20 6 20H18C19.1 20 20 19.1 20 18V14" stroke="#1a3a4a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <div style={{ fontWeight:700, fontSize:15, color:"#1a3a4a" }}>Tap to Select CSV File</div>
+            <div style={{ fontSize:12, color:"#888", marginTop:4 }}>.csv files only</div>
+          </button>
+
+          {fileName && <div style={{ fontSize:13, color:"#1a3a4a", fontWeight:600, marginBottom:8 }}>Selected: {fileName}</div>}
+          {error && <div style={{ background:"#fef2f2", border:"1px solid #fca5a5", borderRadius:10, padding:"12px 14px", fontSize:13, color:"#dc2626", marginTop:8 }}>{error}</div>}
+
+          <div style={{ background:"#fffbeb", border:"1px solid #f5c400", borderRadius:10, padding:"12px 14px", marginTop:16 }}>
+            <div style={{ fontWeight:700, fontSize:13, color:"#92400e", marginBottom:4 }}>Supported formats</div>
+            <div style={{ fontSize:12, color:"#78350f", lineHeight:1.6 }}>
+              CSV files with columns: Date, Description, Amount (or Debit/Credit split columns). Works with most UK bank exports.
+            </div>
+          </div>
+        </div>
+      </div>
+      <BottomBar onHome={onHome}/>
+    </div>
+  );
+
+  // ── Transactions list ──
+  if (view === "transactions") {
+    const summary = buildStatementSummary(transactions);
+    return (
+      <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+        <Header title={`${transactions.length} Transactions`} onBack={() => setView("upload")}/>
+        <div style={{ flex:1, overflowY:"auto", padding:"12px 16px 100px" }}>
+          {/* Quick summary bar */}
+          <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+            <div style={{ flex:1, background:"#f0fdf4", borderRadius:10, padding:"8px 10px", textAlign:"center" }}>
+              <div style={{ fontSize:10, color:"#16a34a", fontWeight:700, textTransform:"uppercase" }}>Income</div>
+              <div style={{ fontSize:15, fontWeight:800, color:"#16a34a" }}>{fmtMoney(summary.totalIncome)}</div>
+            </div>
+            <div style={{ flex:1, background:"#fef2f2", borderRadius:10, padding:"8px 10px", textAlign:"center" }}>
+              <div style={{ fontSize:10, color:"#dc2626", fontWeight:700, textTransform:"uppercase" }}>Expenses</div>
+              <div style={{ fontSize:15, fontWeight:800, color:"#dc2626" }}>{fmtMoney(summary.totalExpenses)}</div>
+            </div>
+            <div style={{ flex:1, background:"#f0f4ff", borderRadius:10, padding:"8px 10px", textAlign:"center" }}>
+              <div style={{ fontSize:10, color:"#1a3a4a", fontWeight:700, textTransform:"uppercase" }}>Net</div>
+              <div style={{ fontSize:15, fontWeight:800, color:summary.net >= 0 ? "#16a34a" : "#dc2626" }}>{fmtMoney(summary.net)}</div>
+            </div>
+          </div>
+
+          <p style={{ fontSize:11, color:"#888", marginBottom:8, textAlign:"center" }}>Tap a transaction to change its category</p>
+
+          {transactions.map((tx, i) => (
+            <div key={i} onClick={() => setEditingTx(editingTx === i ? null : i)}
+              style={{ background:"#fff", borderRadius:10, padding:"10px 14px", marginBottom:6, border: editingTx === i ? "2px solid #1a3a4a" : "1px solid #e2e6ea", cursor:"pointer" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:13, fontWeight:600, color:"#222", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{tx.description || "(No description)"}</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:3 }}>
+                    <span style={{ fontSize:11, color:"#888" }}>{tx.date}</span>
+                    <span style={{ fontSize:10, fontWeight:700, color: catColor(tx.category), background: catColor(tx.category) + "18", padding:"2px 8px", borderRadius:6 }}>{catLabel(tx.category)}</span>
+                    {tx.autoCategorised && <span style={{ fontSize:9, color:"#aaa" }}>auto</span>}
+                  </div>
+                </div>
+                <div style={{ fontSize:15, fontWeight:700, color: tx.amount >= 0 ? "#16a34a" : "#dc2626", flexShrink:0, marginLeft:8 }}>{fmtMoney(tx.amount)}</div>
+              </div>
+
+              {/* Category override picker */}
+              {editingTx === i && (
+                <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid #eee" }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#555", marginBottom:6 }}>Change category:</div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
+                    {BANK_CATEGORIES.map(c => (
+                      <button key={c.key} onClick={(e) => {
+                        e.stopPropagation();
+                        setTransactions(prev => prev.map((t, idx) => idx === i ? { ...t, category: c.key, autoCategorised: false } : t));
+                        setEditingTx(null);
+                      }}
+                        style={{ padding:"4px 10px", borderRadius:8, border: tx.category === c.key ? `2px solid ${c.color}` : "1px solid #ddd", background: tx.category === c.key ? c.color + "20" : "#f9f9f9", cursor:"pointer", fontSize:11, fontWeight:600, color: c.color }}>
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <BottomBar onHome={onHome} onNext={handleSave} nextLabel="Save Statement"/>
+      </div>
+    );
+  }
+
+  // ── Summary view ──
+  if (view === "summary") {
+    const stmt = savedStatements[0];
+    if (!stmt) { setView("main"); return null; }
+    const s = stmt.summary;
+    const catEntries = Object.entries(s.byCategory)
+      .filter(([, v]) => v !== 0)
+      .sort((a, b) => a[1] - b[1]);
+    const maxAbs = Math.max(...catEntries.map(([, v]) => Math.abs(v)), 1);
+
+    return (
+      <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+        <Header title="Statement Summary" onBack={() => setView("main")}/>
+        <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 100px" }}>
+          <div style={{ textAlign:"center", marginBottom:16 }}>
+            <div style={{ fontSize:11, color:"#888" }}>{stmt.fileName} &middot; {stmt.period.from} to {stmt.period.to}</div>
+          </div>
+
+          {/* Top-level numbers */}
+          <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+            <div style={{ flex:1, background:"#f0fdf4", borderRadius:12, padding:"14px 12px", textAlign:"center" }}>
+              <div style={{ fontSize:10, color:"#16a34a", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>Total Income</div>
+              <div style={{ fontSize:20, fontWeight:800, color:"#16a34a" }}>{fmtMoney(s.totalIncome)}</div>
+            </div>
+            <div style={{ flex:1, background:"#fef2f2", borderRadius:12, padding:"14px 12px", textAlign:"center" }}>
+              <div style={{ fontSize:10, color:"#dc2626", fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>Total Expenses</div>
+              <div style={{ fontSize:20, fontWeight:800, color:"#dc2626" }}>{fmtMoney(s.totalExpenses)}</div>
+            </div>
+          </div>
+          <div style={{ background: s.net >= 0 ? "#f0fdf4" : "#fef2f2", borderRadius:12, padding:"14px 16px", textAlign:"center", marginBottom:20 }}>
+            <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", color: s.net >= 0 ? "#16a34a" : "#dc2626", marginBottom:4 }}>Net Balance</div>
+            <div style={{ fontSize:26, fontWeight:800, color: s.net >= 0 ? "#16a34a" : "#dc2626" }}>{fmtMoney(s.net)}</div>
+          </div>
+
+          {/* Category breakdown */}
+          <h3 style={{ fontSize:14, fontWeight:700, color:"#0d1f2d", margin:"0 0 10px" }}>Breakdown by Category</h3>
+          {catEntries.map(([key, val]) => (
+            <div key={key} style={{ marginBottom:8 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:3 }}>
+                <span style={{ fontSize:12, fontWeight:600, color: catColor(key) }}>{catLabel(key)}</span>
+                <span style={{ fontSize:13, fontWeight:700, color: val >= 0 ? "#16a34a" : "#dc2626" }}>{fmtMoney(val)}</span>
+              </div>
+              <div style={{ height:8, background:"#e5e7eb", borderRadius:4, overflow:"hidden" }}>
+                <div style={{ height:"100%", width: `${(Math.abs(val) / maxAbs) * 100}%`, background: catColor(key), borderRadius:4, transition:"width 0.3s" }}/>
+              </div>
+            </div>
+          ))}
+
+          <div style={{ marginTop:24, textAlign:"center" }}>
+            <button onClick={() => setView("main")}
+              style={{ padding:"14px 28px", background:"#1a3a4a", color:"#fff200", border:"none", borderRadius:10, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+              Done
+            </button>
+          </div>
+        </div>
+        <BottomBar onHome={onHome}/>
+      </div>
+    );
+  }
+
+  // ── History ──
+  if (view === "history") return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title="Past Imports" onBack={() => setView("main")}/>
+      <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 100px" }}>
+        {savedStatements.length === 0 ? (
+          <div style={{ textAlign:"center", padding:"40px 20px", color:"#888" }}>
+            <div style={{ fontSize:40, marginBottom:12 }}>📂</div>
+            <p style={{ fontSize:14, margin:0 }}>No statements imported yet.</p>
+          </div>
+        ) : savedStatements.map(stmt => (
+          <div key={stmt.id} style={{ background:"#fff", borderRadius:12, padding:"14px 16px", marginBottom:10, border:"1px solid #e2e6ea" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+              <div onClick={() => { setDetailStatement(stmt); setView("detail"); }} style={{ flex:1, cursor:"pointer" }}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#0d1f2d", marginBottom:3 }}>{stmt.fileName}</div>
+                <div style={{ fontSize:11, color:"#888" }}>Imported: {stmt.importDate} &middot; {stmt.period.from} to {stmt.period.to}</div>
+                <div style={{ display:"flex", gap:12, marginTop:6 }}>
+                  <span style={{ fontSize:12, fontWeight:700, color:"#16a34a" }}>{fmtMoney(stmt.summary.totalIncome)}</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:"#dc2626" }}>{fmtMoney(stmt.summary.totalExpenses)}</span>
+                  <span style={{ fontSize:12, fontWeight:700, color: stmt.summary.net >= 0 ? "#16a34a" : "#dc2626" }}>Net: {fmtMoney(stmt.summary.net)}</span>
+                </div>
+              </div>
+              <button onClick={() => handleDelete(stmt.id)}
+                style={{ background:"#fef2f2", border:"1px solid #fca5a5", borderRadius:8, padding:"6px 10px", cursor:"pointer", fontSize:11, fontWeight:600, color:"#dc2626", flexShrink:0, marginLeft:8 }}>
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <BottomBar onHome={onHome}/>
+    </div>
+  );
+
+  // ── Detail view for a past statement ──
+  if (view === "detail" && detailStatement) {
+    const s = detailStatement.summary;
+    const catEntries = Object.entries(s.byCategory)
+      .filter(([, v]) => v !== 0)
+      .sort((a, b) => a[1] - b[1]);
+    const maxAbs = Math.max(...catEntries.map(([, v]) => Math.abs(v)), 1);
+
+    return (
+      <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+        <Header title={detailStatement.fileName} onBack={() => setView("history")}/>
+        <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 100px" }}>
+          <div style={{ textAlign:"center", marginBottom:12 }}>
+            <div style={{ fontSize:11, color:"#888" }}>Imported: {detailStatement.importDate} &middot; {detailStatement.period.from} to {detailStatement.period.to}</div>
+            <div style={{ fontSize:11, color:"#888" }}>{detailStatement.transactions.length} transactions</div>
+          </div>
+
+          <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+            <div style={{ flex:1, background:"#f0fdf4", borderRadius:12, padding:"12px 10px", textAlign:"center" }}>
+              <div style={{ fontSize:10, color:"#16a34a", fontWeight:700, textTransform:"uppercase" }}>Income</div>
+              <div style={{ fontSize:18, fontWeight:800, color:"#16a34a" }}>{fmtMoney(s.totalIncome)}</div>
+            </div>
+            <div style={{ flex:1, background:"#fef2f2", borderRadius:12, padding:"12px 10px", textAlign:"center" }}>
+              <div style={{ fontSize:10, color:"#dc2626", fontWeight:700, textTransform:"uppercase" }}>Expenses</div>
+              <div style={{ fontSize:18, fontWeight:800, color:"#dc2626" }}>{fmtMoney(s.totalExpenses)}</div>
+            </div>
+            <div style={{ flex:1, background: s.net >= 0 ? "#f0fdf4" : "#fef2f2", borderRadius:12, padding:"12px 10px", textAlign:"center" }}>
+              <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", color: s.net >= 0 ? "#16a34a" : "#dc2626" }}>Net</div>
+              <div style={{ fontSize:18, fontWeight:800, color: s.net >= 0 ? "#16a34a" : "#dc2626" }}>{fmtMoney(s.net)}</div>
+            </div>
+          </div>
+
+          <h3 style={{ fontSize:14, fontWeight:700, color:"#0d1f2d", margin:"0 0 10px" }}>Category Breakdown</h3>
+          {catEntries.map(([key, val]) => (
+            <div key={key} style={{ marginBottom:8 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:3 }}>
+                <span style={{ fontSize:12, fontWeight:600, color: catColor(key) }}>{catLabel(key)}</span>
+                <span style={{ fontSize:13, fontWeight:700, color: val >= 0 ? "#16a34a" : "#dc2626" }}>{fmtMoney(val)}</span>
+              </div>
+              <div style={{ height:8, background:"#e5e7eb", borderRadius:4, overflow:"hidden" }}>
+                <div style={{ height:"100%", width: `${(Math.abs(val) / maxAbs) * 100}%`, background: catColor(key), borderRadius:4 }}/>
+              </div>
+            </div>
+          ))}
+
+          <h3 style={{ fontSize:14, fontWeight:700, color:"#0d1f2d", margin:"20px 0 10px" }}>Transactions</h3>
+          {detailStatement.transactions.map((tx, i) => (
+            <div key={i} style={{ background:"#fff", borderRadius:8, padding:"8px 12px", marginBottom:4, border:"1px solid #eee", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:12, fontWeight:600, color:"#222", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{tx.description || "(No description)"}</div>
+                <div style={{ display:"flex", gap:6, marginTop:2 }}>
+                  <span style={{ fontSize:10, color:"#888" }}>{tx.date}</span>
+                  <span style={{ fontSize:10, fontWeight:600, color: catColor(tx.category) }}>{catLabel(tx.category)}</span>
+                </div>
+              </div>
+              <div style={{ fontSize:13, fontWeight:700, color: tx.amount >= 0 ? "#16a34a" : "#dc2626", flexShrink:0 }}>{fmtMoney(tx.amount)}</div>
+            </div>
+          ))}
+        </div>
+        <BottomBar onHome={onHome}/>
+      </div>
+    );
+  }
+
+  // Fallback
+  setView("main");
+  return null;
 }
 
 function FeatureLockedScreen({ feature, requiredPlan, onBack, onHome }) {
@@ -20295,7 +20805,7 @@ function App({ onLogout }) {
       onPaymentSubmitted={()=>{ /* profile updated by markPaymentSubmitted, force re-render */ setScreen("home"); }}
     />;
   }
-  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("✅ "+n+" demo records added!\n\nGo to Records → Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")} onAdminDashboard={()=>setScreen("adminDashboard")} onPSC={()=>setScreen("psc")}/>;
+  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("✅ "+n+" demo records added!\n\nGo to Records → Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")} onAdminDashboard={()=>setScreen("adminDashboard")} onPSC={()=>setScreen("psc")} onBankStatements={()=>setScreen("bankStatements")}/>;
   if (screen === "psc") return <PSCScreen onHome={goHome} engineerData={profileDefaults()} onSave={(rec)=>{ setRecords(prev=>[...prev, rec]); }}/>;
   if (screen === "adminDashboard") return <AdminDashboardScreen onBack={()=>setScreen("home")} onHome={goHome} records={records} invoices={invoices} quotes={quotes}/>;
   if (screen === "contacts") return <ClientContactsScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
@@ -20324,6 +20834,10 @@ function App({ onLogout }) {
       document.head.appendChild(s);
     }
   }}/>;
+  }
+  if (screen === "bankStatements") {
+    if (getUserPlan() === "lite") return <FeatureLockedScreen feature="Bank Statements" requiredPlan="Pro" onBack={()=>setScreen("home")} onHome={goHome}/>;
+    return <BankStatementsScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
   }
   if (quoteWizardOpen) return <QuoteWizard sourceRecord={null} onSave={(qData)=>{ setQuotes(prev=>[...prev,qData]); alert("✅ Quote saved to Quotes folder!"); setQuoteWizardOpen(false); goHome(); }} onClose={()=>{ setQuoteWizardOpen(false); setScreen("newJob"); }} profile={userProfile}/>;
   if (invoiceWizardOpen) return <InvoiceWizard sourceRecord={null} onSave={(invData)=>{ setInvoices(prev=>[...prev, invData]); alert("✅ Invoice saved to Invoices folder!"); setInvoiceWizardOpen(false); goHome(); }} onClose={()=>{ setInvoiceWizardOpen(false); setScreen("newJob"); }} invoiceRecords={invoices} profile={userProfile}/>;
