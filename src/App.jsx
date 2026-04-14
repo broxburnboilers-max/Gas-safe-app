@@ -22916,6 +22916,41 @@ function ElectricalPDFPreview({ certData, certType, certTitle, onClose }) {
                 {renderField("Next Inspection", certData.nextInspectionDate)}
               </div>
             </>}
+            {certType === "eic" && <>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Installation Details</div>
+                {renderField("Installation Address", certData.installAddress)}
+                {renderField("Description", certData.installDescription)}
+                {renderField("Extent Covered", certData.extentCovered)}
+                {renderField("Installation Type", certData.installationType)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Supply & Earthing</div>
+                {renderField("Earthing Arrangement", certData.earthingArrangement)}
+                {renderField("Supply Type", certData.supplyType)}
+                {renderField("Live Conductors", certData.liveConductors)}
+                {renderField("Nominal Voltage", certData.nominalVoltage ? certData.nominalVoltage + "V" : "")}
+                {renderField("Prospective Fault Current", certData.prospectiveFaultCurrent ? certData.prospectiveFaultCurrent + " kA" : "")}
+                {renderField("Ze", certData.externalZe ? certData.externalZe + " Ω" : "")}
+                {renderField("Means of Earthing", certData.meansOfEarthing)}
+              </div>
+              <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Design & Construction</div>
+                {renderField("Designer", certData.designerName1)}
+                {renderField("Constructor", certData.constructorName)}
+                {renderField("Inspector", certData.inspectorName)}
+                {renderField("BS Amendment", certData.designBSAmendment)}
+                {renderField("Next Inspection Interval", certData.nextInspectionInterval)}
+              </div>
+              {certData.circuits && certData.circuits.length > 0 && <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Circuits ({certData.circuits.length})</div>
+                {certData.circuits.map((c, i) => <div key={i} style={{ marginBottom:6, fontSize:12, color:"#555" }}>Circuit {c.circuitNumber}: {c.circuitDescription || "—"} — {c.wiringType || "—"}, OCPD: {c.ocpdType || "—"} {c.ocpdRating ? c.ocpdRating + "A" : ""}</div>)}
+              </div>}
+              {certData.testResults && certData.testResults.length > 0 && <div style={sectionStyle}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Test Results ({certData.testResults.length})</div>
+                {certData.testResults.map((t, i) => <div key={i} style={{ marginBottom:6, fontSize:12, color:"#555" }}>Circuit {t.circuitNumber}: R1={t.r1Line || "—"}Ω, Rn={t.rnNeutral || "—"}Ω, R2={t.r2CPC || "—"}Ω, Zs={t.zsMax || "—"}Ω, IR={t.insulationLiveEarth || "—"}MΩ</div>)}
+              </div>}
+            </>}
             {certType === "minor_works" && <>
               <div style={sectionStyle}>
                 <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Description of Work</div>
@@ -24528,12 +24563,13 @@ function PATTestingForm({ onBack, onSave, currentUser }) {
   );
 }
 
-function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onReport, onProfile, onPayment, onClientDetails, onBankStatements, onJobSheets, onEngineerManagement, onCombine, records, invoices, quotes, accountReports, yearlyReports }) {
+function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onReport, onProfile, onPayment, onClientDetails, onBankStatements, onJobSheets, onEngineerManagement, onCombine, onSaveCert, records, invoices, quotes, accountReports, yearlyReports }) {
   const [elecScreen, setElecScreen] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showFeatureSuggest, setShowFeatureSuggest] = useState(false);
 
   const handleSaveCert = (record) => {
+    if (onSaveCert) { onSaveCert(record); return; }
     try {
       const existing = JSON.parse(localStorage.getItem("records") || "[]");
       existing.push(record);
@@ -27698,18 +27734,20 @@ function PlumbingRPZForm({ onBack, onSave, currentUser }) {
 }
 
 // ── PlumbingDashboard ───────────────────────────────────────────────────────
-function PlumbingDashboard({ onBack, currentUser, onNewJob, onRecords, onReport, onProfile, onPayment, onClientDetails, onBankStatements, onJobSheets, onEngineerManagement, onCombine, records, invoices, quotes, accountReports, yearlyReports }) {
+function PlumbingDashboard({ onBack, currentUser, onNewJob, onRecords, onReport, onProfile, onPayment, onClientDetails, onBankStatements, onJobSheets, onEngineerManagement, onCombine, onSaveCert, records, invoices, quotes, accountReports, yearlyReports }) {
   const [plumbScreen, setPlumbScreen] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showFeatureSuggest, setShowFeatureSuggest] = useState(false);
 
   const handleSaveCert = (rec) => {
-    // Save to localStorage certs array
-    try {
-      const existing = JSON.parse(localStorage.getItem(sk("gsc_records")) || "[]");
-      existing.push(rec);
-      localStorage.setItem(sk("gsc_records"), JSON.stringify(existing));
-    } catch(e) { console.error("Failed to save plumbing cert:", e); }
+    if (onSaveCert) { onSaveCert(rec); }
+    else {
+      try {
+        const existing = JSON.parse(localStorage.getItem(sk("gsc_records")) || "[]");
+        existing.push(rec);
+        localStorage.setItem(sk("gsc_records"), JSON.stringify(existing));
+      } catch(e) { console.error("Failed to save plumbing cert:", e); }
+    }
     setPlumbScreen(null);
   };
 
@@ -28547,7 +28585,7 @@ async function generateOilRenewablesPDF(certType, data) {
 }
 
 // ── Oil & Renewables Certificate Form Component (Multi-Step Wizard) ─────────
-function OilCertForm({ certType, certTitle, onBack, currentUser }) {
+function OilCertForm({ certType, certTitle, onBack, currentUser, onSave }) {
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState(() => {
     const profile = (() => { try { return JSON.parse(localStorage.getItem(sk("profile")) || "{}"); } catch { return {}; } })();
@@ -29363,11 +29401,14 @@ function OilCertForm({ certType, certTitle, onBack, currentUser }) {
 
   const handleSave = () => {
     const cert = { ...formData, trade: "oil", type: certType, savedAt: new Date().toISOString() };
-    try {
-      const existing = JSON.parse(localStorage.getItem(sk("gsc_records")) || "[]");
-      existing.push(cert);
-      localStorage.setItem(sk("gsc_records"), JSON.stringify(existing));
-    } catch {}
+    if (onSave) { onSave(cert); }
+    else {
+      try {
+        const existing = JSON.parse(localStorage.getItem(sk("gsc_records")) || "[]");
+        existing.push(cert);
+        localStorage.setItem(sk("gsc_records"), JSON.stringify(existing));
+      } catch {}
+    }
     setSaved(true);
   };
 
@@ -29450,7 +29491,7 @@ function OilCertForm({ certType, certTitle, onBack, currentUser }) {
 }
 
 // ── Oil & Renewables Dashboard ──────────────────────────────────────────────
-function OilRenewablesDashboard({ onBack, currentUser, onNewJob, onRecords, onReport, onProfile, onPayment, onClientDetails, onBankStatements, onJobSheets, onEngineerManagement, onCombine, records, invoices, quotes, accountReports, yearlyReports }) {
+function OilRenewablesDashboard({ onBack, currentUser, onNewJob, onRecords, onReport, onProfile, onPayment, onClientDetails, onBankStatements, onJobSheets, onEngineerManagement, onCombine, onSaveCert, records, invoices, quotes, accountReports, yearlyReports }) {
   const [oilScreen, setOilScreen] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showFeatureSuggest, setShowFeatureSuggest] = useState(false);
@@ -29467,7 +29508,7 @@ function OilRenewablesDashboard({ onBack, currentUser, onNewJob, onRecords, onRe
   };
 
   if (oilScreen && certForms[oilScreen]) {
-    return <OilCertForm certType={certForms[oilScreen].type} certTitle={certForms[oilScreen].title} onBack={() => setOilScreen(null)} currentUser={currentUser} />;
+    return <OilCertForm certType={certForms[oilScreen].type} certTitle={certForms[oilScreen].title} onBack={() => setOilScreen(null)} currentUser={currentUser} onSave={onSaveCert} />;
   }
 
   // PillBtn matching Electrical style exactly
@@ -30691,6 +30732,7 @@ function App({ onLogout }) {
     onClientDetails={()=>setScreen("contacts")} onBankStatements={()=>setScreen("bankStatements")}
     onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}
     onCombine={()=>setScreen("combineCerts")}
+    onSaveCert={(rec) => setRecords(prev => [...prev, rec])}
     records={records} invoices={invoices} quotes={quotes} accountReports={accountReports} yearlyReports={yearlyReports} />;
 
   // ── Fire Safety Dashboard ──────────────────────────────────────────────
@@ -30705,6 +30747,7 @@ function App({ onLogout }) {
     onClientDetails={()=>setScreen("contacts")} onBankStatements={()=>setScreen("bankStatements")}
     onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}
     onCombine={()=>setScreen("combineCerts")}
+    onSaveCert={(rec) => setRecords(prev => [...prev, rec])}
     records={records} invoices={invoices} quotes={quotes} accountReports={accountReports} yearlyReports={yearlyReports} />;
 
   // ── Oil & Renewables Dashboard ─────────────────────────────────────────
@@ -30714,6 +30757,7 @@ function App({ onLogout }) {
     onClientDetails={()=>setScreen("contacts")} onBankStatements={()=>setScreen("bankStatements")}
     onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}
     onCombine={()=>setScreen("combineCerts")}
+    onSaveCert={(rec) => setRecords(prev => [...prev, rec])}
     records={records} invoices={invoices} quotes={quotes} accountReports={accountReports} yearlyReports={yearlyReports} />;
 
 
