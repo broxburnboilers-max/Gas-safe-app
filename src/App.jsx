@@ -26036,7 +26036,7 @@ function FireDoorInspectionForm({ onBack, onSave, currentUser }) {
 
 // ─── Fire Safety Dashboard ──────────────────────────────────────────────────
 
-function FireSafetyDashboard({ onBack, currentUser, onSaveCert, records, invoices, quotes, accountReports, yearlyReports }) {
+function FireSafetyDashboard({ onBack, currentUser, onSaveCert, onRecords, records, invoices, quotes, accountReports, yearlyReports }) {
   const [fireScreen, setFireScreen] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showFeatureSuggest, setShowFeatureSuggest] = useState(false);
@@ -26172,6 +26172,9 @@ function FireSafetyDashboard({ onBack, currentUser, onSaveCert, records, invoice
         </FirePillBtn>
         <FirePillBtn onClick={() => setFireScreen("fireDoor")} label="Fire Door Inspection" color="#ff6b35" iconBg="#8d6e63">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M19 19V5c0-1.1-.9-2-2-2H7c-1.1 0-2 .9-2 2v14H3v2h18v-2h-2zm-4-6h-2v-2h2v2z"/></svg>
+        </FirePillBtn>
+        <FirePillBtn onClick={onRecords} label="Records" color="#fff200" iconBg="#0d1f2d">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
         </FirePillBtn>
       </div>
 
@@ -29963,6 +29966,276 @@ function OilRenewablesDashboard({ onBack, currentUser, onNewJob, onRecords, onRe
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ─── TRADE-SPECIFIC RECORDS SCREENS ─────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function TradeRecordsSubScreen({ type, label, color, records, onBack, onHome, onDelete }) {
+  const [selected, setSelected] = useState(null);
+  const [viewing, setViewing] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const typeRecords = records.map((r,i)=>({...r,_origIdx:i})).filter(r=>r.type===type);
+
+  if (viewing !== null) {
+    const r = typeRecords[viewing];
+    // Electrical types
+    if (["eicr","eic","minor_works","ev_charger","pat_testing"].includes(type)) {
+      const titles = { eicr:"Electrical Installation Condition Report — BS 7671:2018+A2:2022", eic:"Electrical Installation Certificate — BS 7671:2018+A2:2022", minor_works:"Minor Electrical Installation Works Certificate — BS 7671:2018+A2:2022", ev_charger:"EV Charger Installation Certificate — BS 7671 Section 722", pat_testing:"Portable Appliance Testing Record — IET Code of Practice" };
+      return <ElectricalPDFPreview certData={r} certType={type} certTitle={titles[type]||label} onClose={()=>setViewing(null)} />;
+    }
+    // Fire types
+    if (type === "fra") {
+      generateFireSafetyPDF("fra", r);
+      setViewing(null);
+      return null;
+    }
+    if (type === "extinguisher_service") {
+      generateFireSafetyPDF("extinguisher", r);
+      setViewing(null);
+      return null;
+    }
+    if (["emergency_lighting","fire_alarm","fire_door"].includes(type)) {
+      generateFireSafetyPDF(type, r);
+      setViewing(null);
+      return null;
+    }
+    // Plumbing types
+    if (["lra","tempLog","g3","tmv","rpz"].includes(type)) {
+      const plumbTitles = { lra:"Legionella Risk Assessment (ACOP L8)", tempLog:"Water Temperature Log (HSG274)", g3:"G3 Unvented Hot Water Certificate", tmv:"TMV Service Record (HTM 04-01)", rpz:"RPZ Valve Test Certificate (WRAS)" };
+      return <PlumbingPDFPreview certType={type} certTitle={plumbTitles[type]||label} certData={r} onClose={()=>setViewing(null)} />;
+    }
+    // Oil types
+    if (["cd11","cd10","cd12","cd14","ti133d","heatpump","solarthermal"].includes(type)) {
+      generateOilRenewablesPDF(type, r);
+      setViewing(null);
+      return null;
+    }
+    // Fallback: just close
+    setViewing(null);
+    return null;
+  }
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title={label} onBack={onBack} onHome={onHome}/>
+      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
+        {typeRecords.length === 0 ? (
+          <div style={{ textAlign:"center", color:"#aaa", marginTop:60, fontSize:15 }}>No records saved yet</div>
+        ) : typeRecords.map((r, i) => {
+          const client = r.clientName || r.form?.clientName || r.companyName || "Unknown Client";
+          const addr = r.clientAddr || r.form?.clientAddr || r.siteAddress || r.address || "";
+          const date = r.date ? new Date(r.date).toLocaleDateString("en-GB") : (r.savedAt ? new Date(r.savedAt).toLocaleDateString("en-GB") : "");
+          return (
+            <div key={i} onClick={()=>setSelected(i)}
+              style={{ background:"#fff", borderRadius:10, padding:"14px 16px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", borderLeft:`4px solid ${color}`, cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:700, fontSize:15, color:"#222" }}>{client}</div>
+                <div style={{ fontSize:13, color:"#888", marginTop:3 }}>{addr}</div>
+                <div style={{ fontSize:12, color, marginTop:3 }}>{label} · {date}</div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 3L10 8L5 13" stroke="#bbb" strokeWidth="2" strokeLinecap="round"/></svg>
+            </div>
+          );
+        })}
+      </div>
+      <BottomBar onHome={onHome}/>
+      {selected !== null && (
+        <RecordActionSheet title={typeRecords[selected]?.clientName || typeRecords[selected]?.form?.clientName || label}
+          onClose={()=>setSelected(null)}
+          onPreview={()=>{ setViewing(selected); setSelected(null); }}
+          onDownload={()=>{ setViewing(selected); setSelected(null); }}
+          onDelete={()=>{ setConfirmDelete(selected); setSelected(null); }}/>
+      )}
+      {confirmDelete !== null && (
+        <ConfirmDeleteModal onCancel={()=>setConfirmDelete(null)}
+          onConfirm={()=>{ onDelete(typeRecords[confirmDelete]._origIdx); setConfirmDelete(null); }}/>
+      )}
+    </div>
+  );
+}
+
+function ElectricalRecordsScreen({ records, onBack, onHome, onDelete }) {
+  const [folder, setFolder] = useState(null);
+  const ELEC_COLOR = "#2563eb";
+
+  const folderDefs = [
+    { id:"eicr", label:"EICR", icon:"📋", color:ELEC_COLOR },
+    { id:"eic", label:"EIC", icon:"📜", color:"#1d4ed8" },
+    { id:"minor_works", label:"Minor Works", icon:"🔧", color:"#3b82f6" },
+    { id:"ev_charger", label:"EV Charger", icon:"🔌", color:"#0ea5e9" },
+    { id:"pat_testing", label:"PAT Testing", icon:"🔍", color:"#6366f1" },
+  ];
+
+  if (folder) {
+    const def = folderDefs.find(f=>f.id===folder);
+    return <TradeRecordsSubScreen type={folder} label={def?.label||folder} color={def?.color||ELEC_COLOR} records={records} onBack={()=>setFolder(null)} onHome={onHome} onDelete={onDelete}/>;
+  }
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title="Electrical Records" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
+        {folderDefs.map(f => {
+          const count = records.filter(r=>r.type===f.id).length;
+          return (
+            <div key={f.id} onClick={()=>setFolder(f.id)}
+              style={{ background:"#fff", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 2px 10px rgba(0,0,0,0.07)", display:"flex", alignItems:"center", gap:16, cursor:"pointer" }}
+              onMouseEnter={e=>e.currentTarget.style.background="#f0f4ff"}
+              onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              <div style={{ width:52, height:52, borderRadius:12, background:`${f.color}18`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:26 }}>
+                {f.icon}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:700, fontSize:15, color:"#222" }}>{f.label}</div>
+                <div style={{ fontSize:13, color:"#888", marginTop:2 }}>{count} record{count!==1?"s":""}</div>
+              </div>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke="#bbb" strokeWidth="2.2" strokeLinecap="round"/></svg>
+            </div>
+          );
+        })}
+      </div>
+      <BottomBar onHome={onHome}/>
+    </div>
+  );
+}
+
+function FireSafetyRecordsScreen({ records, onBack, onHome, onDelete }) {
+  const [folder, setFolder] = useState(null);
+  const FIRE_COLOR = "#ef4444";
+
+  const folderDefs = [
+    { id:"fra", label:"Fire Risk Assessment", icon:"📋", color:FIRE_COLOR },
+    { id:"extinguisher_service", label:"Fire Extinguisher Service", icon:"🧯", color:"#dc2626" },
+    { id:"emergency_lighting", label:"Emergency Lighting", icon:"💡", color:"#f97316" },
+    { id:"fire_alarm", label:"Fire Alarm", icon:"🔔", color:"#b91c1c" },
+    { id:"fire_door", label:"Fire Door Inspection", icon:"🚪", color:"#ea580c" },
+  ];
+
+  if (folder) {
+    const def = folderDefs.find(f=>f.id===folder);
+    return <TradeRecordsSubScreen type={folder} label={def?.label||folder} color={def?.color||FIRE_COLOR} records={records} onBack={()=>setFolder(null)} onHome={onHome} onDelete={onDelete}/>;
+  }
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title="Fire Safety Records" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
+        {folderDefs.map(f => {
+          const count = records.filter(r=>r.type===f.id).length;
+          return (
+            <div key={f.id} onClick={()=>setFolder(f.id)}
+              style={{ background:"#fff", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 2px 10px rgba(0,0,0,0.07)", display:"flex", alignItems:"center", gap:16, cursor:"pointer" }}
+              onMouseEnter={e=>e.currentTarget.style.background="#fff5f5"}
+              onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              <div style={{ width:52, height:52, borderRadius:12, background:`${f.color}18`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:26 }}>
+                {f.icon}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:700, fontSize:15, color:"#222" }}>{f.label}</div>
+                <div style={{ fontSize:13, color:"#888", marginTop:2 }}>{count} record{count!==1?"s":""}</div>
+              </div>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke="#bbb" strokeWidth="2.2" strokeLinecap="round"/></svg>
+            </div>
+          );
+        })}
+      </div>
+      <BottomBar onHome={onHome}/>
+    </div>
+  );
+}
+
+function PlumbingRecordsScreen({ records, onBack, onHome, onDelete }) {
+  const [folder, setFolder] = useState(null);
+  const PLUMB_COLOR = "#0891b2";
+
+  const folderDefs = [
+    { id:"lra", label:"Legionella Risk Assessment", icon:"🦠", color:PLUMB_COLOR },
+    { id:"tempLog", label:"Water Temperature Log", icon:"🌡️", color:"#06b6d4" },
+    { id:"g3", label:"G3 Unvented", icon:"🔥", color:"#0e7490" },
+    { id:"tmv", label:"TMV Service", icon:"🔧", color:"#0284c7" },
+    { id:"rpz", label:"RPZ Valve Test", icon:"🔩", color:"#0369a1" },
+  ];
+
+  if (folder) {
+    const def = folderDefs.find(f=>f.id===folder);
+    return <TradeRecordsSubScreen type={folder} label={def?.label||folder} color={def?.color||PLUMB_COLOR} records={records} onBack={()=>setFolder(null)} onHome={onHome} onDelete={onDelete}/>;
+  }
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title="Plumbing Records" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
+        {folderDefs.map(f => {
+          const count = records.filter(r=>r.type===f.id).length;
+          return (
+            <div key={f.id} onClick={()=>setFolder(f.id)}
+              style={{ background:"#fff", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 2px 10px rgba(0,0,0,0.07)", display:"flex", alignItems:"center", gap:16, cursor:"pointer" }}
+              onMouseEnter={e=>e.currentTarget.style.background="#f0fdfa"}
+              onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              <div style={{ width:52, height:52, borderRadius:12, background:`${f.color}18`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:26 }}>
+                {f.icon}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:700, fontSize:15, color:"#222" }}>{f.label}</div>
+                <div style={{ fontSize:13, color:"#888", marginTop:2 }}>{count} record{count!==1?"s":""}</div>
+              </div>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke="#bbb" strokeWidth="2.2" strokeLinecap="round"/></svg>
+            </div>
+          );
+        })}
+      </div>
+      <BottomBar onHome={onHome}/>
+    </div>
+  );
+}
+
+function OilRenewablesRecordsScreen({ records, onBack, onHome, onDelete }) {
+  const [folder, setFolder] = useState(null);
+  const OIL_COLOR = "#16a34a";
+
+  const folderDefs = [
+    { id:"cd11", label:"CD/11 Service & Commissioning", icon:"🔧", color:OIL_COLOR },
+    { id:"cd10", label:"CD/10 Installation", icon:"📋", color:"#15803d" },
+    { id:"cd12", label:"CD/12 Tank Inspection", icon:"🛢️", color:"#166534" },
+    { id:"cd14", label:"CD/14 Decommissioning", icon:"🚫", color:"#14532d" },
+    { id:"ti133d", label:"TI/133D Landlord Inspection", icon:"🏠", color:"#22c55e" },
+    { id:"heatpump", label:"MCS Heat Pump", icon:"♨️", color:"#059669" },
+    { id:"solarthermal", label:"Solar Thermal", icon:"☀️", color:"#047857" },
+  ];
+
+  if (folder) {
+    const def = folderDefs.find(f=>f.id===folder);
+    return <TradeRecordsSubScreen type={folder} label={def?.label||folder} color={def?.color||OIL_COLOR} records={records} onBack={()=>setFolder(null)} onHome={onHome} onDelete={onDelete}/>;
+  }
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <Header title="Oil & Renewables Records" onBack={onBack}/>
+      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
+        {folderDefs.map(f => {
+          const count = records.filter(r=>r.type===f.id).length;
+          return (
+            <div key={f.id} onClick={()=>setFolder(f.id)}
+              style={{ background:"#fff", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 2px 10px rgba(0,0,0,0.07)", display:"flex", alignItems:"center", gap:16, cursor:"pointer" }}
+              onMouseEnter={e=>e.currentTarget.style.background="#f0fdf4"}
+              onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              <div style={{ width:52, height:52, borderRadius:12, background:`${f.color}18`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:26 }}>
+                {f.icon}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:700, fontSize:15, color:"#222" }}>{f.label}</div>
+                <div style={{ fontSize:13, color:"#888", marginTop:2 }}>{count} record{count!==1?"s":""}</div>
+              </div>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke="#bbb" strokeWidth="2.2" strokeLinecap="round"/></svg>
+            </div>
+          );
+        })}
+      </div>
+      <BottomBar onHome={onHome}/>
+    </div>
+  );
+}
+
 // ─── END MULTI-TRADE COMPONENTS ──────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -30663,6 +30936,11 @@ function App({ onLogout }) {
     onRenew={(rec)=>handleRenew(rec)}
     userPlan={getUserPlan()}/>;
 
+  // ── Trade-specific Records Screens ──────────────────────────────────────
+  if (screen === "electricalRecords") return <ElectricalRecordsScreen records={records} onBack={()=>setScreen("home")} onHome={goHome} onDelete={(i)=>setRecords(r=>r.filter((_,idx)=>idx!==i))}/>;
+  if (screen === "fireRecords") return <FireSafetyRecordsScreen records={records} onBack={()=>setScreen("home")} onHome={goHome} onDelete={(i)=>setRecords(r=>r.filter((_,idx)=>idx!==i))}/>;
+  if (screen === "plumbingRecords") return <PlumbingRecordsScreen records={records} onBack={()=>setScreen("home")} onHome={goHome} onDelete={(i)=>setRecords(r=>r.filter((_,idx)=>idx!==i))}/>;
+  if (screen === "oilRecords") return <OilRenewablesRecordsScreen records={records} onBack={()=>setScreen("home")} onHome={goHome} onDelete={(i)=>setRecords(r=>r.filter((_,idx)=>idx!==i))}/>;
 
   // ── Trial / paywall gate ──────────────────────────────────────────────────
   const _trialStatus = getTrialStatus();
@@ -30690,7 +30968,7 @@ function App({ onLogout }) {
 
   // ── Electrical Dashboard ────────────────────────────────────────────────
   if (screen === "home" && activeTrade === "electrical") return <ElectricalDashboard onBack={goTradeHome} currentUser={currentUser}
-    onNewJob={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")}
+    onNewJob={()=>setScreen("newJob")} onRecords={()=>setScreen("electricalRecords")} onReport={()=>setScreen("report")}
     onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")}
     onClientDetails={()=>setScreen("contacts")} onBankStatements={()=>setScreen("bankStatements")}
     onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}
@@ -30700,10 +30978,11 @@ function App({ onLogout }) {
   // ── Fire Safety Dashboard ──────────────────────────────────────────────
   if (screen === "home" && activeTrade === "fire") return <FireSafetyDashboard onBack={goTradeHome} currentUser={currentUser}
     onSaveCert={(rec) => setRecords(prev => [...prev, rec])}
+    onRecords={()=>setScreen("fireRecords")}
     records={records} invoices={invoices} quotes={quotes} accountReports={accountReports} yearlyReports={yearlyReports} />;
   // ── Plumbing & Legionella Dashboard ─────────────────────────────────────
   if (screen === "home" && activeTrade === "plumbing") return <PlumbingDashboard onBack={goTradeHome} currentUser={currentUser}
-    onNewJob={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")}
+    onNewJob={()=>setScreen("newJob")} onRecords={()=>setScreen("plumbingRecords")} onReport={()=>setScreen("report")}
     onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")}
     onClientDetails={()=>setScreen("contacts")} onBankStatements={()=>setScreen("bankStatements")}
     onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}
@@ -30712,7 +30991,7 @@ function App({ onLogout }) {
 
   // ── Oil & Renewables Dashboard ─────────────────────────────────────────
   if (screen === "home" && activeTrade === "oil") return <OilRenewablesDashboard onBack={goTradeHome} currentUser={currentUser}
-    onNewJob={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")}
+    onNewJob={()=>setScreen("newJob")} onRecords={()=>setScreen("oilRecords")} onReport={()=>setScreen("report")}
     onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")}
     onClientDetails={()=>setScreen("contacts")} onBankStatements={()=>setScreen("bankStatements")}
     onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}
