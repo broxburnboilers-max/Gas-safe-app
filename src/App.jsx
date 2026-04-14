@@ -501,7 +501,7 @@ function BottomBar({ onHome, onNext, onOptions, nextLabel="Next" }) {
   );
 }
 
-function FormInput({ label, value, onChange, placeholder, type="text", multiline=false, maxLength }) {
+function FormInput({ label, value, onChange, placeholder, type="text", multiline=false, maxLength, step, inputMode }) {
   return (
     <div style={{ margin:"0 14px 8px" }}>
       {label && <div style={{ fontSize:11, color:"rgba(255,255,255,0.6)", padding:"0 0 4px", fontWeight:600, fontFamily:"'Segoe UI',sans-serif", textTransform:"uppercase", letterSpacing:0.5 }}>{label}</div>}
@@ -509,7 +509,8 @@ function FormInput({ label, value, onChange, placeholder, type="text", multiline
         <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength}
           style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px", border:"1px solid #2a4058", background:"#1e3044", borderRadius:10, fontSize:14, fontFamily:"'Segoe UI',sans-serif", resize:"vertical", minHeight:80, outline:"none", color:"#e8edf2" }}/>
       ) : (
-        <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
+        <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} step={step} inputMode={inputMode}
+          onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior:"smooth", block:"center" }), 300)}
           style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px", border:"1px solid #2a4058", background:"#1e3044", borderRadius:10, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#e8edf2" }}/>
       )}
       {maxLength && <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", padding:"4px 0 0" }}>You Can Enter {maxLength} Characters</div>}
@@ -3942,23 +3943,23 @@ function GasRateCalcScreen({ onBack, onHome }) {
 
   if (showHistory) {
     return (
-      <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
         <Header title="Calculation History" onBack={()=>setShowHistory(false)}/>
         <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
-          {history.length === 0 && <p style={{ textAlign:"center", color:"#888", padding:40 }}>No saved calculations yet.</p>}
+          {history.length === 0 && <p style={{ textAlign:"center", color:"rgba(255,255,255,0.45)", padding:40 }}>No saved calculations yet.</p>}
           {history.map(c => (
-            <div key={c.id} style={{ background:"#fff", borderRadius:12, padding:"14px 16px", marginBottom:10, boxShadow:"0 1px 6px rgba(0,0,0,0.06)" }}>
+            <div key={c.id} style={{ background:"rgba(255,255,255,0.06)", borderRadius:12, padding:"14px 16px", marginBottom:10, border:"1px solid rgba(255,255,255,0.08)" }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-                <span style={{ fontSize:12, color:"#888" }}>{new Date(c.timestamp).toLocaleString("en-GB")}</span>
+                <span style={{ fontSize:12, color:"rgba(255,255,255,0.45)" }}>{new Date(c.timestamp).toLocaleString("en-GB")}</span>
                 <button onClick={()=>deleteCalc(c.id)} style={{ background:"none", border:"none", cursor:"pointer", color:"#ef4444", fontSize:16 }}>✕</button>
               </div>
-              <div style={{ fontSize:13, color:"#444", marginBottom:4 }}>
+              <div style={{ fontSize:13, color:"rgba(255,255,255,0.6)", marginBottom:4 }}>
                 {c.meterType === "imperial" ? "Imperial" : "Metric"} · {c.gasType === "natural" ? "Natural Gas" : "LPG"}
               </div>
               <div style={{ display:"flex", gap:16 }}>
-                <div><span style={{ fontSize:11, color:"#888" }}>Gross</span><div style={{ fontWeight:700, color:BLUE }}>{c.grossKW?.toFixed(2)} kW</div></div>
-                <div><span style={{ fontSize:11, color:"#888" }}>Net</span><div style={{ fontWeight:700, color:BLUE }}>{c.netKW?.toFixed(2)} kW</div></div>
-                <div><span style={{ fontSize:11, color:"#888" }}>Rate</span><div style={{ fontWeight:700, color:BLUE }}>{c.gasRateM3?.toFixed(4)} m³/hr</div></div>
+                <div><span style={{ fontSize:11, color:"rgba(255,255,255,0.45)" }}>Gross</span><div style={{ fontWeight:700, color:"#fff200" }}>{c.grossKW?.toFixed(2)} kW</div></div>
+                <div><span style={{ fontSize:11, color:"rgba(255,255,255,0.45)" }}>Net</span><div style={{ fontWeight:700, color:"#fff200" }}>{c.netKW?.toFixed(2)} kW</div></div>
+                <div><span style={{ fontSize:11, color:"rgba(255,255,255,0.45)" }}>Rate</span><div style={{ fontWeight:700, color:"#fff200" }}>{c.gasRateM3?.toFixed(4)} m³/hr</div></div>
               </div>
               {c.toleranceStatus && (
                 <div style={{ marginTop:6, fontSize:12, color:tolColors[c.toleranceStatus], fontWeight:600 }}>
@@ -3974,7 +3975,7 @@ function GasRateCalcScreen({ onBack, onHome }) {
   }
 
   return (
-    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
       <Header title="Gas Rate Calculator" onBack={onBack} right={
         <button onClick={()=>setShowHistory(true)} style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:10, padding:"6px 12px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>
           History ({history.length})
@@ -3994,21 +3995,21 @@ function GasRateCalcScreen({ onBack, onHome }) {
 
         {meterType === "imperial" ? (
           <>
-            <div style={{ margin:"0 0 8px", background:"#fff", borderRadius:10, border:"1px solid #e2e6ea", overflow:"hidden" }}>
-              <div style={{ fontSize:12, color:"#6b7b8d", padding:"8px 14px 0", fontWeight:600 }}>Test Dial Value (ft³)</div>
-              <select value={testDial} onChange={e=>setTestDial(e.target.value)} style={{ width:"100%", boxSizing:"border-box", padding:"6px 14px 10px", border:"none", background:"transparent", fontSize:15, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#222" }}>
+            <div style={{ margin:"0 14px 8px" }}>
+              <div style={{ fontSize:11, color:"rgba(255,255,255,0.6)", padding:"0 0 4px", fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>Test Dial Value (ft³)</div>
+              <select value={testDial} onChange={e=>setTestDial(e.target.value)} style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px", border:"1px solid #2a4058", background:"#1e3044", borderRadius:10, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#e8edf2" }}>
                 {["0.5","1","2","5","10"].map(v=><option key={v} value={v}>{v} ft³</option>)}
               </select>
             </div>
-            <FormInput label="Time for 1 Revolution (seconds)" value={timeSeconds} onChange={setTimeSeconds} type="number" placeholder="e.g. 120"/>
+            <FormInput label="Time for 1 Revolution (seconds)" value={timeSeconds} onChange={setTimeSeconds} type="number" step="any" inputMode="decimal" placeholder="e.g. 120"/>
           </>
         ) : (
           <>
-            <FormInput label="Reading 1 (R1)" value={r1} onChange={setR1} type="number" placeholder="e.g. 0.072"/>
-            <FormInput label="Reading 2 (R2)" value={r2} onChange={setR2} type="number" placeholder="e.g. 0.133"/>
-            <div style={{ margin:"0 14px 8px", background:"#fff", borderRadius:10, border:"1px solid #e2e6ea", overflow:"hidden" }}>
-              <div style={{ fontSize:12, color:"#6b7b8d", padding:"8px 14px 0", fontWeight:600 }}>Test Duration</div>
-              <select value={duration} onChange={e=>setDuration(e.target.value)} style={{ width:"100%", boxSizing:"border-box", padding:"6px 14px 10px", border:"none", background:"transparent", fontSize:15, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#222" }}>
+            <FormInput label="Reading 1 (R1)" value={r1} onChange={setR1} type="number" step="any" inputMode="decimal" placeholder="e.g. 0.072"/>
+            <FormInput label="Reading 2 (R2)" value={r2} onChange={setR2} type="number" step="any" inputMode="decimal" placeholder="e.g. 0.133"/>
+            <div style={{ margin:"0 14px 8px" }}>
+              <div style={{ fontSize:11, color:"rgba(255,255,255,0.6)", padding:"0 0 4px", fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>Test Duration</div>
+              <select value={duration} onChange={e=>setDuration(e.target.value)} style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px", border:"1px solid #2a4058", background:"#1e3044", borderRadius:10, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#e8edf2" }}>
                 <option value="1">1 minute</option>
                 <option value="2">2 minutes</option>
               </select>
@@ -4018,32 +4019,32 @@ function GasRateCalcScreen({ onBack, onHome }) {
 
         {/* Results Card */}
         {netKW !== null && (
-          <div style={{ margin:"14px 0", background:"#fff", borderRadius:14, padding:"18px 16px", boxShadow:"0 2px 12px rgba(0,0,0,0.08)", border:`2px solid ${BLUE}` }}>
+          <div style={{ margin:"14px 0", background:"rgba(255,255,255,0.06)", borderRadius:14, padding:"18px 16px", border:`2px solid ${BLUE}` }}>
             <div style={{ fontSize:13, fontWeight:700, color:BLUE, marginBottom:12, textTransform:"uppercase", letterSpacing:0.5 }}>Results</div>
             {meterType === "imperial" && gasRateFt3 !== null && (
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
-                <span style={{ fontSize:13, color:"#666" }}>Gas Rate</span>
-                <span style={{ fontWeight:700, color:"#222" }}>{gasRateFt3.toFixed(2)} ft³/hr</span>
+                <span style={{ fontSize:13, color:"rgba(255,255,255,0.6)" }}>Gas Rate</span>
+                <span style={{ fontWeight:700, color:"#e8edf2" }}>{gasRateFt3.toFixed(2)} ft³/hr</span>
               </div>
             )}
             {meterType === "metric" && gasUsed !== null && (
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
-                <span style={{ fontSize:13, color:"#666" }}>Gas Used</span>
-                <span style={{ fontWeight:700, color:"#222" }}>{gasUsed.toFixed(4)} m³</span>
+                <span style={{ fontSize:13, color:"rgba(255,255,255,0.6)" }}>Gas Used</span>
+                <span style={{ fontWeight:700, color:"#e8edf2" }}>{gasUsed.toFixed(4)} m³</span>
               </div>
             )}
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
-              <span style={{ fontSize:13, color:"#666" }}>Gas Rate (m³/hr)</span>
-              <span style={{ fontWeight:700, color:"#222" }}>{gasRateM3.toFixed(4)} m³/hr</span>
+              <span style={{ fontSize:13, color:"rgba(255,255,255,0.6)" }}>Gas Rate (m³/hr)</span>
+              <span style={{ fontWeight:700, color:"#e8edf2" }}>{gasRateM3.toFixed(4)} m³/hr</span>
             </div>
-            <div style={{ borderTop:"1px solid #eee", margin:"10px 0", padding:"10px 0 0" }}>
+            <div style={{ borderTop:"1px solid rgba(255,255,255,0.1)", margin:"10px 0", padding:"10px 0 0" }}>
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                <span style={{ fontSize:14, fontWeight:600, color:"#444" }}>Gross Input</span>
-                <span style={{ fontSize:20, fontWeight:800, color:BLUE }}>{grossKW.toFixed(2)} kW</span>
+                <span style={{ fontSize:14, fontWeight:600, color:"rgba(255,255,255,0.7)" }}>Gross Input</span>
+                <span style={{ fontSize:20, fontWeight:800, color:"#fff200" }}>{grossKW.toFixed(2)} kW</span>
               </div>
               <div style={{ display:"flex", justifyContent:"space-between" }}>
-                <span style={{ fontSize:14, fontWeight:600, color:"#444" }}>Net Input</span>
-                <span style={{ fontSize:20, fontWeight:800, color:BLUE }}>{netKW.toFixed(2)} kW</span>
+                <span style={{ fontSize:14, fontWeight:600, color:"rgba(255,255,255,0.7)" }}>Net Input</span>
+                <span style={{ fontSize:20, fontWeight:800, color:"#fff200" }}>{netKW.toFixed(2)} kW</span>
               </div>
             </div>
           </div>
@@ -4052,14 +4053,14 @@ function GasRateCalcScreen({ onBack, onHome }) {
         {/* Tolerance Check */}
         {netKW !== null && (
           <div style={{ margin:"0 0 10px" }}>
-            <FormInput label="Manufacturer's Rated Input (kW)" value={ratedInput} onChange={setRatedInput} type="number" placeholder="e.g. 24.0"/>
+            <FormInput label="Manufacturer's Rated Input (kW)" value={ratedInput} onChange={setRatedInput} type="number" step="any" inputMode="decimal" placeholder="e.g. 24.0"/>
             {toleranceStatus && (
-              <div style={{ margin:"0 14px", padding:"12px 16px", borderRadius:10, background:toleranceStatus === "green" ? "#f0fdf4" : toleranceStatus === "amber" ? "#fffbeb" : "#fef2f2", border:`1px solid ${tolColors[toleranceStatus]}40` }}>
+              <div style={{ margin:"0 14px", padding:"12px 16px", borderRadius:10, background:`${tolColors[toleranceStatus]}18`, border:`1px solid ${tolColors[toleranceStatus]}40` }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                   <span style={{ fontSize:20 }}>{tolIcons[toleranceStatus]}</span>
                   <span style={{ fontWeight:700, color:tolColors[toleranceStatus], fontSize:14 }}>{toleranceMsg}</span>
                 </div>
-                <div style={{ fontSize:12, color:"#666", marginTop:4 }}>
+                <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginTop:4 }}>
                   Acceptable range: {(parseFloat(ratedInput)*0.90).toFixed(2)} kW – {(parseFloat(ratedInput)*1.05).toFixed(2)} kW
                 </div>
               </div>
@@ -6418,6 +6419,7 @@ function LPGStepAppliances({ data, onChange, onNext, onBack, onHome }) {
   };
   const apps = data.appliances || Array(ROWS).fill(null).map(()=>({}));
   const inp = (i,key,ph,im) => <input value={apps[i][key]||""} onChange={e=>update(i,key,e.target.value)} placeholder={ph||""} inputMode={im||undefined}
+    onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior:"smooth", block:"center" }), 300)}
     style={{ width:"100%", padding:"7px 8px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, boxSizing:"border-box", background:"#1e3044", color:"#e8edf2" }}/>;
 
   if(mmPicker) {
@@ -7519,6 +7521,7 @@ function BmkStepMeasure({ data, onChange, onNext, onBack, onHome }) {
     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 0" }}>
       <div style={{ fontSize:13, color:"#444", flex:1 }}>{label}</div>
       <input value={data[key]||""} onChange={e=>onChange({...data,[key]:e.target.value})} placeholder=""
+        onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior:"smooth", block:"center" }), 300)}
         style={{ width:90, padding:"7px 10px", border:"1px solid #ddd", borderRadius:8, fontSize:13, outline:"none", textAlign:"right" }}/>
     </div>
   );
@@ -8346,6 +8349,7 @@ function CGSCStepAppliances({ data, onChange, onNext, onBack, onHome }) {
   }
 
   const inp = (i,key,ph,im) => <input value={apps[i][key]||""} onChange={e=>update(i,key,e.target.value)} placeholder={ph||""} inputMode={im||undefined}
+    onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior:"smooth", block:"center" }), 300)}
     style={{ width:"100%", padding:"7px 8px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, boxSizing:"border-box", background:"#1e3044", color:"#e8edf2" }}/>;
   const mmInp = (i, key) => (
     <div onClick={()=>setMmPicker({row:i,field:key})}
@@ -19940,7 +19944,7 @@ function WNStepNoticeDetails({ data, onChange, onNext, onBack, onHome, embeddedM
   const set = (k, v) => onChange({...data, [k]: v});
   const [wnPicker, setWnPicker] = useState(null);
 
-  if(wnPicker==="make") return <PickerScreen title="Make" options={ALL_MAKES} onSelect={v=>{set("make",v);set("model","");setWnPicker(null);}} onBack={()=>setWnPicker(null)} allowCustom={true} onSaveCustom={v=>rememberApplianceValue("make",v)}/>;
+  if(wnPicker==="make") return <PickerScreen title="Make" options={ALL_MAKES} onSelect={v=>{onChange({...data, make:v, model:""});setWnPicker(null);}} onBack={()=>setWnPicker(null)} allowCustom={true} onSaveCustom={v=>rememberApplianceValue("make",v)}/>;
   if(wnPicker==="model") return <PickerScreen title="Model" options={data.make ? getModelsForMake(data.make) : []} onSelect={v=>{set("model",v);setWnPicker(null);}} onBack={()=>setWnPicker(null)} allowCustom={true} onSaveCustom={v=>rememberApplianceValue("model",v)}/>;
 
   const headerTitle = embeddedMode ? "Warning Notice Details" : "Notice Details";
@@ -22885,6 +22889,22 @@ function ElectricalPDFPreview({ certData, certType, certTitle, onClose }) {
   );
 }
 
+// ─── Error Boundary for Electrical Forms ─────────────────────────────────────
+class ElecFormErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  render() {
+    if (this.state.hasError) {
+      return React.createElement("div", { style: { minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:32, fontFamily:"'Segoe UI',sans-serif" } },
+        React.createElement("div", { style: { color:"#ef4444", fontSize:18, fontWeight:700, marginBottom:12 } }, "Something went wrong"),
+        React.createElement("div", { style: { color:"rgba(255,255,255,0.6)", fontSize:14, marginBottom:16, textAlign:"center" } }, String(this.state.error?.message || "Unknown error")),
+        React.createElement("button", { onClick: () => { this.setState({ hasError: false, error: null }); if (this.props.onBack) this.props.onBack(); }, style: { padding:"12px 24px", borderRadius:10, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" } }, "Go Back")
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ─── EICR FORM (BS 7671:2018+A2:2022 — 13-step wizard) ─────────────────────
 function EICRForm({ onBack, onSave, currentUser }) {
   const OUTCOME_CODES = ["","✓","C1","C2","C3","FI","N","V","LIM","N/A"];
@@ -23529,7 +23549,7 @@ function EICRForm({ onBack, onSave, currentUser }) {
 
       {/* Content */}
       <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"4px 16px 100px" }}>
-        {stepRenderers[step]()}
+        {stepRenderers[step] ? stepRenderers[step]() : <div style={{ color:"rgba(255,255,255,0.5)", padding:20, textAlign:"center" }}>Loading step...</div>}
       </div>
 
       {/* Bottom navigation */}
@@ -24410,7 +24430,7 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
     } catch(e) { console.error("Failed to save cert:", e); }
   };
 
-  if (elecScreen === "eicr") return <EICRForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
+  if (elecScreen === "eicr") return <ElecFormErrorBoundary onBack={() => setElecScreen(null)}><EICRForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} /></ElecFormErrorBoundary>;
   if (elecScreen === "eic") return <EICForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
   if (elecScreen === "minorWorks") return <MinorWorksForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
   if (elecScreen === "evCharger") return <EVChargerForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
