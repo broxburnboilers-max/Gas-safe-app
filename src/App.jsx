@@ -408,7 +408,7 @@ async function checkStripeSubscription(username) {
     return null;
   }
 }
-const LIGHT_BG = "#f0f2f5";    // Cool grey background
+const LIGHT_BG = "linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)";    // Dark theme background
 const GS_YELLOW = "#fff200";   // App yellow
 const GS_MID = "#35463d";      // App mid green
 
@@ -476,13 +476,13 @@ function getCompanyProfile() {
 
 function Header({ title, onBack, right }) {
   return (
-    <div style={{ background:`linear-gradient(160deg,${DARK_BLUE} 0%,${BLUE} 70%,#2a5a6a 100%)`, padding:"18px 20px 16px", display:"flex", alignItems:"center", gap:12, minHeight:56, flexShrink:0, borderRadius:"0 0 18px 18px", boxShadow:"0 4px 16px rgba(13,31,45,0.18)" }}>
+    <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
       {onBack && (
-        <button onClick={onBack} style={{ background:"rgba(255,255,255,0.12)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:12, width:38, height:38, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0, backdropFilter:"blur(4px)" }}>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
       )}
-      <span style={{ flex:1, color:"#fff", fontWeight:700, fontSize:17, fontFamily:"'Segoe UI',sans-serif", letterSpacing:0.2 }}>{title}</span>
+      <span style={{ flex:1, color:"#e8edf2", fontWeight:700, fontSize:15, fontFamily:"'Segoe UI',sans-serif" }}>{title}</span>
       {right}
     </div>
   );
@@ -490,54 +490,44 @@ function Header({ title, onBack, right }) {
 
 function BottomBar({ onHome, onNext, onOptions, nextLabel="Next" }) {
   return (
-    <div style={{ padding:"8px 16px 10px", background:"transparent", flexShrink:0, position:"sticky", bottom:0, zIndex:10 }}>
-      <div style={{ display:"flex", background:"#fff", borderRadius:16, boxShadow:"0 -2px 16px rgba(0,0,0,0.08)", overflow:"hidden", border:"1px solid rgba(0,0,0,0.04)" }}>
-        <button onClick={onHome} style={{ flex:1, padding:"12px 0", background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3, color:"#7a8a96", fontSize:11, fontWeight:600, fontFamily:"'Segoe UI',sans-serif" }}>
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 9.5L11 3L19 9.5V19H14V14H8V19H3V9.5Z" stroke="#7a8a96" strokeWidth="1.8" strokeLinejoin="round"/></svg>
-          Home
-        </button>
-        {onOptions ? (
-          <button onClick={onOptions} style={{ flex:1, padding:"12px 0", background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3, color:"#7a8a96", fontSize:11, fontWeight:600, fontFamily:"'Segoe UI',sans-serif" }}>
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="5" width="16" height="2" rx="1" fill="#7a8a96"/><rect x="3" y="10" width="16" height="2" rx="1" fill="#7a8a96"/><rect x="3" y="15" width="16" height="2" rx="1" fill="#7a8a96"/></svg>
-            Options
-          </button>
-        ) : onNext ? (
-          <button onClick={onNext} style={{ flex:1, padding:"12px 0", background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3, color:BLUE, fontSize:11, fontWeight:700, fontFamily:"'Segoe UI',sans-serif" }}>
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M5 11H17M12 6L17 11L12 16" stroke={BLUE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            {nextLabel}
-          </button>
-        ) : null}
-      </div>
+    <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
+      <button onClick={onHome} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>Home</button>
+      {onOptions ? (
+        <button onClick={onOptions} style={{ flex:1, padding:"13px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>Options</button>
+      ) : onNext ? (
+        <button onClick={onNext} style={{ flex:1, padding:"13px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>{nextLabel}</button>
+      ) : null}
     </div>
   );
 }
 
 function FormInput({ label, value, onChange, placeholder, type="text", multiline=false, maxLength }) {
   return (
-    <div style={{ margin:"0 14px 8px", background:"#fff", borderRadius:10, border:"1px solid #e2e6ea", overflow:"hidden" }}>
-      {label && <div style={{ fontSize:12, color:"#6b7b8d", padding:"8px 14px 0", fontWeight:600, fontFamily:"'Segoe UI',sans-serif" }}>{label}</div>}
+    <div style={{ margin:"0 14px 8px" }}>
+      {label && <div style={{ fontSize:11, color:"rgba(255,255,255,0.6)", padding:"0 0 4px", fontWeight:600, fontFamily:"'Segoe UI',sans-serif", textTransform:"uppercase", letterSpacing:0.5 }}>{label}</div>}
       {multiline ? (
         <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength}
-          style={{ width:"100%", boxSizing:"border-box", padding:"8px 14px 10px", border:"none", background:"transparent", fontSize:15, fontFamily:"'Segoe UI',sans-serif", resize:"none", height:100, outline:"none", color:"#222" }}/>
+          style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px", border:"1px solid #2a4058", background:"#1e3044", borderRadius:10, fontSize:14, fontFamily:"'Segoe UI',sans-serif", resize:"vertical", minHeight:80, outline:"none", color:"#e8edf2" }}/>
       ) : (
         <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
-          style={{ width:"100%", boxSizing:"border-box", padding: label ? "6px 14px 10px" : "12px 14px", border:"none", background:"transparent", fontSize:15, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#222" }}/>
+          style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px", border:"1px solid #2a4058", background:"#1e3044", borderRadius:10, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#e8edf2" }}/>
       )}
-      {maxLength && <div style={{ fontSize:11, color:"#aaa", padding:"0 14px 6px" }}>You Can Enter {maxLength} Characters</div>}
+      {maxLength && <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", padding:"4px 0 0" }}>You Can Enter {maxLength} Characters</div>}
     </div>
   );
 }
 
 function RadioGroup({ options, value, onChange }) {
   return (
-    <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
+    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
       {options.map(opt => (
-        <label key={opt} style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", fontSize:14, color:"#444" }}>
-          <div onClick={()=>onChange(opt)} style={{ width:20, height:20, borderRadius:"50%", border:`2px solid ${value===opt?BLUE:"#bbb"}`, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", background:"#fff" }}>
-            {value===opt && <div style={{ width:10, height:10, borderRadius:"50%", background:BLUE }}/>}
-          </div>
-          {opt}
-        </label>
+        <button key={opt} onClick={()=>onChange(opt)} style={{
+          flex:1, padding:"8px", borderRadius:8, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif",
+          border:"1px solid", minWidth:60, textAlign:"center",
+          borderColor: value===opt ? "#3b82f6" : "rgba(255,255,255,0.12)",
+          background: value===opt ? "rgba(59,130,246,0.15)" : "rgba(255,255,255,0.04)",
+          color: value===opt ? "#3b82f6" : "rgba(255,255,255,0.45)"
+        }}>{opt}</button>
       ))}
     </div>
   );
@@ -545,8 +535,8 @@ function RadioGroup({ options, value, onChange }) {
 
 function SectionHeader({ title, actions }) {
   return (
-    <div style={{ margin:"14px 14px 8px", padding:"10px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", borderLeft:`4px solid ${BLUE}`, background:"#fff", borderRadius:"0 10px 10px 0", boxShadow:"0 1px 6px rgba(0,0,0,0.06)" }}>
-      <span style={{ color:BLUE, fontWeight:700, fontSize:14, fontFamily:"'Segoe UI',sans-serif" }}>{title}</span>
+    <div style={{ margin:"14px 14px 8px", padding:"10px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:"1px solid rgba(59,130,246,0.3)" }}>
+      <span style={{ color:"#3b82f6", fontWeight:700, fontSize:14, fontFamily:"'Segoe UI',sans-serif", textTransform:"uppercase", letterSpacing:0.8 }}>{title}</span>
       {actions && <div style={{ display:"flex", gap:8 }}>{actions}</div>}
     </div>
   );
@@ -3341,144 +3331,109 @@ function PSCScreen({ onHome, onSave, engineerData: initEngData }) {
     return { results, overallWorst };
   };
 
+  const PSC_STEPS = ["Property","Items","Inspect","Results","Warning","Save"];
   const hdrStyle = { background:"linear-gradient(135deg, #1a3a4a 0%, #0d1f2d 100%)", padding:"18px 16px 14px", display:"flex", alignItems:"center", gap:12, flexShrink:0 };
-  const cardStyle = { background:"#fff", borderRadius:14, padding:"16px 18px", boxShadow:"0 2px 8px rgba(0,0,0,0.06)", marginBottom:12 };
-  const labelStyle = { display:"block", color:"#1a3a4a", fontWeight:700, fontSize:13, marginBottom:4 };
-  const inputStyle = { width:"100%", padding:"11px 14px", borderRadius:10, border:"1.5px solid #d1d5db", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box" };
-  const selectStyle = { ...inputStyle, appearance:"auto" };
+  const cardStyle = { background:"rgba(255,255,255,0.04)", borderRadius:14, padding:"16px 18px", border:"1px solid rgba(255,255,255,0.08)", marginBottom:12 };
+  const labelStyle = GAS_LABEL;
+  const inputStyle = GAS_INPUT;
+  const selectStyle = GAS_SELECT;
 
   // ── Step 1: Property & Engineer Details ──
   if (step === 1) return (
-    <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
-      <div style={hdrStyle}>
-        <button onClick={onHome} style={{ background:"none", border:"none", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center" }}>
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M15 18L8 11L15 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </button>
-        <span style={{ color:"#fff", fontWeight:800, fontSize:17 }}>Property Safety Check</span>
+    <GasFormShell title="Property Safety Check" subtitle="Property & Engineer Details" step={0} totalSteps={6} stepLabels={PSC_STEPS} onBack={onHome} onPrev={null} onNext={()=>setStep(2)}>
+      <div style={{ marginBottom:12 }}>
+        <label style={labelStyle}>Property Reference</label>
+        <input style={inputStyle} value={pscData.propertyRef} onChange={e=>upd("propertyRef",e.target.value)} placeholder="PSC-001"/>
       </div>
-      <div style={{ padding:"4px 8px 4px", background:"#dc2626", textAlign:"center" }}>
-        <span style={{ color:"#fff", fontSize:12, fontWeight:700 }}>Step 1 of 6 — Property & Engineer Details</span>
+      <div style={{ marginBottom:12 }}>
+        <label style={labelStyle}>Date of Inspection</label>
+        <input style={inputStyle} type="date" value={pscData.date} onChange={e=>upd("date",e.target.value)}/>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
-        <div style={cardStyle}>
-          <label style={labelStyle}>Property Reference</label>
-          <input style={inputStyle} value={pscData.propertyRef} onChange={e=>upd("propertyRef",e.target.value)} placeholder="PSC-001"/>
-        </div>
-        <div style={cardStyle}>
-          <label style={labelStyle}>Date of Inspection</label>
-          <input style={inputStyle} type="date" value={pscData.date} onChange={e=>upd("date",e.target.value)}/>
-        </div>
-        <SectionHeader title="Engineer Details"/>
-        <div style={cardStyle}>
-          <label style={labelStyle}>Engineer Name</label>
-          <input style={inputStyle} value={pscData.engineer.name} onChange={e=>upd("engineer.name",e.target.value)}/>
-          <div style={{height:10}}/>
-          <label style={labelStyle}>Gas Safe Registration No.</label>
-          <input style={inputStyle} value={pscData.engineer.gasRegNo} onChange={e=>upd("engineer.gasRegNo",e.target.value)}/>
-          <div style={{height:10}}/>
-          <label style={labelStyle}>Company</label>
-          <input style={inputStyle} value={pscData.engineer.company} onChange={e=>upd("engineer.company",e.target.value)}/>
-        </div>
-        <SectionHeader title="Property Details"/>
-        <div style={cardStyle}>
-          <label style={labelStyle}>Address Line 1</label>
-          <input style={inputStyle} value={pscData.property.addr1} onChange={e=>upd("property.addr1",e.target.value)}/>
-          <div style={{height:8}}/>
-          <label style={labelStyle}>Address Line 2</label>
-          <input style={inputStyle} value={pscData.property.addr2} onChange={e=>upd("property.addr2",e.target.value)}/>
-          <div style={{height:8}}/>
-          <label style={labelStyle}>City/Town</label>
-          <input style={inputStyle} value={pscData.property.city} onChange={e=>upd("property.city",e.target.value)}/>
-          <div style={{height:8}}/>
-          <label style={labelStyle}>Postcode</label>
-          <input style={inputStyle} value={pscData.property.postcode} onChange={e=>upd("property.postcode",e.target.value)}/>
-          <div style={{height:8}}/>
-          <label style={labelStyle}>Landlord/Owner Name</label>
-          <input style={inputStyle} value={pscData.property.landlord} onChange={e=>upd("property.landlord",e.target.value)}/>
-          <div style={{height:8}}/>
-          <label style={labelStyle}>Tenant Name</label>
-          <input style={inputStyle} value={pscData.property.tenant} onChange={e=>upd("property.tenant",e.target.value)}/>
-          <div style={{height:10}}/>
-          <label style={labelStyle}>Property Type</label>
-          <select style={selectStyle} value={pscData.property.type} onChange={e=>upd("property.type",e.target.value)}>
-            {["House","Flat","Commercial","HMO","Other"].map(t=><option key={t}>{t}</option>)}
-          </select>
-        </div>
+      <div style={GAS_SECTION}>Engineer Details</div>
+      <div style={{ marginBottom:12 }}>
+        <label style={labelStyle}>Engineer Name</label>
+        <input style={inputStyle} value={pscData.engineer.name} onChange={e=>upd("engineer.name",e.target.value)}/>
       </div>
-      <BottomBar onHome={onHome} onNext={()=>setStep(2)} nextLabel="Next: Select Items"/>
-    </div>
+      <div style={{ marginBottom:12 }}>
+        <label style={labelStyle}>Gas Safe Registration No.</label>
+        <input style={inputStyle} value={pscData.engineer.gasRegNo} onChange={e=>upd("engineer.gasRegNo",e.target.value)}/>
+      </div>
+      <div style={{ marginBottom:12 }}>
+        <label style={labelStyle}>Company</label>
+        <input style={inputStyle} value={pscData.engineer.company} onChange={e=>upd("engineer.company",e.target.value)}/>
+      </div>
+      <div style={GAS_SECTION}>Property Details</div>
+      {[["property.addr1","Address Line 1"],["property.addr2","Address Line 2"],["property.city","City/Town"],["property.postcode","Postcode"],["property.landlord","Landlord/Owner Name"],["property.tenant","Tenant Name"]].map(([path,lbl])=>(
+        <div key={path} style={{ marginBottom:10 }}>
+          <label style={labelStyle}>{lbl}</label>
+          <input style={inputStyle} value={path.split(".").reduce((o,k)=>o?.[k],pscData)||""} onChange={e=>upd(path,e.target.value)}/>
+        </div>
+      ))}
+      <div style={{ marginBottom:12 }}>
+        <label style={labelStyle}>Property Type</label>
+        <select style={selectStyle} value={pscData.property.type} onChange={e=>upd("property.type",e.target.value)}>
+          {["House","Flat","Commercial","HMO","Other"].map(t=><option key={t}>{t}</option>)}
+        </select>
+      </div>
+    </GasFormShell>
   );
 
   // ── Step 2: Appliance/Installation Selection ──
   if (step === 2) return (
-    <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
-      <div style={hdrStyle}>
-        <button onClick={()=>setStep(1)} style={{ background:"none", border:"none", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center" }}>
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M15 18L8 11L15 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </button>
-        <span style={{ color:"#fff", fontWeight:800, fontSize:17 }}>Select Items to Inspect</span>
+    <GasFormShell title="Property Safety Check" subtitle="Select Items to Inspect" step={1} totalSteps={6} stepLabels={PSC_STEPS} onBack={()=>setStep(1)} onPrev={()=>setStep(1)} onNext={()=>{ if(selectedItems.length===0){alert("Please select at least one item to inspect.");return;} setCurrentQItem(0); setStep(3); }}>
+      <p style={{ color:"rgba(255,255,255,0.5)", fontSize:13, margin:"0 0 12px", textAlign:"center" }}>Tap each item present at the property. Selected items turn green.</p>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+        {PSC_ITEM_TYPES.map(item => {
+          const sel = selectedItems.includes(item.key);
+          return (
+            <div key={item.key}>
+              <button onClick={()=>{
+                setSelectedItems(prev => sel ? prev.filter(k=>k!==item.key) : [...prev, item.key]);
+                if (!sel && !itemAnswers[item.key]) {
+                  const qs = PSC_QUESTIONS[item.key] || [];
+                  setItemAnswers(prev => ({...prev, [item.key]: qs.map(q=>({...q, answer:"", classification:null}))}));
+                }
+              }} style={{
+                width:"100%", padding:"16px 10px", borderRadius:14,
+                background: sel ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)",
+                color: sel ? "#22c55e" : "rgba(255,255,255,0.6)",
+                border: sel ? "2px solid rgba(34,197,94,0.5)" : "2px solid rgba(255,255,255,0.12)",
+                cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", fontWeight:700, fontSize:13,
+                display:"flex", flexDirection:"column", alignItems:"center", gap:6,
+                transition:"all 0.2s ease"
+              }}>
+                <span style={{ fontSize:28 }}>{item.emoji}</span>
+                {item.label}
+                {sel && <span style={{ fontSize:18 }}>{"\u2713"}</span>}
+              </button>
+              {sel && (item.hasMakeModel || item.hasDetails) && (
+                <div style={{ ...cardStyle, marginTop:8, padding:"12px 14px" }}>
+                  {item.hasMakeModel && (<>
+                    <label style={{...labelStyle, fontSize:11}}>Make</label>
+                    <input style={{...inputStyle, padding:"8px 10px", fontSize:13, marginBottom:6}} value={(itemDetails[item.key]||{}).make||""} onChange={e=>setItemDetails(p=>({...p,[item.key]:{...p[item.key],make:e.target.value}}))} placeholder="Make"/>
+                    <label style={{...labelStyle, fontSize:11}}>Model</label>
+                    <input style={{...inputStyle, padding:"8px 10px", fontSize:13, marginBottom:6}} value={(itemDetails[item.key]||{}).model||""} onChange={e=>setItemDetails(p=>({...p,[item.key]:{...p[item.key],model:e.target.value}}))} placeholder="Model"/>
+                  </>)}
+                  {item.detailFields && item.detailFields.map(df => (
+                    <div key={df.id} style={{marginBottom:6}}>
+                      <label style={{...labelStyle, fontSize:11}}>{df.label}</label>
+                      {df.options ? (
+                        <select style={{...selectStyle, padding:"8px 10px", fontSize:13}} value={(itemDetails[item.key]||{})[df.id]||""} onChange={e=>setItemDetails(p=>({...p,[item.key]:{...p[item.key],[df.id]:e.target.value}}))}>
+                          <option value="">Select...</option>
+                          {df.options.map(o=><option key={o} value={o}>{o}</option>)}
+                        </select>
+                      ) : (
+                        <input style={{...inputStyle, padding:"8px 10px", fontSize:13}} value={(itemDetails[item.key]||{})[df.id]||""} onChange={e=>setItemDetails(p=>({...p,[item.key]:{...p[item.key],[df.id]:e.target.value}}))} placeholder={df.label}/>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
-      <div style={{ padding:"4px 8px 4px", background:"#dc2626", textAlign:"center" }}>
-        <span style={{ color:"#fff", fontSize:12, fontWeight:700 }}>Step 2 of 6 — What does this property have?</span>
-      </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
-        <p style={{ color:"#555", fontSize:13, margin:"0 0 12px", textAlign:"center" }}>Tap each item present at the property. Selected items turn green.</p>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-          {PSC_ITEM_TYPES.map(item => {
-            const sel = selectedItems.includes(item.key);
-            return (
-              <div key={item.key}>
-                <button onClick={()=>{
-                  setSelectedItems(prev => sel ? prev.filter(k=>k!==item.key) : [...prev, item.key]);
-                  if (!sel && !itemAnswers[item.key]) {
-                    const qs = PSC_QUESTIONS[item.key] || [];
-                    setItemAnswers(prev => ({...prev, [item.key]: qs.map(q=>({...q, answer:"", classification:null}))}));
-                  }
-                }} style={{
-                  width:"100%", padding:"16px 10px", borderRadius:14,
-                  background: sel ? "linear-gradient(135deg, #16a34a, #15803d)" : "#e5e7eb",
-                  color: sel ? "#fff" : "#374151",
-                  border: sel ? "2px solid #15803d" : "2px solid #d1d5db",
-                  cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", fontWeight:700, fontSize:13,
-                  display:"flex", flexDirection:"column", alignItems:"center", gap:6,
-                  boxShadow: sel ? "0 4px 12px rgba(22,163,74,0.3)" : "none",
-                  transition:"all 0.2s ease"
-                }}>
-                  <span style={{ fontSize:28 }}>{item.emoji}</span>
-                  {item.label}
-                  {sel && <span style={{ fontSize:18 }}>{"\u2713"}</span>}
-                </button>
-                {/* Detail fields when selected */}
-                {sel && (item.hasMakeModel || item.hasDetails) && (
-                  <div style={{ ...cardStyle, marginTop:8, padding:"12px 14px" }}>
-                    {item.hasMakeModel && (<>
-                      <label style={{...labelStyle, fontSize:12}}>Make</label>
-                      <input style={{...inputStyle, padding:"8px 10px", fontSize:13, marginBottom:6}} value={(itemDetails[item.key]||{}).make||""} onChange={e=>setItemDetails(p=>({...p,[item.key]:{...p[item.key],make:e.target.value}}))} placeholder="Make"/>
-                      <label style={{...labelStyle, fontSize:12}}>Model</label>
-                      <input style={{...inputStyle, padding:"8px 10px", fontSize:13, marginBottom:6}} value={(itemDetails[item.key]||{}).model||""} onChange={e=>setItemDetails(p=>({...p,[item.key]:{...p[item.key],model:e.target.value}}))} placeholder="Model"/>
-                    </>)}
-                    {item.detailFields && item.detailFields.map(df => (
-                      <div key={df.id} style={{marginBottom:6}}>
-                        <label style={{...labelStyle, fontSize:12}}>{df.label}</label>
-                        {df.options ? (
-                          <select style={{...selectStyle, padding:"8px 10px", fontSize:13}} value={(itemDetails[item.key]||{})[df.id]||""} onChange={e=>setItemDetails(p=>({...p,[item.key]:{...p[item.key],[df.id]:e.target.value}}))}>
-                            <option value="">Select...</option>
-                            {df.options.map(o=><option key={o} value={o}>{o}</option>)}
-                          </select>
-                        ) : (
-                          <input style={{...inputStyle, padding:"8px 10px", fontSize:13}} value={(itemDetails[item.key]||{})[df.id]||""} onChange={e=>setItemDetails(p=>({...p,[item.key]:{...p[item.key],[df.id]:e.target.value}}))} placeholder={df.label}/>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <BottomBar onHome={onHome} onNext={()=>{ if(selectedItems.length===0){alert("Please select at least one item to inspect.");return;} setCurrentQItem(0); setStep(3); }} nextLabel={`Next: Inspect ${selectedItems.length} Item${selectedItems.length!==1?"s":""}`}/>
-    </div>
+    </GasFormShell>
   );
 
   // ── Step 3: Inspection Questions ──
@@ -3488,67 +3443,55 @@ function PSCScreen({ onHome, onSave, engineerData: initEngData }) {
     const answers = itemAnswers[currentItem.key] || [];
 
     return (
-      <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
-        <div style={hdrStyle}>
-          <button onClick={()=>{ if(currentQItem>0) setCurrentQItem(currentQItem-1); else setStep(2); }} style={{ background:"none", border:"none", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center" }}>
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M15 18L8 11L15 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-          <span style={{ color:"#fff", fontWeight:800, fontSize:17 }}>{currentItem.emoji} {currentItem.label}</span>
-        </div>
-        <div style={{ padding:"4px 8px", background:"#dc2626", textAlign:"center" }}>
-          <span style={{ color:"#fff", fontSize:12, fontWeight:700 }}>Step 3 of 6 — Inspecting item {currentQItem+1} of {selectedItemDefs.length}</span>
-        </div>
-        <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
-          <p style={{ color:"#555", fontSize:13, margin:"0 0 14px", textAlign:"center" }}>Answer each question based on your inspection. "Yes" indicates a fault was found.</p>
-          {answers.map((a, idx) => (
-            <div key={a.id} style={{ ...cardStyle, borderLeft: a.answer==="yes" ? (a.classification==="ID" ? "4px solid #dc2626" : a.classification==="AR" ? "4px solid #f59e0b" : "4px solid #6b7280") : a.answer==="no" ? "4px solid #16a34a" : "4px solid #d1d5db" }}>
-              <p style={{ margin:"0 0 4px", fontWeight:700, fontSize:13, color:"#1a3a4a" }}>
-                <span style={{ color:"#6b7280", fontSize:11 }}>[{a.ref}]</span> {a.q}
-              </p>
-              <p style={{ margin:"0 0 8px", fontSize:12, color:"#6b7280", lineHeight:1.4 }}>{a.why}</p>
-              <div style={{ display:"flex", gap:8 }}>
-                <button onClick={()=>{
-                  const newAnswers = [...answers];
-                  newAnswers[idx] = { ...a, answer:"no", classification: null };
-                  setItemAnswers(prev=>({...prev, [currentItem.key]: newAnswers}));
-                }} style={{
-                  flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif",
-                  background: a.answer==="no" ? "#16a34a" : "#f3f4f6", color: a.answer==="no" ? "#fff" : "#374151",
-                  border: a.answer==="no" ? "2px solid #15803d" : "2px solid #d1d5db"
-                }}>
-                  {"\u2713"} No Fault
-                </button>
-                <button onClick={()=>{
-                  const newAnswers = [...answers];
-                  newAnswers[idx] = { ...a, answer:"yes", classification: a.yesClass };
-                  setItemAnswers(prev=>({...prev, [currentItem.key]: newAnswers}));
-                }} style={{
-                  flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif",
-                  background: a.answer==="yes" ? (a.yesClass==="ID" ? "#dc2626" : "#f59e0b") : "#f3f4f6",
-                  color: a.answer==="yes" ? "#fff" : "#374151",
-                  border: a.answer==="yes" ? (a.yesClass==="ID" ? "2px solid #b91c1c" : "2px solid #d97706") : "2px solid #d1d5db"
-                }}>
-                  {"\u26A0"} Yes — {a.yesClass}
-                </button>
-              </div>
-              {a.answer === "yes" && (
-                <div style={{ marginTop:8, padding:"10px 12px", borderRadius:8, background: a.classification==="ID" ? "#fef2f2" : "#fffbeb", border: a.classification==="ID" ? "1px solid #fecaca" : "1px solid #fde68a" }}>
-                  <p style={{ margin:0, fontSize:12, fontWeight:700, color: a.classification==="ID" ? "#dc2626" : "#d97706" }}>
-                    {a.classification==="ID" ? "\u{1F6D1} IMMEDIATELY DANGEROUS" : "\u26A0\uFE0F AT RISK"}
-                  </p>
-                  <p style={{ margin:"4px 0 0", fontSize:12, color:"#374151", lineHeight:1.4 }}>{a.action}</p>
-                </div>
-              )}
+      <GasFormShell title={`${currentItem.emoji} ${currentItem.label}`} subtitle={`Item ${currentQItem+1} of ${selectedItemDefs.length}`} step={2} totalSteps={6} stepLabels={PSC_STEPS} onBack={()=>{ if(currentQItem>0) setCurrentQItem(currentQItem-1); else setStep(2); }} onPrev={()=>{ if(currentQItem>0) setCurrentQItem(currentQItem-1); else setStep(2); }} onNext={()=>{
+        const unanswered = answers.filter(a=>!a.answer).length;
+        if(unanswered > 0 && !window.confirm(`${unanswered} question(s) unanswered. Continue anyway?`)) return;
+        if(currentQItem < selectedItemDefs.length - 1) setCurrentQItem(currentQItem+1);
+        else setStep(4);
+      }}>
+        <p style={{ color:"rgba(255,255,255,0.5)", fontSize:13, margin:"0 0 14px", textAlign:"center" }}>Answer each question. "Yes" indicates a fault was found.</p>
+        {answers.map((a, idx) => (
+          <div key={a.id} style={{ ...cardStyle, borderLeft: a.answer==="yes" ? (a.classification==="ID" ? "4px solid #dc2626" : a.classification==="AR" ? "4px solid #f59e0b" : "4px solid #6b7280") : a.answer==="no" ? "4px solid #22c55e" : "4px solid rgba(255,255,255,0.12)" }}>
+            <p style={{ margin:"0 0 4px", fontWeight:700, fontSize:13, color:"#e8edf2" }}>
+              <span style={{ color:"rgba(255,255,255,0.4)", fontSize:11 }}>[{a.ref}]</span> {a.q}
+            </p>
+            <p style={{ margin:"0 0 8px", fontSize:12, color:"rgba(255,255,255,0.5)", lineHeight:1.4 }}>{a.why}</p>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={()=>{
+                const newAnswers = [...answers];
+                newAnswers[idx] = { ...a, answer:"no", classification: null };
+                setItemAnswers(prev=>({...prev, [currentItem.key]: newAnswers}));
+              }} style={{
+                flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif",
+                background: a.answer==="no" ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)", color: a.answer==="no" ? "#22c55e" : "rgba(255,255,255,0.45)",
+                border: a.answer==="no" ? "2px solid rgba(34,197,94,0.5)" : "2px solid rgba(255,255,255,0.12)"
+              }}>
+                No Fault
+              </button>
+              <button onClick={()=>{
+                const newAnswers = [...answers];
+                newAnswers[idx] = { ...a, answer:"yes", classification: a.yesClass };
+                setItemAnswers(prev=>({...prev, [currentItem.key]: newAnswers}));
+              }} style={{
+                flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif",
+                background: a.answer==="yes" ? (a.yesClass==="ID" ? "rgba(239,68,68,0.2)" : "rgba(245,158,11,0.2)") : "rgba(255,255,255,0.04)",
+                color: a.answer==="yes" ? (a.yesClass==="ID" ? "#ef4444" : "#f59e0b") : "rgba(255,255,255,0.45)",
+                border: a.answer==="yes" ? (a.yesClass==="ID" ? "2px solid rgba(239,68,68,0.5)" : "2px solid rgba(245,158,11,0.5)") : "2px solid rgba(255,255,255,0.12)"
+              }}>
+                Yes — {a.yesClass}
+              </button>
             </div>
-          ))}
-        </div>
-        <BottomBar onHome={onHome} onNext={()=>{
-          const unanswered = answers.filter(a=>!a.answer).length;
-          if(unanswered > 0 && !window.confirm(`${unanswered} question(s) unanswered. Continue anyway?`)) return;
-          if(currentQItem < selectedItemDefs.length - 1) setCurrentQItem(currentQItem+1);
-          else setStep(4);
-        }} nextLabel={currentQItem < selectedItemDefs.length - 1 ? `Next: ${selectedItemDefs[currentQItem+1]?.label}` : "View Results"}/>
-      </div>
+            {a.answer === "yes" && (
+              <div style={{ marginTop:8, padding:"10px 12px", borderRadius:8, background: a.classification==="ID" ? "rgba(239,68,68,0.1)" : "rgba(245,158,11,0.1)", border: a.classification==="ID" ? "1px solid rgba(239,68,68,0.3)" : "1px solid rgba(245,158,11,0.3)" }}>
+                <p style={{ margin:0, fontSize:12, fontWeight:700, color: a.classification==="ID" ? "#ef4444" : "#f59e0b" }}>
+                  {a.classification==="ID" ? "IMMEDIATELY DANGEROUS" : "AT RISK"}
+                </p>
+                <p style={{ margin:"4px 0 0", fontSize:12, color:"rgba(255,255,255,0.7)", lineHeight:1.4 }}>{a.action}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </GasFormShell>
     );
   }
 
@@ -3561,75 +3504,57 @@ function PSCScreen({ onHome, onSave, engineerData: initEngData }) {
     const overallLabel = overallWorst === "ID" ? "IMMEDIATELY DANGEROUS" : overallWorst === "AR" ? "AT RISK" : overallWorst === "NCS" ? "NOT TO CURRENT STANDARDS" : "SAFE";
 
     return (
-      <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
-        <div style={hdrStyle}>
-          <button onClick={()=>{ setStep(3); setCurrentQItem(selectedItemDefs.length-1); }} style={{ background:"none", border:"none", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center" }}>
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M15 18L8 11L15 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-          <span style={{ color:"#fff", fontWeight:800, fontSize:17 }}>Results Summary</span>
-        </div>
-        <div style={{ padding:"4px 8px", background: overallColor, textAlign:"center" }}>
-          <span style={{ color:"#fff", fontSize:12, fontWeight:700 }}>Step 4 of 6 — Overall Classification: {overallIcon} {overallLabel}</span>
-        </div>
-        <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
-          {/* Overall banner */}
-          <div style={{ ...cardStyle, background: overallWorst==="ID" ? "#fef2f2" : overallWorst==="AR" ? "#fffbeb" : "#f0fdf4", borderLeft:`5px solid ${overallColor}` }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              <span style={{ fontSize:32 }}>{overallIcon}</span>
-              <div>
-                <p style={{ margin:0, fontWeight:800, fontSize:16, color:overallColor }}>{overallLabel}</p>
-                <p style={{ margin:"2px 0 0", fontSize:12, color:"#6b7280" }}>
-                  {pscData.property.addr1}{pscData.property.postcode ? ", " + pscData.property.postcode : ""} | {pscData.date}
-                </p>
-              </div>
-            </div>
-            {overallWorst === "ID" && (
-              <p style={{ margin:"10px 0 0", padding:"8px 12px", background:"#dc2626", color:"#fff", borderRadius:8, fontSize:12, fontWeight:700 }}>
-                {"\u260E"} If gas escape detected: Call Gas Emergency 0800 111 999
+      <GasFormShell title="Results Summary" subtitle={`${overallIcon} ${overallLabel}`} step={3} totalSteps={6} stepLabels={PSC_STEPS} onBack={()=>{ setStep(3); setCurrentQItem(selectedItemDefs.length-1); }} onPrev={()=>{ setStep(3); setCurrentQItem(selectedItemDefs.length-1); }} onNext={()=>setStep(hasIssues ? 5 : 6)}>
+        <div style={{ ...cardStyle, borderLeft:`5px solid ${overallColor}` }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ fontSize:32 }}>{overallIcon}</span>
+            <div>
+              <p style={{ margin:0, fontWeight:800, fontSize:16, color:overallColor }}>{overallLabel}</p>
+              <p style={{ margin:"2px 0 0", fontSize:12, color:"rgba(255,255,255,0.5)" }}>
+                {pscData.property.addr1}{pscData.property.postcode ? ", " + pscData.property.postcode : ""} | {pscData.date}
               </p>
-            )}
+            </div>
           </div>
-
-          {/* Per-item results */}
-          {results.map(item => {
-            const col = item.classification==="ID" ? "#dc2626" : item.classification==="AR" ? "#f59e0b" : item.classification==="NCS" ? "#6b7280" : "#16a34a";
-            const icon = item.classification==="ID" ? "\u{1F6D1}" : item.classification==="AR" ? "\u26A0\uFE0F" : item.classification==="NCS" ? "\u{1F4DD}" : "\u2705";
-            const label = item.classification==="ID" ? "IMMEDIATELY DANGEROUS" : item.classification==="AR" ? "AT RISK" : item.classification==="NCS" ? "NOT TO CURRENT STANDARDS" : "SAFE";
-            return (
-              <div key={item.key} style={{ ...cardStyle, borderLeft:`4px solid ${col}` }}>
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
-                  <span style={{ fontWeight:700, fontSize:14, color:"#1a3a4a" }}>{item.emoji} {item.label}</span>
-                  <span style={{ padding:"3px 10px", borderRadius:20, background:col, color:"#fff", fontSize:11, fontWeight:700 }}>{icon} {label}</span>
-                </div>
-                {item.details.make && <p style={{ margin:"0 0 4px", fontSize:12, color:"#6b7280" }}>Make: {item.details.make} | Model: {item.details.model || "N/A"}</p>}
-                {item.faults.length > 0 && (
-                  <div style={{ marginTop:6 }}>
-                    {item.faults.map((f,fi) => (
-                      <div key={fi} style={{ padding:"8px 10px", borderRadius:8, background: f.classification==="ID" ? "#fef2f2" : "#fffbeb", marginBottom:4 }}>
-                        <p style={{ margin:0, fontSize:12, fontWeight:700, color: f.classification==="ID" ? "#dc2626" : "#d97706" }}>{f.classification} — {f.ref}</p>
-                        <p style={{ margin:"2px 0 0", fontSize:12, color:"#374151" }}>{f.q}</p>
-                        <p style={{ margin:"2px 0 0", fontSize:11, color:"#6b7280" }}>{f.action}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {item.faults.length === 0 && <p style={{ margin:0, fontSize:12, color:"#16a34a", fontWeight:600 }}>No faults found</p>}
-              </div>
-            );
-          })}
-
-          {/* RIDDOR notice */}
           {overallWorst === "ID" && (
-            <div style={{ ...cardStyle, background:"#fef2f2", borderLeft:"4px solid #dc2626" }}>
-              <p style={{ margin:0, fontWeight:700, fontSize:13, color:"#dc2626" }}>RIDDOR Reporting</p>
-              <p style={{ margin:"4px 0 0", fontSize:12, color:"#374151", lineHeight:1.4 }}>
-                If this ID situation is due to poor workmanship/design AND is dangerous to such an extent it is likely to cause death, unconsciousness, or taking to hospital — report under RIDDOR 11(2) within 14 days via hse.gov.uk/riddor
-              </p>
-            </div>
+            <p style={{ margin:"10px 0 0", padding:"8px 12px", background:"rgba(239,68,68,0.2)", color:"#ef4444", borderRadius:8, fontSize:12, fontWeight:700, border:"1px solid rgba(239,68,68,0.3)" }}>
+              If gas escape detected: Call Gas Emergency 0800 111 999
+            </p>
           )}
         </div>
-        <BottomBar onHome={onHome} onNext={()=>setStep(hasIssues ? 5 : 6)} nextLabel={hasIssues ? "Next: Warning Notice" : "Next: Generate PDF"}/>
-      </div>
+        {results.map(item => {
+          const col = item.classification==="ID" ? "#ef4444" : item.classification==="AR" ? "#f59e0b" : item.classification==="NCS" ? "#6b7280" : "#22c55e";
+          const icon = item.classification==="ID" ? "IMMEDIATELY DANGEROUS" : item.classification==="AR" ? "AT RISK" : item.classification==="NCS" ? "NOT TO CURRENT STANDARDS" : "SAFE";
+          return (
+            <div key={item.key} style={{ ...cardStyle, borderLeft:`4px solid ${col}` }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                <span style={{ fontWeight:700, fontSize:14, color:"#e8edf2" }}>{item.emoji} {item.label}</span>
+                <span style={{ padding:"3px 10px", borderRadius:20, background:col, color:"#fff", fontSize:11, fontWeight:700 }}>{icon}</span>
+              </div>
+              {item.details.make && <p style={{ margin:"0 0 4px", fontSize:12, color:"rgba(255,255,255,0.5)" }}>Make: {item.details.make} | Model: {item.details.model || "N/A"}</p>}
+              {item.faults.length > 0 && (
+                <div style={{ marginTop:6 }}>
+                  {item.faults.map((f,fi) => (
+                    <div key={fi} style={{ padding:"8px 10px", borderRadius:8, background: f.classification==="ID" ? "rgba(239,68,68,0.1)" : "rgba(245,158,11,0.1)", marginBottom:4, border: f.classification==="ID" ? "1px solid rgba(239,68,68,0.2)" : "1px solid rgba(245,158,11,0.2)" }}>
+                      <p style={{ margin:0, fontSize:12, fontWeight:700, color: f.classification==="ID" ? "#ef4444" : "#f59e0b" }}>{f.classification} — {f.ref}</p>
+                      <p style={{ margin:"2px 0 0", fontSize:12, color:"rgba(255,255,255,0.7)" }}>{f.q}</p>
+                      <p style={{ margin:"2px 0 0", fontSize:11, color:"rgba(255,255,255,0.5)" }}>{f.action}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {item.faults.length === 0 && <p style={{ margin:0, fontSize:12, color:"#22c55e", fontWeight:600 }}>No faults found</p>}
+            </div>
+          );
+        })}
+        {overallWorst === "ID" && (
+          <div style={{ ...cardStyle, borderLeft:"4px solid #ef4444", background:"rgba(239,68,68,0.08)" }}>
+            <p style={{ margin:0, fontWeight:700, fontSize:13, color:"#ef4444" }}>RIDDOR Reporting</p>
+            <p style={{ margin:"4px 0 0", fontSize:12, color:"rgba(255,255,255,0.7)", lineHeight:1.4 }}>
+              If this ID situation is due to poor workmanship/design AND is dangerous to such an extent it is likely to cause death, unconsciousness, or taking to hospital — report under RIDDOR 11(2) within 14 days via hse.gov.uk/riddor
+            </p>
+          </div>
+        )}
+      </GasFormShell>
     );
   }
 
@@ -3640,48 +3565,36 @@ function PSCScreen({ onHome, onSave, engineerData: initEngData }) {
     const faultSummary = faultItems.map(fi => fi.faults.map(f => `${fi.label}: ${f.q} [${f.classification} - ${f.ref}]`).join("\n")).join("\n");
 
     return (
-      <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
-        <div style={hdrStyle}>
-          <button onClick={()=>setStep(4)} style={{ background:"none", border:"none", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center" }}>
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M15 18L8 11L15 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-          <span style={{ color:"#fff", fontWeight:800, fontSize:17 }}>Warning Notice</span>
+      <GasFormShell title="Warning Notice" subtitle="Warning Notice Required" step={4} totalSteps={6} stepLabels={PSC_STEPS} onBack={()=>setStep(4)} onPrev={()=>setStep(4)} onNext={()=>setStep(6)}>
+        <div style={{ ...cardStyle, borderLeft:"4px solid #f59e0b", background:"rgba(245,158,11,0.08)" }}>
+          <p style={{ margin:0, fontWeight:700, fontSize:14, color:"#f59e0b" }}>Warning Notice Required</p>
+          <p style={{ margin:"6px 0 0", fontSize:12, color:"rgba(255,255,255,0.7)", lineHeight:1.5 }}>
+            {overallWorst === "ID" ? "Immediately Dangerous situation(s) found. The gas fitting(s) MUST be disconnected/made safe immediately. If the user refuses, cap off the gas supply." : "At Risk situation(s) found. The responsible person must be informed and a Warning Notice issued."}
+          </p>
         </div>
-        <div style={{ padding:"4px 8px", background:"#f59e0b", textAlign:"center" }}>
-          <span style={{ color:"#fff", fontSize:12, fontWeight:700 }}>Step 5 of 6 — Warning Notice Required</span>
+        <div style={GAS_SECTION}>Faults Summary</div>
+        {faultItems.map(fi => (
+          <div key={fi.key} style={cardStyle}>
+            <p style={{ margin:"0 0 6px", fontWeight:700, fontSize:13, color:"#e8edf2" }}>{fi.emoji} {fi.label} — {fi.classification}</p>
+            {fi.faults.map((f,i) => (
+              <div key={i} style={{ padding:"6px 8px", borderRadius:6, background: f.classification==="ID" ? "rgba(239,68,68,0.1)" : "rgba(245,158,11,0.1)", marginBottom:4, border: f.classification==="ID" ? "1px solid rgba(239,68,68,0.2)" : "1px solid rgba(245,158,11,0.2)" }}>
+                <p style={{ margin:0, fontSize:12, fontWeight:600, color: f.classification==="ID" ? "#ef4444" : "#f59e0b" }}>{f.classification} [{f.ref}]: {f.q}</p>
+                <p style={{ margin:"2px 0 0", fontSize:11, color:"rgba(255,255,255,0.5)" }}>Action: {f.action}</p>
+              </div>
+            ))}
+          </div>
+        ))}
+        <div style={GAS_SECTION}>Actions Taken</div>
+        <div style={{ marginBottom:12 }}>
+          <label style={labelStyle}>Remedial Action / Notes</label>
+          <textarea style={{ ...inputStyle, minHeight:80, resize:"vertical" }} value={pscData.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Describe actions taken..."/>
         </div>
-        <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
-          <div style={{ ...cardStyle, borderLeft:"4px solid #f59e0b", background:"#fffbeb" }}>
-            <p style={{ margin:0, fontWeight:700, fontSize:14, color:"#d97706" }}>{"\u26A0\uFE0F"} Warning Notice Required</p>
-            <p style={{ margin:"6px 0 0", fontSize:12, color:"#374151", lineHeight:1.5 }}>
-              {overallWorst === "ID" ? "Immediately Dangerous situation(s) found. The gas fitting(s) MUST be disconnected/made safe immediately. If the user refuses, cap off the gas supply." : "At Risk situation(s) found. The responsible person must be informed and a Warning Notice issued."}
-            </p>
-          </div>
-          <SectionHeader title="Faults Summary"/>
-          {faultItems.map(fi => (
-            <div key={fi.key} style={cardStyle}>
-              <p style={{ margin:"0 0 6px", fontWeight:700, fontSize:13, color:"#1a3a4a" }}>{fi.emoji} {fi.label} — {fi.classification}</p>
-              {fi.faults.map((f,i) => (
-                <div key={i} style={{ padding:"6px 8px", borderRadius:6, background: f.classification==="ID" ? "#fef2f2" : "#fffbeb", marginBottom:4 }}>
-                  <p style={{ margin:0, fontSize:12, fontWeight:600 }}>{f.classification} [{f.ref}]: {f.q}</p>
-                  <p style={{ margin:"2px 0 0", fontSize:11, color:"#6b7280" }}>Action: {f.action}</p>
-                </div>
-              ))}
-            </div>
-          ))}
-          <SectionHeader title="Actions Taken"/>
-          <div style={cardStyle}>
-            <label style={labelStyle}>Remedial Action / Notes</label>
-            <textarea style={{ ...inputStyle, minHeight:80 }} value={pscData.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Describe actions taken, e.g. appliance disconnected, gas supply capped, responsible person advised..."/>
-          </div>
-          <div style={{ ...cardStyle, background:"#f0fdf4", borderLeft:"4px solid #16a34a" }}>
-            <p style={{ margin:0, fontSize:12, fontWeight:700, color:"#16a34a" }}>
-              {"\u2139\uFE0F"} This warning notice will be included in the PDF report. You can also create a standalone Warning Notice from the existing Warning Notice flow in the app.
-            </p>
-          </div>
+        <div style={{ ...cardStyle, borderLeft:"4px solid #22c55e", background:"rgba(34,197,94,0.06)" }}>
+          <p style={{ margin:0, fontSize:12, fontWeight:700, color:"#22c55e" }}>
+            This warning notice will be included in the PDF report.
+          </p>
         </div>
-        <BottomBar onHome={onHome} onNext={()=>setStep(6)} nextLabel="Next: Generate PDF"/>
-      </div>
+      </GasFormShell>
     );
   }
 
@@ -3752,7 +3665,7 @@ function PSCScreen({ onHome, onSave, engineerData: initEngData }) {
     };
 
     if (showPDF) return (
-      <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <div style={{ minHeight:"100dvh", background:GAS_BG, fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
         <div style={hdrStyle}>
           <button onClick={()=>setShowPDF(false)} style={{ background:"none", border:"none", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center" }}>
             <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M15 18L8 11L15 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -3882,13 +3795,13 @@ function PSCScreen({ onHome, onSave, engineerData: initEngData }) {
             </div>
           </div>
         </div>
-        <div style={{ padding:"8px 16px 10px", background:"transparent", flexShrink:0, position:"sticky", bottom:0, zIndex:10 }}>
+        <div style={{ padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", flexShrink:0, position:"sticky", bottom:0, zIndex:10 }}>
           <div style={{ display:"flex", gap:8 }}>
-            <button onClick={handleDownloadPDF} style={{ flex:1, padding:"14px", background:"#1a3a4a", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
-              {"\u{1F4E5}"} Download PDF
+            <button onClick={handleDownloadPDF} style={{ flex:1, padding:"14px", background:"rgba(255,255,255,0.1)", color:"#fff", border:"1px solid rgba(255,255,255,0.25)", borderRadius:12, fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+              Download PDF
             </button>
-            <button onClick={()=>{ handleSave(); alert("\u2705 Property Safety Check saved to Records!"); setShowPDF(false); onHome(); }} style={{ flex:1, padding:"14px", background:"#16a34a", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
-              {"\u{1F4BE}"} Save to Records
+            <button onClick={()=>{ handleSave(); alert("Property Safety Check saved to Records!"); setShowPDF(false); onHome(); }} style={{ flex:1, padding:"14px", background:"#22c55e", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+              Save to Records
             </button>
           </div>
         </div>
@@ -3896,40 +3809,28 @@ function PSCScreen({ onHome, onSave, engineerData: initEngData }) {
     );
 
     return (
-      <div style={{ minHeight:"100dvh", background:"#f4f6f4", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
-        <div style={hdrStyle}>
-          <button onClick={()=>setStep(overallWorst==="AR"||overallWorst==="ID" ? 5 : 4)} style={{ background:"none", border:"none", cursor:"pointer", color:"#fff", display:"flex", alignItems:"center" }}>
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M15 18L8 11L15 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      <GasFormShell title="Save & Report" subtitle="Property Safety Check Complete" step={5} totalSteps={6} stepLabels={PSC_STEPS} onBack={()=>setStep(overallWorst==="AR"||overallWorst==="ID" ? 5 : 4)} onPrev={()=>setStep(overallWorst==="AR"||overallWorst==="ID" ? 5 : 4)} onNext={null}>
+        <div style={cardStyle}>
+          <p style={{ margin:0, fontWeight:700, fontSize:15, color:"#e8edf2" }}>Property Safety Check Complete</p>
+          <p style={{ margin:"6px 0", fontSize:13, color:"rgba(255,255,255,0.5)" }}>
+            {pscData.property.addr1}{pscData.property.postcode ? ", "+pscData.property.postcode : ""} | {pscData.date}
+          </p>
+          <div style={{ padding:"8px 12px", borderRadius:8, background:overallColor, color:"#fff", textAlign:"center", marginTop:8 }}>
+            <span style={{ fontWeight:800 }}>{overallIcon} {overallLabel}</span>
+          </div>
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:12 }}>
+          <button onClick={()=>setShowPDF(true)} style={{ padding:"16px", background:"rgba(255,255,255,0.1)", color:"#fff", border:"1px solid rgba(255,255,255,0.25)", borderRadius:14, fontWeight:700, fontSize:15, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+            Preview & Download PDF
           </button>
-          <span style={{ color:"#fff", fontWeight:800, fontSize:17 }}>Save & Report</span>
+          <button onClick={()=>{ handleSave(); alert("Property Safety Check saved to Records!"); onHome(); }} style={{ padding:"16px", background:"#22c55e", color:"#fff", border:"none", borderRadius:14, fontWeight:700, fontSize:15, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+            Save to Records
+          </button>
+          <button onClick={()=>{ handleSave(); setShowPDF(true); }} style={{ padding:"16px", background:GAS_ACCENT, color:"#fff", border:"none", borderRadius:14, fontWeight:700, fontSize:15, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+            Save & Preview PDF
+          </button>
         </div>
-        <div style={{ padding:"4px 8px", background:"#1a3a4a", textAlign:"center" }}>
-          <span style={{ color:"#fff", fontSize:12, fontWeight:700 }}>Step 6 of 6 — Save & Generate PDF</span>
-        </div>
-        <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
-          <div style={cardStyle}>
-            <p style={{ margin:0, fontWeight:700, fontSize:15, color:"#1a3a4a" }}>Property Safety Check Complete</p>
-            <p style={{ margin:"6px 0", fontSize:13, color:"#6b7280" }}>
-              {pscData.property.addr1}{pscData.property.postcode ? ", "+pscData.property.postcode : ""} | {pscData.date}
-            </p>
-            <div style={{ padding:"8px 12px", borderRadius:8, background:overallColor, color:"#fff", textAlign:"center", marginTop:8 }}>
-              <span style={{ fontWeight:800 }}>{overallIcon} {overallLabel}</span>
-            </div>
-          </div>
-          <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:12 }}>
-            <button onClick={()=>setShowPDF(true)} style={{ padding:"16px", background:"#1a3a4a", color:"#fff", border:"none", borderRadius:14, fontWeight:700, fontSize:15, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
-              {"\u{1F4C4}"} Preview & Download PDF
-            </button>
-            <button onClick={()=>{ handleSave(); alert("\u2705 Property Safety Check saved to Records!"); onHome(); }} style={{ padding:"16px", background:"#16a34a", color:"#fff", border:"none", borderRadius:14, fontWeight:700, fontSize:15, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
-              {"\u{1F4BE}"} Save to Records
-            </button>
-            <button onClick={()=>{ handleSave(); setShowPDF(true); }} style={{ padding:"16px", background:"#f59e0b", color:"#fff", border:"none", borderRadius:14, fontWeight:700, fontSize:15, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
-              {"\u{1F4BE}"} Save & Preview PDF
-            </button>
-          </div>
-        </div>
-        <BottomBar onHome={onHome}/>
-      </div>
+      </GasFormShell>
     );
   }
 
@@ -6454,17 +6355,12 @@ function LeisureScreen({ engineerData, onBack, onHome, onSave, initialData }) {
 const LPG_COLOR = "#ea7c09";
 
 function LPGStepFileRef({ data, onChange, onNext, onBack, onHome, title="Gas Safety Record" }) {
-  const inp = { width:"100%", boxSizing:"border-box", padding:"13px 15px", border:"none", borderRadius:8, background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", boxShadow:"0 2px 8px rgba(0,0,0,0.08)", outline:"none", marginBottom:12 };
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title={title} onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, paddingBottom:80 }}>
-        <p style={{ color:"#888", fontSize:14, marginBottom:20, textAlign:"center" }}>Enter a certificate reference and number</p>
-        <input value={data.certRef} onChange={e=>onChange({...data,certRef:e.target.value})} placeholder="Certificate Reference" style={inp}/>
-        <input value={data.certNo} onChange={e=>onChange({...data,certNo:e.target.value})} placeholder="Certificate No" style={inp}/>
-      </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
-    </div>
+    <GasFormShell title={title} subtitle="File Reference" step={0} totalSteps={7} stepLabels={["File Ref","Details","Appliances","Faults","Attachments","Declaration","Signatures"]} onBack={onBack} onPrev={null} onNext={onNext}>
+      <p style={{ color:"rgba(255,255,255,0.5)", fontSize:14, marginBottom:16, textAlign:"center" }}>Enter a certificate reference and number</p>
+      <GASInput label="Certificate Reference" value={data.certRef} onChange={v=>onChange({...data,certRef:v})} placeholder="Certificate Reference"/>
+      <GASInput label="Certificate No" value={data.certNo} onChange={v=>onChange({...data,certNo:v})} placeholder="Certificate No"/>
+    </GasFormShell>
   );
 }
 
@@ -6477,44 +6373,33 @@ function LPGStepDetails({ data, onChange, onNext, onBack, onHome }) {
     _setPickerLPGStepDetails(null);
   };
   const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
-  const ContactBtn = ({target}) => <button onClick={()=>_setPickerLPGStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1a3a4a",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
-  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1a3a4a",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerLPGStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(59,130,246,0.15)",border:"1px solid rgba(59,130,246,0.4)",borderRadius:20,padding:"6px 14px",color:"#3b82f6",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>Add Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.4)",borderRadius:20,padding:"6px 14px",color:"#22c55e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>Copy</button>;
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto" }}>
-        <SectionHeader title="Engineers Details"/>
-        <FormInput label="Trading Title / Company Name" placeholder="Company name" value={data.engCompany||""} onChange={v=>onChange({...data,engCompany:v})}/>
-        <FormInput label="Address" placeholder="Address" value={data.engAddr1||""} onChange={v=>onChange({...data,engAddr1:v})}/>
-        <FormInput label="Town / City" placeholder="Town or city" value={data.engAddr2||""} onChange={v=>onChange({...data,engAddr2:v})}/>
-        <FormInput label="Post Code" placeholder="Postcode" value={data.engPostcode||""} onChange={v=>onChange({...data,engPostcode:v})}/>
-        <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={data.gasSafeNo||""} onChange={v=>onChange({...data,gasSafeNo:v})}/>
-        <FormInput label="Telephone No" placeholder="Telephone" value={data.engTel||""} onChange={v=>onChange({...data,engTel:v})}/>
-        <FormInput label="Engineer Name" placeholder="Engineer name" value={data.engName||""} onChange={v=>onChange({...data,engName:v})}/>
-        <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={data.gasId||""} onChange={v=>onChange({...data,gasId:v})}/>
-        <SectionHeader title="Client Details" actions={[<ContactBtn key="cp" target="client"/>]}/>
-        <FormInput placeholder="Name" value={data.clientName||""} onChange={v=>onChange({...data,clientName:v})}/>
-        <FormInput placeholder="Address line 1" value={data.clientAddr1||""} onChange={v=>onChange({...data,clientAddr1:v})}/>
-        <FormInput placeholder="Address line 2" value={data.clientAddr2||""} onChange={v=>onChange({...data,clientAddr2:v})}/>
-        <FormInput placeholder="Address line 3" value={data.clientAddr3||""} onChange={v=>onChange({...data,clientAddr3:v})}/>
-        <FormInput placeholder="Postcode" value={data.clientPostcode||""} onChange={v=>onChange({...data,clientPostcode:v})}/>
-        <FormInput placeholder="Telephone" value={data.clientTel||""} onChange={v=>onChange({...data,clientTel:v})}/>
-        <FormInput placeholder="Email" value={data.clientEmail||""} onChange={v=>onChange({...data,clientEmail:v})}/>
-        <SectionHeader title="Installation Details" actions={[<CopyBtn key="copy"/>, <ContactBtn key="cp" target="inst"/>]}/>
-        <FormInput placeholder="Name" value={data.instName||""} onChange={v=>onChange({...data,instName:v})}/>
-        <FormInput placeholder="Address line 1" value={data.instAddr1||""} onChange={v=>onChange({...data,instAddr1:v})}/>
-        <FormInput placeholder="Address line 2" value={data.instAddr2||""} onChange={v=>onChange({...data,instAddr2:v})}/>
-        <FormInput placeholder="Address line 3" value={data.instAddr3||""} onChange={v=>onChange({...data,instAddr3:v})}/>
-        <FormInput placeholder="Postcode" value={data.instPostcode||""} onChange={v=>onChange({...data,instPostcode:v})}/>
-        <FormInput placeholder="Telephone" value={data.instTel||""} onChange={v=>onChange({...data,instTel:v})}/>
-        <div style={{ height:20 }}/>
+    <GasFormShell title="Gas Safety Record" subtitle="Engineers, Client & Installation Details" step={1} totalSteps={7} stepLabels={["File Ref","Details","Appliances","Faults","Attachments","Declaration","Signatures"]} onBack={onBack} onPrev={onBack} onNext={onNext}>
+      <div style={GAS_SECTION}>Engineer Details</div>
+      {[["engCompany","Trading Title / Company Name","Company name"],["engAddr1","Address","Address"],["engAddr2","Town / City","Town or city"],["engPostcode","Post Code","Postcode"],["gasSafeNo","Gas Safe No","Gas Safe registration number"],["engTel","Telephone No","Telephone"],["engName","Engineer Name","Engineer name"],["gasId","Gas ID Number (Engineer ID)","Engineer ID card number"]].map(([k,l,p])=>(
+        <GASInput key={k} label={l} value={data[k]} onChange={v=>onChange({...data,[k]:v})} placeholder={p}/>
+      ))}
+      <div style={{ ...GAS_SECTION, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span>Client Details</span>
+        <ContactBtn target="client"/>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
+      {[["clientName","Name"],["clientAddr1","Address line 1"],["clientAddr2","Address line 2"],["clientAddr3","Address line 3"],["clientPostcode","Postcode"],["clientTel","Telephone"],["clientEmail","Email"]].map(([k,p])=>(
+        <GASInput key={k} label={p} value={data[k]} onChange={v=>onChange({...data,[k]:v})} placeholder={p}/>
+      ))}
+      <div style={{ ...GAS_SECTION, display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+        <span>Installation Details</span>
+        <div style={{ display:"flex", gap:6 }}><CopyBtn/><ContactBtn target="inst"/></div>
+      </div>
+      {[["instName","Name"],["instAddr1","Address line 1"],["instAddr2","Address line 2"],["instAddr3","Address line 3"],["instPostcode","Postcode"],["instTel","Telephone"]].map(([k,p])=>(
+        <GASInput key={k} label={p} value={data[k]} onChange={v=>onChange({...data,[k]:v})} placeholder={p}/>
+      ))}
       {_pickerLPGStepDetails && <ContactPickerModal
         title={_pickerLPGStepDetails==="client" ? "Choose Client" : _pickerLPGStepDetails==="inst" ? "Choose Installation" : "Choose Contact"}
         onSelect={c=>_handlePickLPGStepDetails(_pickerLPGStepDetails,c)}
         onClose={()=>_setPickerLPGStepDetails(null)}/>}
-    </div>
+    </GasFormShell>
   );
 }
 
@@ -6533,7 +6418,7 @@ function LPGStepAppliances({ data, onChange, onNext, onBack, onHome }) {
   };
   const apps = data.appliances || Array(ROWS).fill(null).map(()=>({}));
   const inp = (i,key,ph) => <input value={apps[i][key]||""} onChange={e=>update(i,key,e.target.value)} placeholder={ph||""}
-    style={{ width:"100%", padding:"7px 8px", border:"1px solid #ddd", borderRadius:6, fontSize:12, boxSizing:"border-box" }}/>;
+    style={{ width:"100%", padding:"7px 8px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, boxSizing:"border-box", background:"#1e3044", color:"#e8edf2" }}/>;
 
   if(mmPicker) {
     const isMake = mmPicker.field==="make";
@@ -6543,24 +6428,22 @@ function LPGStepAppliances({ data, onChange, onNext, onBack, onHome }) {
 
   const mmInp = (i, key) => (
     <div onClick={()=>setMmPicker({row:i,field:key})}
-      style={{ width:"100%", padding:"7px 8px", border:"1px solid #ddd", borderRadius:6, fontSize:12, boxSizing:"border-box", cursor:"pointer", background:"#fff", color:(apps[i]||{})[key]?"#222":"#aaa", minHeight:32 }}>
+      style={{ width:"100%", padding:"7px 8px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, boxSizing:"border-box", cursor:"pointer", background:"#1e3044", color:(apps[i]||{})[key]?"#e8edf2":"rgba(255,255,255,0.35)", minHeight:32 }}>
       {(apps[i]||{})[key] || (key==="make" ? "Select make..." : "Select model...")}
     </div>
   );
   const sel = (i,key,opts) => <select value={apps[i][key]||""} onChange={e=>update(i,key,e.target.value)}
-    style={{ width:"100%", padding:"7px 4px", border:"1px solid #ddd", borderRadius:6, fontSize:12, background:"#fff" }}>
+    style={{ width:"100%", padding:"7px 4px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, background:"#1e3044", color:"#e8edf2" }}>
     {opts.map(o=><option key={o} value={o}>{o||"-"}</option>)}
   </select>;
-  const lbl = (t) => <div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>{t}</div>;
+  const lbl = (t) => <div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>{t}</div>;
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Appliance & Inspection Details" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:12, paddingBottom:80 }}>
-        <div style={{ fontSize:12, color:"#888", marginBottom:10 }}>Enter details for up to 5 appliances</div>
-        {Array(ROWS).fill(null).map((_,i)=>(
-          <div key={i} style={{ background:"#fff", borderRadius:10, padding:12, marginBottom:8, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-            <div style={{ fontWeight:700, fontSize:13, color:LPG_COLOR, marginBottom:8 }}>Appliance {i+1}</div>
+    <GasFormShell title="Gas Safety Record" subtitle="Appliance & Inspection Details" step={2} totalSteps={7} stepLabels={["File Ref","Details","Appliances","Faults","Attachments","Declaration","Signatures"]} onBack={onBack} onPrev={onBack} onNext={onNext}>
+      <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginBottom:10 }}>Enter details for up to 5 appliances</div>
+      {Array(ROWS).fill(null).map((_,i)=>(
+        <div key={i} style={{ background:"rgba(255,255,255,0.04)", borderRadius:10, padding:12, marginBottom:8, border:"1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ fontWeight:700, fontSize:13, color:GAS_ACCENT, marginBottom:8 }}>Appliance {i+1}</div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
               <div>{lbl("Location")}{inp(i,"location","e.g. Airing Cupboard")}</div>
               <div>{lbl("Appliance Type")}{inp(i,"type","e.g. Central Heating Boiler")}</div>
@@ -6583,9 +6466,7 @@ function LPGStepAppliances({ data, onChange, onNext, onBack, onHome }) {
             </div>
           </div>
         ))}
-      </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
-    </div>
+    </GasFormShell>
   );
 }
 
@@ -6600,78 +6481,74 @@ function LPGStepFaults({ data, onChange, onNext, onBack, onHome }) {
   };
   const faults = data.faults || Array(ROWS).fill(null).map(()=>({}));
   const inp = (i,key,ph) => <input value={faults[i][key]||""} onChange={e=>update(i,key,e.target.value)} placeholder={ph||""}
-    style={{ width:"100%", padding:"8px 10px", border:"1px solid #ddd", borderRadius:6, fontSize:13, boxSizing:"border-box" }}/>;
+    style={{ width:"100%", padding:"8px 10px", border:"1px solid #2a4058", borderRadius:6, fontSize:13, boxSizing:"border-box", background:"#1e3044", color:"#e8edf2" }}/>;
   const sel = (i,key,opts) => <select value={faults[i][key]||""} onChange={e=>update(i,key,e.target.value)}
-    style={{ width:"100%", padding:"8px 6px", border:"1px solid #ddd", borderRadius:6, fontSize:13, background:"#fff" }}>
+    style={{ width:"100%", padding:"8px 6px", border:"1px solid #2a4058", borderRadius:6, fontSize:13, background:"#1e3044", color:"#e8edf2" }}>
     {opts.map(o=><option key={o} value={o}>{o||"-"}</option>)}
   </select>;
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Faults, Remedial Work & Installation Checks" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontWeight:700, fontSize:14, color:LPG_COLOR, borderBottom:`2px solid ${LPG_COLOR}30`, paddingBottom:6, marginBottom:10 }}>Faults / Notes + Remedial Work</div>
-          {Array(ROWS).fill(null).map((_,i)=>(
-            <div key={i} style={{ background:"#f9f9f9", borderRadius:8, padding:10, marginBottom:8 }}>
-              <div style={{ fontWeight:600, fontSize:12, color:"#555", marginBottom:6 }}>Row {i+1}</div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 80px", gap:8 }}>
-                <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Faults / Notes</div>{inp(i,"fault","Describe fault or note")}</div>
-                <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Remedial Work Taken</div>{inp(i,"remedial","Remedial work taken")}</div>
-                <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Warning Notice Fixed</div>{sel(i,"warningFixed",ynOpts)}</div>
-              </div>
+    <GasFormShell title="Gas Safety Record" subtitle="Faults, Remedial Work & Installation Checks" step={3} totalSteps={7} stepLabels={["File Ref","Details","Appliances","Faults","Attachments","Declaration","Signatures"]} onBack={onBack} onPrev={onBack} onNext={onNext}>
+      <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+        <div style={GAS_SECTION}>Faults / Notes + Remedial Work</div>
+        {Array(ROWS).fill(null).map((_,i)=>(
+          <div key={i} style={{ background:"rgba(255,255,255,0.04)", borderRadius:8, padding:10, marginBottom:8, border:"1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ fontWeight:600, fontSize:12, color:"rgba(255,255,255,0.5)", marginBottom:6 }}>Row {i+1}</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 80px", gap:8 }}>
+              <div><div style={GAS_LABEL}>Faults / Notes</div>{inp(i,"fault","Describe fault or note")}</div>
+              <div><div style={GAS_LABEL}>Remedial Work Taken</div>{inp(i,"remedial","Remedial work taken")}</div>
+              <div><div style={GAS_LABEL}>WN Fixed</div>{sel(i,"warningFixed",ynOpts)}</div>
             </div>
-          ))}
-        </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontWeight:700, fontSize:14, color:LPG_COLOR, borderBottom:`2px solid ${LPG_COLOR}30`, paddingBottom:6, marginBottom:12 }}>Installation Checks</div>
-          {[
-            ["Gas Tightness Test", "gasTightness"],
-            ["Gas Installation Pipework Visual Inspection satisfactory", "pipeworkInspection"],
-          ].map(([label,key])=>(
-            <div key={key} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-              <div style={{ flex:1, fontSize:13, color:"#333" }}>{label}</div>
-              <div style={{ width:90 }}>
-                <select value={data[key]||""} onChange={e=>onChange({...data,[key]:e.target.value})}
-                  style={{ width:"100%", padding:"9px 6px", border:"1px solid #ddd", borderRadius:8, fontSize:13, background:"#fff" }}>
-                  {["","Yes","No","NA"].map(o=><option key={o} value={o}>{o||"Select..."}</option>)}
-                </select>
-              </div>
-            </div>
-          ))}
-          {[
-            ["Regulator Lock up Pressure (mbar)", "regulatorLockup"],
-            ["Regulator Operating Pressure (mbar)", "regulatorOperating"],
-          ].map(([label,key])=>(
-            <div key={key} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-              <div style={{ flex:1, fontSize:13, color:"#333" }}>{label}</div>
-              <input value={data[key]||""} onChange={e=>onChange({...data,[key]:e.target.value})} placeholder="mbar"
-                style={{ width:90, padding:"9px 10px", border:"1px solid #ddd", borderRadius:8, fontSize:13, boxSizing:"border-box" }}/>
-            </div>
-          ))}
-          {[
-            ["Hose(s) Check", "hosesCheck"],
-            ["ECV Check", "ecvCheck"],
-          ].map(([label,key])=>(
-            <div key={key} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-              <div style={{ flex:1, fontSize:13, color:"#333" }}>{label}</div>
-              <div style={{ width:90 }}>
-                <select value={data[key]||""} onChange={e=>onChange({...data,[key]:e.target.value})}
-                  style={{ width:"100%", padding:"9px 6px", border:"1px solid #ddd", borderRadius:8, fontSize:13, background:"#fff" }}>
-                  {["","Yes","No","NA"].map(o=><option key={o} value={o}>{o||"Select..."}</option>)}
-                </select>
-              </div>
-            </div>
-          ))}
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8, marginTop:12 }}>
-            <div style={{ flex:1, fontSize:13, color:"#333" }}>Next Inspection Due On or Before</div>
-            <input type="date" value={data.nextInspection||""} onChange={e=>onChange({...data,nextInspection:e.target.value})}
-              style={{ width:160, padding:"9px 10px", border:"1px solid #ddd", borderRadius:8, fontSize:13, boxSizing:"border-box" }}/>
           </div>
+        ))}
+      </div>
+      <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+        <div style={GAS_SECTION}>Installation Checks</div>
+        {[
+          ["Gas Tightness Test", "gasTightness"],
+          ["Gas Installation Pipework Visual Inspection satisfactory", "pipeworkInspection"],
+        ].map(([label,key])=>(
+          <div key={key} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+            <div style={{ flex:1, fontSize:13, color:"rgba(255,255,255,0.7)" }}>{label}</div>
+            <div style={{ width:90 }}>
+              <select value={data[key]||""} onChange={e=>onChange({...data,[key]:e.target.value})}
+                style={{ width:"100%", padding:"9px 6px", border:"1px solid #2a4058", borderRadius:8, fontSize:13, background:"#1e3044", color:"#e8edf2" }}>
+                {["","Yes","No","NA"].map(o=><option key={o} value={o}>{o||"..."}</option>)}
+              </select>
+            </div>
+          </div>
+        ))}
+        {[
+          ["Regulator Lock up Pressure (mbar)", "regulatorLockup"],
+          ["Regulator Operating Pressure (mbar)", "regulatorOperating"],
+        ].map(([label,key])=>(
+          <div key={key} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+            <div style={{ flex:1, fontSize:13, color:"rgba(255,255,255,0.7)" }}>{label}</div>
+            <input value={data[key]||""} onChange={e=>onChange({...data,[key]:e.target.value})} placeholder="mbar"
+              style={{ width:90, padding:"9px 10px", border:"1px solid #2a4058", borderRadius:8, fontSize:13, boxSizing:"border-box", background:"#1e3044", color:"#e8edf2" }}/>
+          </div>
+        ))}
+        {[
+          ["Hose(s) Check", "hosesCheck"],
+          ["ECV Check", "ecvCheck"],
+        ].map(([label,key])=>(
+          <div key={key} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+            <div style={{ flex:1, fontSize:13, color:"rgba(255,255,255,0.7)" }}>{label}</div>
+            <div style={{ width:90 }}>
+              <select value={data[key]||""} onChange={e=>onChange({...data,[key]:e.target.value})}
+                style={{ width:"100%", padding:"9px 6px", border:"1px solid #2a4058", borderRadius:8, fontSize:13, background:"#1e3044", color:"#e8edf2" }}>
+                {["","Yes","No","NA"].map(o=><option key={o} value={o}>{o||"..."}</option>)}
+              </select>
+            </div>
+          </div>
+        ))}
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8, marginTop:12 }}>
+          <div style={{ flex:1, fontSize:13, color:"rgba(255,255,255,0.7)" }}>Next Inspection Due On or Before</div>
+          <input type="date" value={data.nextInspection||""} onChange={e=>onChange({...data,nextInspection:e.target.value})}
+            style={{ width:160, padding:"9px 10px", border:"1px solid #2a4058", borderRadius:8, fontSize:13, boxSizing:"border-box", background:"#1e3044", color:"#e8edf2" }}/>
         </div>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
-    </div>
+    </GasFormShell>
   );
 }
 
@@ -6758,7 +6635,7 @@ function LPGPDF({ formData, engineerData, onClose, onSave, autoDownload, onDownl
   const filledFaults = Array(5).fill(null).map((_,i) => faults[i]||{});
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
+    <div style={{ position:"fixed", inset:0, background:"#0d1f2d", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
       <div style={{ background:"#0d1f2d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round"/></svg>
@@ -7035,12 +6912,12 @@ function LPGScreen({ engineerData, onBack, onHome, onSave, initialData }) {
 const COOL_COLOR = "#0891b2";
 
 function CoolOffStepFileRef({ data, onChange, onNext, onBack, onHome }) {
-  const inp = { width:"100%", boxSizing:"border-box", padding:"13px 15px", border:"none", borderRadius:8, background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", boxShadow:"0 2px 8px rgba(0,0,0,0.08)", outline:"none", marginBottom:12 };
+  const inp = { width:"100%", boxSizing:"border-box", padding:"13px 15px", border:"1px solid #2a4058", borderRadius:10, background:"#1e3044", color:"#e8edf2", fontSize:15, fontFamily:"'Segoe UI',sans-serif", outline:"none", marginBottom:12 };
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="7 Day Cooling Off Period Exemption" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, paddingBottom:80 }}>
-        <p style={{ color:"#888", fontSize:14, marginBottom:20, textAlign:"center" }}>Enter a reference and certificate number</p>
+        <p style={{ color:"rgba(255,255,255,0.5)", fontSize:14, marginBottom:20, textAlign:"center" }}>Enter a reference and certificate number</p>
         <input value={data.fileRef} onChange={e=>onChange({...data,fileRef:e.target.value})} placeholder="Reference" style={inp}/>
         <input value={data.certNo} onChange={e=>onChange({...data,certNo:e.target.value})} placeholder="Certificate No" style={inp}/>
       </div>
@@ -7058,8 +6935,8 @@ function CoolOffStepDetails({ data, onChange, onNext, onBack, onHome }) {
     _setPickerCoolOffStepDetails(null);
   };
   const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
-  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCoolOffStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1a3a4a",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
-  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1a3a4a",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCoolOffStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(59,130,246,0.15)",border:"1px solid rgba(59,130,246,0.4)",borderRadius:20,padding:"6px 14px",color:"#3b82f6",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>Add Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.4)",borderRadius:20,padding:"6px 14px",color:"#22c55e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>Copy</button>;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
@@ -7107,7 +6984,7 @@ function CoolOffStepEngineering({ data, onChange, onNext, onBack, onHome }) {
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Engineering Details & Signatures" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           {sec("Engineering Details")}
           {lbl("Trading Title / Company Name")}<input value={data.tradingTitle} onChange={e=>onChange({...data,tradingTitle:e.target.value})} placeholder="Company name" style={inp}/>
           {lbl("Address")}<input value={data.engAddr} onChange={e=>onChange({...data,engAddr:e.target.value})} placeholder="Street address" style={inp}/>
@@ -7116,7 +6993,7 @@ function CoolOffStepEngineering({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Gas Safe No")}<input value={data.gasSafeNo} onChange={e=>onChange({...data,gasSafeNo:e.target.value})} placeholder="Gas Safe Registration No" style={inp}/>
           {lbl("Tel No")}<input value={data.engTel} onChange={e=>onChange({...data,engTel:e.target.value})} placeholder="Telephone" style={inp}/>
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           {sec("Engineer's Signature")}
           {lbl("Draw engineer signature")}
           <SigPad value={data.sigEngineerImg} storageKey="gsc_engineer_sig" onChange={v=>onChange({...data,sigEngineerImg:v})}/>
@@ -7196,7 +7073,7 @@ function CoolOffPDF({ formData, engineerData, onClose, onSave, autoDownload, onD
   const S = { borderCollapse:"collapse", width:"100%" };
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
+    <div style={{ position:"fixed", inset:0, background:"#0d1f2d", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
       {/* Toolbar */}
       <div style={{ background:"#0d1f2d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -7489,7 +7366,7 @@ function BmkStepClientDetails({ data, onChange, onNext, onBack, onHome }) {
 function BmkStepAppliance({ data, onChange, onNext, onBack, onHome }) {
   const [bmkPicker, setBmkPicker] = useState(null);
   const inp = (key, ph) => <input value={data[key]||""} onChange={e=>onChange({...data,[key]:e.target.value})} placeholder={ph}
-    style={{ width:"100%", boxSizing:"border-box", padding:"14px", border:"1px solid #ddd", borderRadius:8, fontSize:15, outline:"none", marginBottom:10 }}/>;
+    style={{ width:"100%", boxSizing:"border-box", padding:"14px", border:"1px solid #2a4058", borderRadius:8, fontSize:15, outline:"none", background:"#1e3044", color:"#e8edf2", marginBottom:10 }}/>;
 
   if(bmkPicker==="boilerMake") return <PickerScreen title="Boiler Make" options={ALL_MAKES} onSelect={v=>{onChange({...data,boilerMake:v,boilerModel:""});setBmkPicker(null);}} onBack={()=>setBmkPicker(null)} allowCustom={true} onSaveCustom={v=>rememberApplianceValue("make",v)}/>;
   if(bmkPicker==="boilerModel") return <PickerScreen title="Boiler Model" options={data.boilerMake ? getModelsForMake(data.boilerMake) : []} onSelect={v=>{onChange({...data,boilerModel:v});setBmkPicker(null);}} onBack={()=>setBmkPicker(null)} allowCustom={true} onSaveCustom={v=>rememberApplianceValue("model",v)}/>;
@@ -7527,14 +7404,14 @@ function BmkStepControls({ data, onChange, onNext, onBack, onHome }) {
       </div>
     );
   };
-  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:BMK_COLOR, margin:"16px 0 8px", paddingBottom:4, borderBottom:`2px solid ${BMK_COLOR}30` }}>{t}</div>;
+  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:GAS_ACCENT, textTransform:"uppercase", letterSpacing:0.8, margin:"16px 0 8px", paddingBottom:4, borderBottom:`2px solid ${BMK_COLOR}30` }}>{t}</div>;
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Controls" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
         <p style={{ fontSize:12, color:"#888", textAlign:"center", marginBottom:4 }}>Please scroll to see all</p>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           {sec("Time & Temperature Control To Heating:")}
           {yn("ctrlRoomStat","Room Stat & Programmer/Timer:")}
           {yn("ctrlProgRoom","Programmable Room Stat:")}
@@ -7570,15 +7447,15 @@ function BmkStepAllSystems({ data, onChange, onNext, onBack, onHome }) {
     </div>
   );
   const inp = (key, ph) => <input value={data[key]||""} onChange={e=>onChange({...data,[key]:e.target.value})} placeholder={ph}
-    style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>;
+    style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px", border:"1px solid #2a4058", borderRadius:8, fontSize:14, outline:"none", background:"#1e3044", color:"#e8edf2", marginBottom:2 }}/>;
   const lbl = t => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4, marginTop:10 }}>{t}</div>;
-  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:BMK_COLOR, margin:"16px 0 8px", paddingBottom:4, borderBottom:`2px solid ${BMK_COLOR}30` }}>{t}</div>;
+  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:GAS_ACCENT, textTransform:"uppercase", letterSpacing:0.8, margin:"16px 0 8px", paddingBottom:4, borderBottom:`2px solid ${BMK_COLOR}30` }}>{t}</div>;
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="All Systems" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           {sec("For All Boilers Confirm The Following")}
           {yn("sysFlush","The system has been flushed in accordance with manufacturers instruction?")}
           {lbl("The system cleaner used?")}{inp("sysCleaner","System cleaner product")}
@@ -7602,7 +7479,7 @@ function BmkStepMeasure({ data, onChange, onNext, onBack, onHome }) {
       <div style={{ flex:1, fontSize:14, color:"#444", paddingRight:12 }}>{ph}</div>
       <div style={{ display:"flex", alignItems:"center", gap:6 }}>
         <input value={data[key]||""} onChange={e=>onChange({...data,[key]:e.target.value})} placeholder=""
-          style={{ width:80, padding:"8px 10px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", textAlign:"right" }}/>
+          style={{ width:80, padding:"8px 10px", border:"1px solid #2a4058", borderRadius:8, fontSize:14, outline:"none", background:"#1e3044", color:"#e8edf2", textAlign:"right" }}/>
         {suffix && <span style={{ fontSize:12, color:"#888", minWidth:30 }}>{suffix}</span>}
       </div>
     </div>
@@ -7637,7 +7514,7 @@ function BmkStepMeasure({ data, onChange, onNext, onBack, onHome }) {
       </div>
     </div>
   );
-  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:BMK_COLOR, margin:"16px 0 8px", paddingBottom:4, borderBottom:`2px solid ${BMK_COLOR}30` }}>{t}</div>;
+  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:GAS_ACCENT, textTransform:"uppercase", letterSpacing:0.8, margin:"16px 0 8px", paddingBottom:4, borderBottom:`2px solid ${BMK_COLOR}30` }}>{t}</div>;
   const co = (key, label) => (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 0" }}>
       <div style={{ fontSize:13, color:"#444", flex:1 }}>{label}</div>
@@ -7650,14 +7527,14 @@ function BmkStepMeasure({ data, onChange, onNext, onBack, onHome }) {
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Measure & Record" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           {sec("Central Heating Mode")}
           {gasRate("chGasRateFt","chGasRateM3","Gas Rate (FT3 / M3):")}
           {inp("chPressure","Gas inlet pressure (max rate) or burner operating pressure (max rate):","mbar")}
           {inp("chFlowTemp","Central heating flow temperature (C°):","°C")}
           {inp("chReturnTemp","Central heating return temperature (C°):","°C")}
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           {sec("Hot Water Mode")}
           {gasRate("hwGasRateFt","hwGasRateM3","Gas Rate (FT3 / M3):")}
           {inp("hwPressure","Gas inlet pressure (max rate) or burner operating pressure (max rate):","mbar")}
@@ -7666,7 +7543,7 @@ function BmkStepMeasure({ data, onChange, onNext, onBack, onHome }) {
           {inp("hwFlowRate","Flow rate ( l/min ):","l/min")}
           {yn("hwCheckedAll","Has hot water been checked at all outlets?")}
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           {sec("Combustion Analysis")}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
             <div>{co("coMin","Min CO:")} </div>
@@ -7697,13 +7574,13 @@ function BmkStepFinalChecks({ data, onChange, onNext, onBack, onHome }) {
       </div>
     </div>
   );
-  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:BMK_COLOR, margin:"16px 0 8px", paddingBottom:4, borderBottom:`2px solid ${BMK_COLOR}30` }}>{t}</div>;
+  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:GAS_ACCENT, textTransform:"uppercase", letterSpacing:0.8, margin:"16px 0 8px", paddingBottom:4, borderBottom:`2px solid ${BMK_COLOR}30` }}>{t}</div>;
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Final Checks" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           {sec("For Condensing Boilers Measure & Record")}
           {yn("condensateDrain","The condensate drain have been installed in accordance with the manufacturers instruction?")}
           {sec("For All Installation Confirm The Following:")}
@@ -7744,7 +7621,7 @@ function BmkStepServices({ data, onChange, onNext, onBack, onHome }) {
         {services.map((svc, i) => (
           <div key={i} style={{ background:"#fff", borderRadius:10, padding:12, marginBottom:10, boxShadow:"0 1px 4px rgba(0,0,0,0.06)", borderLeft:`3px solid ${BMK_COLOR}` }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-              <div style={{ fontWeight:700, fontSize:14, color:BMK_COLOR }}>Service {i+1}</div>
+              <div style={{ fontWeight:700, fontSize:14, color:GAS_ACCENT, textTransform:"uppercase", letterSpacing:0.8 }}>Service {i+1}</div>
               {svc.date && <div style={{ fontSize:12, color:"#888" }}>{svc.date}</div>}
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
@@ -7782,14 +7659,14 @@ function BmkStepSignature({ data, onChange, onNext, onBack, onHome }) {
     if (Object.keys(updates).length) onChange({...data,...updates});
   }, []);
 
-  const lbl = t => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:6, marginTop:10 }}>{t}</div>;
-  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:BMK_COLOR, borderBottom:`2px solid ${BMK_COLOR}30`, paddingBottom:6, marginBottom:12, marginTop:16 }}>{t}</div>;
+  const lbl = t => <div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:6, marginTop:10, textTransform:"uppercase", letterSpacing:0.5 }}>{t}</div>;
+  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:GAS_ACCENT, textTransform:"uppercase", letterSpacing:0.8, borderBottom:`2px solid ${BMK_COLOR}30`, paddingBottom:6, marginBottom:12, marginTop:16 }}>{t}</div>;
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Signatures" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ display:"flex", alignItems:"flex-start", gap:10, padding:"12px 0", borderBottom:"1px solid #f0f0f0" }}>
             <input type="checkbox" id="dataProtection" checked={data.dataProtection||false}
               onChange={e=>onChange({...data,dataProtection:e.target.checked})}
@@ -7800,9 +7677,9 @@ function BmkStepSignature({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Draw engineer signature below")}
           <SigPad value={data.sigEngineerImg} storageKey="gsc_engineer_sig" onChange={v=>onChange({...data,sigEngineerImg:v})}/>
           {lbl("Engineer printed name")}<input value={data.sigEngineerName||""} onChange={e=>onChange({...data,sigEngineerName:e.target.value})} placeholder="Full name"
-            style={{ width:"100%", boxSizing:"border-box", padding:"11px 13px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
+            style={{ width:"100%", boxSizing:"border-box", padding:"11px 13px", border:"1px solid #2a4058", borderRadius:8, fontSize:14, outline:"none", background:"#1e3044", color:"#e8edf2", marginBottom:2 }}/>
           {lbl("Date")}<input type="date" value={data.sigDate||today} onChange={e=>onChange({...data,sigDate:e.target.value})}
-            style={{ width:"100%", boxSizing:"border-box", padding:"11px 13px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none" }}/>
+            style={{ width:"100%", boxSizing:"border-box", padding:"11px 13px", border:"1px solid #2a4058", borderRadius:8, fontSize:14, outline:"none", background:"#1e3044", color:"#e8edf2" }}/>
           {data.sigDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(data.sigDate)}</div>}
         </div>
 
@@ -7814,14 +7691,14 @@ function BmkStepSignature({ data, onChange, onNext, onBack, onHome }) {
 
 function BmkStepCompanyDetails({ data, onChange, onNext, onBack, onHome }) {
   const inp = (key, ph, type) => <input type={type||"text"} value={data[key]||""} onChange={e=>onChange({...data,[key]:e.target.value})} placeholder={ph}
-    style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:15, outline:"none", marginBottom:2 }}/>;
+    style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #2a4058", borderRadius:8, fontSize:15, outline:"none", background:"#1e3044", color:"#e8edf2", marginBottom:2 }}/>;
   const lbl = t => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4, marginTop:10 }}>{t}</div>;
-  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:BMK_COLOR, borderBottom:`2px solid ${BMK_COLOR}30`, paddingBottom:6, marginBottom:4, marginTop:14 }}>{t}</div>;
+  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:GAS_ACCENT, textTransform:"uppercase", letterSpacing:0.8, borderBottom:`2px solid ${BMK_COLOR}30`, paddingBottom:6, marginBottom:4, marginTop:14 }}>{t}</div>;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Company Details" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           {sec("Company Details")}
           {lbl("Company Name")}{inp("companyName","Company name")}
           {lbl("Address")}{inp("companyAddr","Address")}
@@ -7831,12 +7708,12 @@ function BmkStepCompanyDetails({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Arrival Time")}{inp("timeArrival","e.g. 09:00 AM","time")}
           {lbl("Departure Time")}{inp("timeDeparture","e.g. 11:30 AM","time")}
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           {sec("Report Issued By")}
           {lbl("Engineer Name")}{inp("engineerName","Full name")}
           {lbl("Engineer ID / Licence No")}{inp("engineerId","ID number")}
           {lbl("Commissioning Date")}<input type="date" value={data.commissionDate||""} onChange={e=>onChange({...data,commissionDate:e.target.value})}
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:15, outline:"none", marginBottom:2 }}/>
+            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #2a4058", borderRadius:8, fontSize:15, outline:"none", background:"#1e3044", color:"#e8edf2", marginBottom:2 }}/>
         </div>
       </div>
       <BottomBar onHome={onHome} onNext={()=>onNext()} nextLabel="Preview PDF"/>
@@ -7934,7 +7811,7 @@ function BenchmarkPDF({ formData, engineerData, onClose, onSave, autoDownload, o
   const instAddr = fd.instAddr1 ? [fd.instAddr1,fd.instAddr2,fd.instAddr3,fd.instPostcode].filter(Boolean).join(", ") : [fd.clientAddr1,fd.clientAddr2,fd.clientAddr3,fd.clientPostcode].filter(Boolean).join(", ");
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,sans-serif" }}>
+    <div style={{ position:"fixed", inset:0, background:"#0d1f2d", zIndex:2000, overflowY:"auto", fontFamily:"Arial,sans-serif" }}>
       {/* Toolbar */}
       <div style={{ background:"#0d1f2d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -8383,12 +8260,12 @@ function BenchmarkScreen({ engineerData, onBack, onHome, onSave, initialData }) 
 const CGSC_COLOR = "#7c3aed";
 
 function CGSCStepFileRef({ data, onChange, onNext, onBack, onHome }) {
-  const inp = { width:"100%", boxSizing:"border-box", padding:"13px 15px", border:"none", borderRadius:8, background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", boxShadow:"0 2px 8px rgba(0,0,0,0.08)", outline:"none", marginBottom:12 };
+  const inp = { width:"100%", boxSizing:"border-box", padding:"13px 15px", border:"1px solid #2a4058", borderRadius:10, background:"#1e3044", color:"#e8edf2", fontSize:15, fontFamily:"'Segoe UI',sans-serif", outline:"none", marginBottom:12 };
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Commercial Gas Safety Certificate" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, paddingBottom:80 }}>
-        <p style={{ color:"#888", fontSize:14, marginBottom:20, textAlign:"center" }}>Enter a certificate reference and number</p>
+        <p style={{ color:"rgba(255,255,255,0.5)", fontSize:14, marginBottom:20, textAlign:"center" }}>Enter a certificate reference and number</p>
         <input value={data.certRef} onChange={e=>onChange({...data,certRef:e.target.value})} placeholder="Certificate Reference" style={inp}/>
         <input value={data.certNo} onChange={e=>onChange({...data,certNo:e.target.value})} placeholder="Certificate No" style={inp}/>
       </div>
@@ -8406,8 +8283,8 @@ function CGSCStepDetails({ data, onChange, onNext, onBack, onHome }) {
     _setPickerCGSCStepDetails(null);
   };
   const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
-  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCGSCStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1a3a4a",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
-  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1a3a4a",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCGSCStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(59,130,246,0.15)",border:"1px solid rgba(59,130,246,0.4)",borderRadius:20,padding:"6px 14px",color:"#3b82f6",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>Add Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.4)",borderRadius:20,padding:"6px 14px",color:"#22c55e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>Copy</button>;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
@@ -8469,19 +8346,19 @@ function CGSCStepAppliances({ data, onChange, onNext, onBack, onHome }) {
   }
 
   const inp = (i,key,ph) => <input value={apps[i][key]||""} onChange={e=>update(i,key,e.target.value)} placeholder={ph||""}
-    style={{ width:"100%", padding:"7px 8px", border:"1px solid #ddd", borderRadius:6, fontSize:12, boxSizing:"border-box" }}/>;
+    style={{ width:"100%", padding:"7px 8px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, boxSizing:"border-box", background:"#1e3044", color:"#e8edf2" }}/>;
   const mmInp = (i, key) => (
     <div onClick={()=>setMmPicker({row:i,field:key})}
-      style={{ width:"100%", padding:"7px 8px", border:"1px solid #ddd", borderRadius:6, fontSize:12, boxSizing:"border-box", cursor:"pointer", background:"#fff", color:(apps[i]||{})[key]?"#222":"#aaa", minHeight:32 }}>
+      style={{ width:"100%", padding:"7px 8px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, boxSizing:"border-box", background:"#1e3044", color:(apps[i]||{})[key]?"#e8edf2":"rgba(255,255,255,0.4)", cursor:"pointer", minHeight:32 }}>
       {(apps[i]||{})[key] || (key==="make" ? "Select make..." : "Select model...")}
     </div>
   );
   const sel = (i,key,opts) => <select value={apps[i][key]||""} onChange={e=>update(i,key,e.target.value)}
-    style={{ width:"100%", padding:"7px 4px", border:"1px solid #ddd", borderRadius:6, fontSize:12, background:"#fff" }}>
+    style={{ width:"100%", padding:"7px 4px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, background:"#1e3044", color:"#e8edf2" }}>
     {opts.map(o=><option key={o} value={o}>{o||"-"}</option>)}
   </select>;
 
-  const lbl = (t) => <div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>{t}</div>;
+  const lbl = (t) => <div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>{t}</div>;
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
@@ -8489,7 +8366,7 @@ function CGSCStepAppliances({ data, onChange, onNext, onBack, onHome }) {
       <div style={{ flex:1, overflowY:"auto", padding:12, paddingBottom:80 }}>
         <div style={{ fontSize:12, color:"#888", marginBottom:10 }}>Enter details for up to 5 appliances</div>
         {Array(ROWS).fill(null).map((_,i)=>(
-          <div key={i} style={{ background:"#fff", borderRadius:10, padding:12, marginBottom:8, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+          <div key={i} style={{ background:"rgba(255,255,255,0.04)", borderRadius:10, padding:12, marginBottom:8, border:"1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ fontWeight:700, fontSize:13, color:CGSC_COLOR, marginBottom:8 }}>Appliance {i+1}</div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
               <div>{lbl("Location")}{inp(i,"location","e.g. Airing Cupboard")}</div>
@@ -8533,7 +8410,7 @@ function CGSCStepFaults({ data, onChange, onNext, onBack, onHome }) {
   const inp = (i,key,ph) => <input value={faults[i][key]||""} onChange={e=>update(i,key,e.target.value)} placeholder={ph||""}
     style={{ width:"100%", padding:"8px 10px", border:"1px solid #ddd", borderRadius:6, fontSize:13, boxSizing:"border-box" }}/>;
   const sel = (i,key,opts) => <select value={faults[i][key]||""} onChange={e=>update(i,key,e.target.value)}
-    style={{ width:"100%", padding:"8px 6px", border:"1px solid #ddd", borderRadius:6, fontSize:13, background:"#fff" }}>
+    style={{ width:"100%", padding:"8px 6px", border:"1px solid #2a4058", borderRadius:6, fontSize:13, background:"#1e3044", color:"#e8edf2" }}>
     {opts.map(o=><option key={o} value={o}>{o||"-"}</option>)}
   </select>;
 
@@ -8541,21 +8418,21 @@ function CGSCStepFaults({ data, onChange, onNext, onBack, onHome }) {
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Faults, Remedial Work & Safety" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontWeight:700, fontSize:14, color:CGSC_COLOR, borderBottom:`2px solid ${CGSC_COLOR}30`, paddingBottom:6, marginBottom:10 }}>Faults / Notes + Remedial Work</div>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ fontWeight:700, fontSize:14, color:GAS_ACCENT, textTransform:"uppercase", letterSpacing:0.8, borderBottom:`2px solid ${CGSC_COLOR}30`, paddingBottom:6, marginBottom:10 }}>Faults / Notes + Remedial Work</div>
           {Array(ROWS).fill(null).map((_,i)=>(
-            <div key={i} style={{ background:"#f9f9f9", borderRadius:8, padding:10, marginBottom:8 }}>
+            <div key={i} style={{ background:"rgba(255,255,255,0.04)", borderRadius:8, padding:10, marginBottom:8, border:"1px solid rgba(255,255,255,0.06)" }}>
               <div style={{ fontWeight:600, fontSize:12, color:"#555", marginBottom:6 }}>Row {i+1}</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 80px", gap:8 }}>
-                <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Faults / Notes</div>{inp(i,"fault","Describe fault or note")}</div>
-                <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Remedial Work Taken</div>{inp(i,"remedial","Remedial work taken")}</div>
-                <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Warning Notice Fixed</div>{sel(i,"warningFixed",ynOpts)}</div>
+                <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Faults / Notes</div>{inp(i,"fault","Describe fault or note")}</div>
+                <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Remedial Work Taken</div>{inp(i,"remedial","Remedial work taken")}</div>
+                <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Warning Notice Fixed</div>{sel(i,"warningFixed",ynOpts)}</div>
               </div>
             </div>
           ))}
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontWeight:700, fontSize:14, color:CGSC_COLOR, borderBottom:`2px solid ${CGSC_COLOR}30`, paddingBottom:6, marginBottom:12 }}>Installation Checks</div>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ fontWeight:700, fontSize:14, color:GAS_ACCENT, textTransform:"uppercase", letterSpacing:0.8, borderBottom:`2px solid ${CGSC_COLOR}30`, paddingBottom:6, marginBottom:12 }}>Installation Checks</div>
           {[
             ["Emergency Control Valve Accessible", "ecvAccessible"],
             ["Gas Tightness Satisfactory", "gasTightness"],
@@ -8569,7 +8446,7 @@ function CGSCStepFaults({ data, onChange, onNext, onBack, onHome }) {
               <div style={{ flex:1, fontSize:13, color:"#333" }}>{label}</div>
               <div style={{ width:90 }}>
                 <select value={data[key]||""} onChange={e=>onChange({...data,[key]:e.target.value})}
-                  style={{ width:"100%", padding:"9px 6px", border:"1px solid #ddd", borderRadius:8, fontSize:13, background:"#fff" }}>
+                  style={{ width:"100%", padding:"9px 6px", border:"1px solid #2a4058", borderRadius:8, fontSize:13, background:"#1e3044", color:"#e8edf2" }}>
                   {ynOpts.map(o=><option key={o} value={o}>{o||"Select..."}</option>)}
                 </select>
               </div>
@@ -8676,7 +8553,7 @@ function CommercialGSCPDF({ formData, engineerData, onClose, onSave, autoDownloa
   const filledFaults = Array(5).fill(null).map((_,i) => faults[i]||{});
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
+    <div style={{ position:"fixed", inset:0, background:"#0d1f2d", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
       {/* Toolbar */}
       <div style={{ background:"#0d1f2d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -8961,12 +8838,12 @@ function CommercialGSCScreen({ engineerData, onBack, onHome, onSave, initialData
 const GISR_COLOR = "#059669";
 
 function GISRStepFileRef({ data, onChange, onNext, onBack, onHome }) {
-  const inp = { width:"100%", boxSizing:"border-box", padding:"13px 15px", border:"none", borderRadius:8, background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", boxShadow:"0 2px 8px rgba(0,0,0,0.08)", outline:"none", marginBottom:12 };
+  const inp = { width:"100%", boxSizing:"border-box", padding:"13px 15px", border:"1px solid #2a4058", borderRadius:10, background:"#1e3044", color:"#e8edf2", fontSize:15, fontFamily:"'Segoe UI',sans-serif", outline:"none", marginBottom:12 };
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Gas Installation Safety Report" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, paddingBottom:80 }}>
-        <p style={{ color:"#888", fontSize:14, marginBottom:20, textAlign:"center" }}>Enter a reference and certificate number</p>
+        <p style={{ color:"rgba(255,255,255,0.5)", fontSize:14, marginBottom:20, textAlign:"center" }}>Enter a reference and certificate number</p>
         <input value={data.fileRef} onChange={e=>onChange({...data,fileRef:e.target.value})} placeholder="Reference" style={inp}/>
         <input value={data.certNo} onChange={e=>onChange({...data,certNo:e.target.value})} placeholder="Certificate Number" style={inp}/>
       </div>
@@ -8984,8 +8861,8 @@ function GISRStepDetails({ data, onChange, onNext, onBack, onHome }) {
     _setPickerGISRStepDetails(null);
   };
   const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
-  const ContactBtn = ({target}) => <button onClick={()=>_setPickerGISRStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1a3a4a",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
-  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1a3a4a",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerGISRStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(59,130,246,0.15)",border:"1px solid rgba(59,130,246,0.4)",borderRadius:20,padding:"6px 14px",color:"#3b82f6",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>Add Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.4)",borderRadius:20,padding:"6px 14px",color:"#22c55e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>Copy</button>;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
@@ -9046,14 +8923,14 @@ function GISRStepAppliances({ data, onChange, onNext, onBack, onHome }) {
     return <PickerScreen title={isMake?"Make":"Model"} options={isMake?ALL_MAKES:(makeVal?getModelsForMake(makeVal):[])} onSelect={v=>{update(mmPicker.row,mmPicker.field,v);if(isMake)update(mmPicker.row,"model","");setMmPicker(null);}} onBack={()=>setMmPicker(null)} allowCustom={true} onSaveCustom={v=>rememberApplianceValue(mmPicker.field,v)}/>;
   }
 
-  const inp = (i,key,ph) => <input value={apps[i][key]||""} onChange={e=>update(i,key,e.target.value)} placeholder={ph||""} style={{ width:"100%", padding:"7px 8px", border:"1px solid #ddd", borderRadius:6, fontSize:12, boxSizing:"border-box" }}/>;
+  const inp = (i,key,ph) => <input value={apps[i][key]||""} onChange={e=>update(i,key,e.target.value)} placeholder={ph||""} style={{ width:"100%", padding:"7px 8px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, boxSizing:"border-box", background:"#1e3044", color:"#e8edf2" }}/>;
   const mmInp = (i, key) => (
     <div onClick={()=>setMmPicker({row:i,field:key})}
-      style={{ width:"100%", padding:"7px 8px", border:"1px solid #ddd", borderRadius:6, fontSize:12, boxSizing:"border-box", cursor:"pointer", background:"#fff", color:(apps[i]||{})[key]?"#222":"#aaa", minHeight:32 }}>
+      style={{ width:"100%", padding:"7px 8px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, boxSizing:"border-box", background:"#1e3044", color:(apps[i]||{})[key]?"#e8edf2":"rgba(255,255,255,0.4)", cursor:"pointer", minHeight:32 }}>
       {(apps[i]||{})[key] || (key==="make" ? "Select make..." : "Select model...")}
     </div>
   );
-  const sel = (i,key,opts) => <select value={apps[i][key]||""} onChange={e=>update(i,key,e.target.value)} style={{ width:"100%", padding:"7px 4px", border:"1px solid #ddd", borderRadius:6, fontSize:12, background:"#fff" }}>{opts.map(o=><option key={o} value={o}>{o||"-"}</option>)}</select>;
+  const sel = (i,key,opts) => <select value={apps[i][key]||""} onChange={e=>update(i,key,e.target.value)} style={{ width:"100%", padding:"7px 4px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, background:"#1e3044", color:"#e8edf2" }}>{opts.map(o=><option key={o} value={o}>{o||"-"}</option>)}</select>;
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
@@ -9061,21 +8938,21 @@ function GISRStepAppliances({ data, onChange, onNext, onBack, onHome }) {
       <div style={{ flex:1, overflowY:"auto", padding:12, paddingBottom:80 }}>
         <div style={{ fontSize:12, color:"#888", marginBottom:10 }}>Enter details for up to 8 appliances</div>
         {Array(ROWS).fill(null).map((_,i)=>(
-          <div key={i} style={{ background:"#fff", borderRadius:10, padding:12, marginBottom:8, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+          <div key={i} style={{ background:"rgba(255,255,255,0.04)", borderRadius:10, padding:12, marginBottom:8, border:"1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ fontWeight:700, fontSize:13, color:GISR_COLOR, marginBottom:8 }}>Appliance {i+1}</div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Type</div>{inp(i,"type","e.g. Combi Boiler")}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Location</div>{inp(i,"location","e.g. Airing Cupboard")}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Make</div>{mmInp(i,"make")}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Model</div>{mmInp(i,"model")}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Flue Type (O/F, R/S, FL)</div>{sel(i,"flueType",flueOpts)}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Operating Pressure / Heat Input</div>{inp(i,"opPressure","mbar / kW/h / Btu/h")}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Combustion Analyser Reading (CO/CO2 or CO ppm)</div>{inp(i,"combustion","CO/CO2 ratio or ppm")}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Safety Device(s) Correct Operation</div>{sel(i,"safetyDevices",ynaOpts)}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Ventilation Provision Satisfactory</div>{sel(i,"ventilation",ynOpts)}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Visual Condition of Flue & Termination</div>{sel(i,"flueCondition",ynaOpts)}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Flue Performance Checks</div>{sel(i,"fluePerformance",pfnaOpts)}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Appliance Safe to Use</div>{sel(i,"safeToUse",ynOpts)}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Type</div>{inp(i,"type","e.g. Combi Boiler")}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Location</div>{inp(i,"location","e.g. Airing Cupboard")}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Make</div>{mmInp(i,"make")}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Model</div>{mmInp(i,"model")}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Flue Type (O/F, R/S, FL)</div>{sel(i,"flueType",flueOpts)}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Operating Pressure / Heat Input</div>{inp(i,"opPressure","mbar / kW/h / Btu/h")}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Combustion Analyser Reading (CO/CO2 or CO ppm)</div>{inp(i,"combustion","CO/CO2 ratio or ppm")}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Safety Device(s) Correct Operation</div>{sel(i,"safetyDevices",ynaOpts)}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Ventilation Provision Satisfactory</div>{sel(i,"ventilation",ynOpts)}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Visual Condition of Flue & Termination</div>{sel(i,"flueCondition",ynaOpts)}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Flue Performance Checks</div>{sel(i,"fluePerformance",pfnaOpts)}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Appliance Safe to Use</div>{sel(i,"safeToUse",ynOpts)}</div>
             </div>
           </div>
         ))}
@@ -9098,16 +8975,16 @@ function GISRStepChecks({ data, onChange, onNext, onBack, onHome }) {
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Meter & Pipework Checks" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontWeight:700, fontSize:14, color:GISR_COLOR, borderBottom:`2px solid ${GISR_COLOR}30`, paddingBottom:6, marginBottom:12 }}>Meter Installation</div>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ fontWeight:700, fontSize:14, color:GAS_ACCENT, textTransform:"uppercase", letterSpacing:0.8, borderBottom:`2px solid ${GISR_COLOR}30`, paddingBottom:6, marginBottom:12 }}>Meter Installation</div>
           {row("Is meter installation accessible?","meterAccessible")}
           {row("Is the meter room/compartment adequately ventilated?","meterVentilated")}
           {row("Is meter room/compartment secure?","meterSecure")}
           {row("Is meter room/compartment clear of combustibles etc?","meterClear")}
           {row("Is meter room/compartment lock key clearly labelled?","meterKeyLabelled")}
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontWeight:700, fontSize:14, color:GISR_COLOR, borderBottom:`2px solid ${GISR_COLOR}30`, paddingBottom:6, marginBottom:12 }}>Installation Pipework</div>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ fontWeight:700, fontSize:14, color:GAS_ACCENT, textTransform:"uppercase", letterSpacing:0.8, borderBottom:`2px solid ${GISR_COLOR}30`, paddingBottom:6, marginBottom:12 }}>Installation Pipework</div>
           {row("Is a gas installation line diagram fixed near the primary meter?","pipeLineDiagram")}
           {row("Is the gas installation line diagram current?","pipeLineDiagramCurrent")}
           {row("Are adequate emergency/isolation valves fitted?","pipeIsolationValves")}
@@ -9136,15 +9013,15 @@ function GISRStepDeclaration({ data, onChange, onNext, onBack, onHome }) {
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Works, Safety Info & Declaration" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontWeight:700, fontSize:14, color:GISR_COLOR, borderBottom:`2px solid ${GISR_COLOR}30`, paddingBottom:6, marginBottom:8 }}>Details of Work Carried Out</div>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ fontWeight:700, fontSize:14, color:GAS_ACCENT, textTransform:"uppercase", letterSpacing:0.8, borderBottom:`2px solid ${GISR_COLOR}30`, paddingBottom:6, marginBottom:8 }}>Details of Work Carried Out</div>
           {ta("workDetails","Describe work carried out")}
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontWeight:700, fontSize:14, color:GISR_COLOR, borderBottom:`2px solid ${GISR_COLOR}30`, paddingBottom:6, marginBottom:8 }}>Details of Remedial Work Required</div>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ fontWeight:700, fontSize:14, color:GAS_ACCENT, textTransform:"uppercase", letterSpacing:0.8, borderBottom:`2px solid ${GISR_COLOR}30`, paddingBottom:6, marginBottom:8 }}>Details of Remedial Work Required</div>
           {ta("remedialDetails","Describe any remedial work required")}
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:"#b91c1c", borderBottom:"2px solid #b91c1c30", paddingBottom:6, marginBottom:12 }}>Safety Information</div>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
             <div style={{ flex:1, fontSize:13, color:"#333" }}>Has a Warning/Advice Notice been raised?</div>
@@ -9161,8 +9038,8 @@ function GISRStepDeclaration({ data, onChange, onNext, onBack, onHome }) {
             <div style={{ width:90 }}>{sel("siAdvised")}</div>
           </div>
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontWeight:700, fontSize:14, color:GISR_COLOR, borderBottom:`2px solid ${GISR_COLOR}30`, paddingBottom:6, marginBottom:8 }}>Declaration</div>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ fontWeight:700, fontSize:14, color:GAS_ACCENT, textTransform:"uppercase", letterSpacing:0.8, borderBottom:`2px solid ${GISR_COLOR}30`, paddingBottom:6, marginBottom:8 }}>Declaration</div>
           <div style={{ fontSize:13, color:"#555", lineHeight:1.6, marginBottom:12, background:"#f9f9f9", borderRadius:8, padding:12 }}>
             <strong>Declaration of Gas Safety</strong> — I confirm that all of the above work described on this form has been satisfactorily completed in accordance with the current Gas Safety (Installation and use) Regulations, industry standards and procedures.
           </div>
@@ -9247,7 +9124,7 @@ function GasInstallReportPDF({ formData, engineerData, onClose, onSave, autoDown
   const filledApps = Array(8).fill(null).map((_,i) => apps[i]||{});
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
+    <div style={{ position:"fixed", inset:0, background:"#0d1f2d", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
       {/* Toolbar */}
       <div style={{ background:"#0d1f2d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -9556,12 +9433,12 @@ function GasInstallReportScreen({ engineerData, onBack, onHome, onSave, initialD
 const CCI_COLOR = "#d97706";
 
 function CCIStepFileRef({ data, onChange, onNext, onBack, onHome }) {
-  const inp = { width:"100%", boxSizing:"border-box", padding:"13px 15px", border:"none", borderRadius:8, background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", boxShadow:"0 2px 8px rgba(0,0,0,0.08)", outline:"none", marginBottom:12 };
+  const inp = { width:"100%", boxSizing:"border-box", padding:"13px 15px", border:"1px solid #2a4058", borderRadius:10, background:"#1e3044", color:"#e8edf2", fontSize:15, fontFamily:"'Segoe UI',sans-serif", outline:"none", marginBottom:12 };
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Commercial Catering Inspection Record" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, paddingBottom:80 }}>
-        <p style={{ color:"#888", fontSize:14, marginBottom:20, textAlign:"center" }}>Enter a reference and certificate number</p>
+        <p style={{ color:"rgba(255,255,255,0.5)", fontSize:14, marginBottom:20, textAlign:"center" }}>Enter a reference and certificate number</p>
         <input value={data.fileRef} onChange={e=>onChange({...data,fileRef:e.target.value})} placeholder="Reference" style={inp}/>
         <input value={data.certNo} onChange={e=>onChange({...data,certNo:e.target.value})} placeholder="Certificate Number" style={inp}/>
       </div>
@@ -9579,8 +9456,8 @@ function CCIStepDetails({ data, onChange, onNext, onBack, onHome }) {
     _setPickerCCIStepDetails(null);
   };
   const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
-  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCCIStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1a3a4a",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
-  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1a3a4a",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerCCIStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(59,130,246,0.15)",border:"1px solid rgba(59,130,246,0.4)",borderRadius:20,padding:"6px 14px",color:"#3b82f6",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>Add Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.4)",borderRadius:20,padding:"6px 14px",color:"#22c55e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>Copy</button>;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
@@ -9638,7 +9515,7 @@ function CCIStepGasInstall({ data, onChange, onNext, onBack, onHome }) {
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Gas Installation Details" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:CCI_COLOR, borderBottom:`2px solid ${CCI_COLOR}30`, paddingBottom:6, marginBottom:12 }}>Gas Installation Details</div>
           {row("Emergency isolation for Catering area?","giEmergIsolation")}
           {row("Location satisfactory?","giLocation")}
@@ -9653,7 +9530,7 @@ function CCIStepGasInstall({ data, onChange, onNext, onBack, onHome }) {
           {row("Is there a warning notice?","giWarningNotice")}
           {row("Do appropriate appliances have full flame safe-guard?","giFlameSafeguard")}
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:CCI_COLOR, borderBottom:`2px solid ${CCI_COLOR}30`, paddingBottom:6, marginBottom:12 }}>Pipework within the catering area</div>
           {row("Are the correct materials being used?","pwMaterials")}
           {row("Correctly identified and labelled?","pwLabelled")}
@@ -9663,7 +9540,7 @@ function CCIStepGasInstall({ data, onChange, onNext, onBack, onHome }) {
           {row("Suitable test points fitted?","pwTestPoints")}
           {row("Main protective equipotential bond fitted?","pwBond")}
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:"#b91c1c", borderBottom:"2px solid #b91c1c30", paddingBottom:6, marginBottom:12 }}>Safety Information</div>
           {row("Has a Warning/Advice Notice been raised?","siWarningNotice")}
           <div style={{ marginBottom:8 }}>
@@ -9702,7 +9579,7 @@ function CCIStepVentilation({ data, onChange, onNext, onBack, onHome }) {
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Ventilation & Extract System" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:CCI_COLOR, borderBottom:`2px solid ${CCI_COLOR}30`, paddingBottom:6, marginBottom:12 }}>Ventilation / Extract System</div>
           {row("Is a canopy system installed?","veCanopy")}
           {row("If Yes — is canopy overhang correct?","veCanopyOverhang")}
@@ -9745,7 +9622,7 @@ function CCIStepVentilation({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Calibration date")}
           {inp("veInstrument2Cal","Calibration date")}
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:CCI_COLOR, borderBottom:`2px solid ${CCI_COLOR}30`, paddingBottom:6, marginBottom:10 }}>Risk Analysis of Kitchen Ventilation System</div>
           {lbl("If applicable — what is the outcome of the Risk Assessment?")}
           {inp("riskAssessment","Risk assessment outcome")}
@@ -9778,17 +9655,17 @@ function CCIStepAppliances({ data, onChange, onNext, onBack, onHome }) {
 
   const inp = (i, key, placeholder, w) => (
     <input value={apps[i][key]||""} onChange={e=>updateAppliance(i,key,e.target.value)} placeholder={placeholder}
-      style={{ width:w||"100%", padding:"6px 8px", border:"1px solid #ddd", borderRadius:6, fontSize:12, boxSizing:"border-box" }}/>
+      style={{ width:w||"100%", padding:"6px 8px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, boxSizing:"border-box", background:"#1e3044", color:"#e8edf2" }}/>
   );
   const mmInp = (i, key) => (
     <div onClick={()=>setMmPicker({row:i,field:key})}
-      style={{ width:"100%", padding:"6px 8px", border:"1px solid #ddd", borderRadius:6, fontSize:12, boxSizing:"border-box", cursor:"pointer", background:"#fff", color:(apps[i]||{})[key]?"#222":"#aaa", minHeight:32 }}>
+      style={{ width:"100%", padding:"6px 8px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, boxSizing:"border-box", background:"#1e3044", color:(apps[i]||{})[key]?"#e8edf2":"rgba(255,255,255,0.4)", cursor:"pointer", minHeight:32 }}>
       {(apps[i]||{})[key] || (key==="make" ? "Select make..." : "Select model...")}
     </div>
   );
   const sel = (i, key, opts) => (
     <select value={apps[i][key]||""} onChange={e=>updateAppliance(i,key,e.target.value)}
-      style={{ width:"100%", padding:"6px 4px", border:"1px solid #ddd", borderRadius:6, fontSize:12, background:"#fff" }}>
+      style={{ width:"100%", padding:"6px 4px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, background:"#1e3044", color:"#e8edf2" }}>
       {opts.map(o=><option key={o} value={o}>{o||"-"}</option>)}
     </select>
   );
@@ -9799,22 +9676,22 @@ function CCIStepAppliances({ data, onChange, onNext, onBack, onHome }) {
       <div style={{ flex:1, overflowY:"auto", padding:12, paddingBottom:80 }}>
         <div style={{ fontSize:12, color:"#888", marginBottom:10 }}>Enter details for each appliance (up to 15)</div>
         {apps.slice(0,applianceCount).map((app,i)=>(
-          <div key={i} style={{ background:"#fff", borderRadius:10, padding:12, marginBottom:8, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+          <div key={i} style={{ background:"rgba(255,255,255,0.04)", borderRadius:10, padding:12, marginBottom:8, border:"1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ fontWeight:700, fontSize:13, color:CCI_COLOR, marginBottom:8 }}>Appliance {i+1}</div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:6 }}>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Type</div>{inp(i,"type","e.g. Combi Boiler")}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Make</div>{mmInp(i,"make")}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Model</div>{mmInp(i,"model")}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Manufacturers instructions?</div>{sel(i,"mfgInstructions",ynaOpts)}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Operating pressure (mbar) / Heat input (kW)</div>{inp(i,"opPressure","mbar / kW")}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>FSD fitted to all burners?</div>{sel(i,"fsdFitted",ynaOpts)}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>FSD correct operation?</div>{sel(i,"fsdOperation",ynaOpts)}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Max CO above appliance</div>{inp(i,"maxCO","ppm")}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Max CO₂ above appliance</div>{inp(i,"maxCO2","ppm")}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Gas isolation valve fitted?</div>{sel(i,"gasIsolation",ynOpts)}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Gas hose & restraint correct?</div>{sel(i,"gasHose",ynaOpts)}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Pipework gas tight?</div>{sel(i,"pipeworkGasTight",ynOpts)}</div>
-              <div><div style={{ fontSize:11, fontWeight:600, color:"#555", marginBottom:2 }}>Safe to use?</div>{sel(i,"safeToUse",ynOpts)}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Type</div>{inp(i,"type","e.g. Combi Boiler")}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Make</div>{mmInp(i,"make")}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Model</div>{mmInp(i,"model")}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Manufacturers instructions?</div>{sel(i,"mfgInstructions",ynaOpts)}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Operating pressure (mbar) / Heat input (kW)</div>{inp(i,"opPressure","mbar / kW")}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>FSD fitted to all burners?</div>{sel(i,"fsdFitted",ynaOpts)}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>FSD correct operation?</div>{sel(i,"fsdOperation",ynaOpts)}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Max CO above appliance</div>{inp(i,"maxCO","ppm")}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Max CO₂ above appliance</div>{inp(i,"maxCO2","ppm")}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Gas isolation valve fitted?</div>{sel(i,"gasIsolation",ynOpts)}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Gas hose & restraint correct?</div>{sel(i,"gasHose",ynaOpts)}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Pipework gas tight?</div>{sel(i,"pipeworkGasTight",ynOpts)}</div>
+              <div><div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>Safe to use?</div>{sel(i,"safeToUse",ynOpts)}</div>
             </div>
           </div>
         ))}
@@ -9838,15 +9715,15 @@ function CCIStepDeclaration({ data, onChange, onNext, onBack, onHome }) {
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Additional Works & Declaration" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:CCI_COLOR, borderBottom:`2px solid ${CCI_COLOR}30`, paddingBottom:6, marginBottom:8 }}>Additional Works Required</div>
           {ta("additionalWorks","Describe any additional works required")}
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:CCI_COLOR, borderBottom:`2px solid ${CCI_COLOR}30`, paddingBottom:6, marginBottom:8 }}>Other Comments</div>
           {ta("otherComments","Any other comments")}
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:CCI_COLOR, borderBottom:`2px solid ${CCI_COLOR}30`, paddingBottom:6, marginBottom:8 }}>Risk Analysis</div>
           {lbl("Has Risk Assessment in accordance with HSE catering information sheet (CAIS 23) been applied?")}
           <select value={data.riskCais23||""} onChange={e=>onChange({...data,riskCais23:e.target.value})}
@@ -9854,7 +9731,7 @@ function CCIStepDeclaration({ data, onChange, onNext, onBack, onHome }) {
             {["","Yes","No","NA"].map(o=><option key={o} value={o}>{o||"Select..."}</option>)}
           </select>
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:CCI_COLOR, borderBottom:`2px solid ${CCI_COLOR}30`, paddingBottom:6, marginBottom:8 }}>Declaration & Signatures</div>
           <div style={{ fontSize:13, color:"#555", lineHeight:1.6, marginBottom:12, background:"#f9f9f9", borderRadius:8, padding:12 }}>
             <strong>Declaration of Gas Safety</strong> — I confirm that this record is a true and accurate representation of the gas work carried out on the day of inspection. Relevant and appropriate duty-holders are required to ensure that gas appliances, installation pipework and flues are maintained in a safe condition, so as to prevent the risk of injury to any person.
@@ -10283,7 +10160,7 @@ function CateringInspectionPDF({ formData, engineerData, onClose, onSave, autoDo
   };
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
+    <div style={{ position:"fixed", inset:0, background:"#0d1f2d", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
       {/* Toolbar */}
       <div style={{ background:"#0d1f2d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -10379,7 +10256,7 @@ function GTPStepFileRef({ data, onChange, onNext, onBack, onHome }) {
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Gas Testing & Purging (Non-Domestic)" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, paddingBottom:80 }}>
-        <p style={{ color:"#888", fontSize:14, marginBottom:20, textAlign:"center" }}>Enter a file reference and certificate number</p>
+        <p style={{ color:"rgba(255,255,255,0.5)", fontSize:14, marginBottom:20, textAlign:"center" }}>Enter a file reference and certificate number</p>
         <input value={data.fileRef} onChange={e=>onChange({...data, fileRef:e.target.value})} placeholder="File Reference" style={inp}/>
         <input value={data.certNo} onChange={e=>onChange({...data, certNo:e.target.value})} placeholder="Certificate Number" style={inp}/>
       </div>
@@ -10397,8 +10274,8 @@ function GTPStepDetails({ data, onChange, onNext, onBack, onHome }) {
     _setPickerGTPStepDetails(null);
   };
   const copyClientToInst = () => onChange({...data, instName:data.clientName||"", instAddr1:data.clientAddr1||"", instAddr2:data.clientAddr2||"", instAddr3:data.clientAddr3||"", instPostcode:data.clientPostcode||"", instTel:data.clientTel||""});
-  const ContactBtn = ({target}) => <button onClick={()=>_setPickerGTPStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"#1a3a4a",border:"none",borderRadius:20,padding:"6px 14px",color:"#fff200",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>👥 Add a Contact</button>;
-  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(29,74,46,0.3)",borderRadius:20,padding:"6px 14px",color:"#1a3a4a",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>✓ Copy</button>;
+  const ContactBtn = ({target}) => <button onClick={()=>_setPickerGTPStepDetails(target)} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(59,130,246,0.15)",border:"1px solid rgba(59,130,246,0.4)",borderRadius:20,padding:"6px 14px",color:"#3b82f6",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Segoe UI',sans-serif"}}>Add Contact</button>;
+  const CopyBtn = () => <button onClick={copyClientToInst} style={{background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.4)",borderRadius:20,padding:"6px 14px",color:"#22c55e",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"inherit"}}>Copy</button>;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
@@ -10450,7 +10327,7 @@ function GTPStepStrength({ data, onChange, onNext, onBack, onHome }) {
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Strength Test Details" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:GTP_COLOR, borderBottom:`2px solid ${GTP_COLOR}30`, paddingBottom:6, marginBottom:8 }}>Strength Test Details</div>
           {lbl("Test Method")}
           <select value={data.stTestMethod} onChange={e=>onChange({...data,stTestMethod:e.target.value})} style={selStyle}>
@@ -10496,7 +10373,7 @@ function GTPStepTightness({ data, onChange, onNext, onBack, onHome }) {
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Tightness Test Details" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:GTP_COLOR, borderBottom:`2px solid ${GTP_COLOR}30`, paddingBottom:6, marginBottom:8 }}>Tightness Test Details</div>
           {lbl("Gas Type")}
           <select value={data.ttGasType} onChange={e=>onChange({...data,ttGasType:e.target.value})} style={selStyle}>
@@ -10563,7 +10440,7 @@ function GTPStepPurging({ data, onChange, onNext, onBack, onHome }) {
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Purging Procedure" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:GTP_COLOR, borderBottom:`2px solid ${GTP_COLOR}30`, paddingBottom:6, marginBottom:8 }}>Purging Procedure Details</div>
           {lbl("Has a risk assessment been carried out?")}
           <select value={data.ppRiskAssess} onChange={e=>onChange({...data,ppRiskAssess:e.target.value})} style={selStyle}>
@@ -10641,7 +10518,7 @@ function GTPStepSignature({ data, onChange, onNext, onBack, onHome }) {
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Declaration & Date" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:GTP_COLOR, borderBottom:`2px solid ${GTP_COLOR}30`, paddingBottom:6, marginBottom:12 }}>Declaration</div>
           <div style={{ fontSize:13, color:"#555", lineHeight:1.6, marginBottom:14, background:"#f9f9f9", borderRadius:8, padding:12 }}>
             <strong>Declaration of Gas Safety</strong> — I confirm that all of the above work described on this form has been satisfactorily completed in accordance with the current Gas Safety (Installation and Use) Regulations, industry standards and procedures.
@@ -10652,7 +10529,7 @@ function GTPStepSignature({ data, onChange, onNext, onBack, onHome }) {
           {lbl("Date")}<input type="date" value={data.sigDate||(new Date().toISOString().slice(0,10))} onChange={e=>onChange({...data,sigDate:e.target.value})} style={inp}/>
           {data.sigDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{(()=>{ const d=new Date(data.sigDate); if(isNaN(d)) return data.sigDate; const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return String(d.getDate()).padStart(2,"0")+"-"+m[d.getMonth()]+"-"+d.getFullYear(); })()}</div>}
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontWeight:700, fontSize:14, color:"#b91c1c", borderBottom:"2px solid #b91c1c30", paddingBottom:6, marginBottom:12 }}>Notification of Unsafe Installation (if applicable)</div>
           <div style={{ fontSize:12, color:"#888", marginBottom:10, lineHeight:1.5 }}>Complete only if an unsafe gas installation has been identified.</div>
           {lbl("Gas Operative's Name")}<input value={data.unsafeOperative} onChange={e=>onChange({...data,unsafeOperative:e.target.value})} placeholder="Leave blank if not applicable" style={inp}/>
@@ -10779,7 +10656,7 @@ function GasTestPurgePDF({ formData, engineerData, onClose, onSave, autoDownload
   ];
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
+    <div style={{ position:"fixed", inset:0, background:"#0d1f2d", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
       <div style={{ background:"#0d1f2d", padding:"10px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round"/></svg>
@@ -11071,62 +10948,44 @@ function GenericCertScreen({ certLabel, engineerData, onBack, onHome, onSave }) 
 
   const set = (k, v) => setForm(f => ({...f, [k]: v}));
 
-  const inputStyle = { width:"100%", padding:"11px 13px", border:"1px solid #ddd", borderRadius:8, fontSize:14, boxSizing:"border-box", fontFamily:"'Segoe UI',sans-serif", marginBottom:2, outline:"none" };
-  const textareaStyle = { ...inputStyle, resize:"vertical", minHeight:60 };
-
   if (showPDF) return <GenericCertPDF certLabel={certLabel} config={config} form={form} engineerData={engineerData}
     onClose={()=>setShowPDF(false)}
     onSave={()=>{
       if (!saved) {
         onSave({ type: config.type, certLabel, form, engineerData, savedAt: new Date().toISOString() });
         setSaved(true);
-        alert("✅ Certificate saved to Records!");
+        alert("Certificate saved to Records!");
       }
     }}/>;
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title={certLabel} onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        {/* Date */}
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4 }}>Date of Inspection <span style={{ color:"#d32f2f" }}>*</span></div>
-          <input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={inputStyle}/>
-        </div>
-
-        {/* Dynamic fields */}
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontWeight:700, fontSize:14, color:config.color, marginBottom:12, paddingBottom:8, borderBottom:`2px solid ${config.color}20` }}>{config.pdfTitle}</div>
-          {config.fields.map(field => (
-            <div key={field.key} style={{ marginBottom:12 }}>
-              <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:4 }}>{field.label}{field.required && <span style={{ color:"#d32f2f" }}> *</span>}</div>
-              {field.multiline
-                ? <textarea value={form[field.key]} onChange={e=>set(field.key,e.target.value)} style={textareaStyle} rows={2}/>
-                : field.type === "date"
-                  ? <input type="date" value={form[field.key]} onChange={e=>set(field.key,e.target.value)} style={inputStyle}/>
-                  : <input type="text" value={form[field.key]} onChange={e=>set(field.key,e.target.value)} style={inputStyle}/>
-              }
-            </div>
-          ))}
-        </div>
-
-        {/* Engineer info (pre-filled, read-only summary) */}
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontWeight:700, fontSize:14, color:"#333", marginBottom:8 }}>Engineer Details</div>
-          <div style={{ fontSize:13, color:"#555", lineHeight:1.8 }}>
-            <div><strong>Name:</strong> {engineerData?.engineerName || ""}</div>
-            <div><strong>Company:</strong> {engineerData?.companyName || ""}</div>
-            <div><strong>Gas Safe No:</strong> {engineerData?.gasSafeNo || ""}</div>
-            <div><strong>Engineer ID:</strong> {engineerData?.gasId || ""}</div>
-          </div>
-        </div>
-
-        <button onClick={()=>setShowPDF(true)}
-          style={{ width:"100%", padding:16, background:config.color, color:"#fff", border:"none", borderRadius:12, fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
-          Preview & Download PDF →
-        </button>
+    <GasFormShell title={certLabel} subtitle="Certificate Form" step={0} totalSteps={1} stepLabels={[certLabel]} onBack={onBack} onPrev={null} onNext={()=>setShowPDF(true)}>
+      <div style={{ marginBottom:12 }}>
+        <span style={GAS_LABEL}>Date of Inspection <span style={{ color:"#ef4444" }}>*</span></span>
+        <input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={GAS_INPUT}/>
       </div>
-    </div>
+
+      <div style={GAS_SECTION}>{config.pdfTitle}</div>
+      {config.fields.map(field => (
+        <div key={field.key} style={{ marginBottom:12 }}>
+          <span style={GAS_LABEL}>{field.label}{field.required && <span style={{ color:"#ef4444" }}> *</span>}</span>
+          {field.multiline
+            ? <textarea value={form[field.key]} onChange={e=>set(field.key,e.target.value)} style={{...GAS_INPUT, resize:"vertical", minHeight:60}} rows={2}/>
+            : field.type === "date"
+              ? <input type="date" value={form[field.key]} onChange={e=>set(field.key,e.target.value)} style={GAS_INPUT}/>
+              : <input type="text" value={form[field.key]} onChange={e=>set(field.key,e.target.value)} style={GAS_INPUT}/>
+          }
+        </div>
+      ))}
+
+      <div style={GAS_SECTION}>Engineer Details</div>
+      <div style={{ fontSize:13, color:"rgba(255,255,255,0.7)", lineHeight:1.8, padding:"8px 0" }}>
+        <div><strong style={{ color:"rgba(255,255,255,0.5)" }}>Name:</strong> {engineerData?.engineerName || ""}</div>
+        <div><strong style={{ color:"rgba(255,255,255,0.5)" }}>Company:</strong> {engineerData?.companyName || ""}</div>
+        <div><strong style={{ color:"rgba(255,255,255,0.5)" }}>Gas Safe No:</strong> {engineerData?.gasSafeNo || ""}</div>
+        <div><strong style={{ color:"rgba(255,255,255,0.5)" }}>Engineer ID:</strong> {engineerData?.gasId || ""}</div>
+      </div>
+    </GasFormShell>
   );
 }
 
@@ -11184,7 +11043,7 @@ function GenericCertPDF({ certLabel, config, form, engineerData, onClose, onSave
   const cellStyle = { border:bd, padding:"4px 8px", fontSize:8.5, verticalAlign:"top" };
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"#555", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
+    <div style={{ position:"fixed", inset:0, background:"#0d1f2d", zIndex:2000, overflowY:"auto", fontFamily:"Arial,Helvetica,sans-serif" }}>
       {/* Top bar */}
       <div style={{ background:"#0d1f2d", padding:"12px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
@@ -11570,6 +11429,7 @@ function AttachmentsStep({ data, onChange, onNext, onBack, onHome, accentColor="
   const imgRef = useRef(null);
   const pdfRef = useRef(null);
   const attachments = data.attachments || [];
+  const isDark = accentColor === GAS_ACCENT || accentColor === "#3b82f6" || accentColor === "#ff6b35" || accentColor === "#00b4d8" || accentColor === "#2d6a4f";
 
   const addFile = (file, type) => {
     if (!file) return;
@@ -11587,11 +11447,75 @@ function AttachmentsStep({ data, onChange, onNext, onBack, onHome, accentColor="
     onChange({ ...data, attachments: updated });
   };
 
+  if (isDark) {
+    return (
+      <div style={{ minHeight:"100dvh", background:GAS_BG, display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+        <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
+          <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div style={{ flex:1 }}>
+            <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", margin:0 }}>Attach Evidence</h2>
+            <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>Photos & Documents</div>
+          </div>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)", marginBottom:16, lineHeight:1.5 }}>
+            Attach photos from your camera or import PDF files. These will be added as extra pages in the certificate PDF.
+          </div>
+          <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap" }}>
+            <button onClick={() => imgRef.current?.click()}
+              style={{ flex:1, minWidth:140, padding:"14px 12px", background:accentColor, color:"#fff", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+              📷 Take Photo
+            </button>
+            <button onClick={() => pdfRef.current?.click()}
+              style={{ flex:1, minWidth:140, padding:"14px 12px", background:"rgba(255,255,255,0.1)", color:"#e8edf2", border:"1px solid rgba(255,255,255,0.2)", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+              📄 Import PDF
+            </button>
+          </div>
+          <input ref={imgRef} type="file" accept="image/*" onChange={e => { addFile(e.target.files?.[0], "image"); e.target.value=""; }} style={{ display:"none" }}/>
+          <input ref={pdfRef} type="file" accept="application/pdf" onChange={e => { addFile(e.target.files?.[0], "pdf"); e.target.value=""; }} style={{ display:"none" }}/>
+          {attachments.length > 0 && (
+            <>
+              <div style={{ fontSize:13, fontWeight:600, color:"#e8edf2", marginBottom:10 }}>
+                {attachments.length} file{attachments.length !== 1 ? "s" : ""} attached
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(120px, 1fr))", gap:10 }}>
+                {attachments.map((att, i) => (
+                  <div key={i} style={{ position:"relative", background:"#1e3044", borderRadius:8, border:"1px solid #2a4058", overflow:"hidden" }}>
+                    {att.type === "image"
+                      ? <img src={att.dataUrl} alt={att.name} style={{ width:"100%", height:100, objectFit:"cover", display:"block" }}/>
+                      : <div style={{ width:"100%", height:100, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"#1e3044" }}>
+                          <span style={{ fontSize:28 }}>📄</span>
+                          <span style={{ fontSize:10, color:"rgba(255,255,255,0.5)", marginTop:4, padding:"0 6px", textAlign:"center", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:"100%" }}>{att.name}</span>
+                        </div>
+                    }
+                    <button onClick={() => removeFile(i)}
+                      style={{ position:"absolute", top:4, right:4, width:22, height:22, borderRadius:"50%", background:"rgba(0,0,0,0.6)", color:"#fff", border:"none", cursor:"pointer", fontSize:13, display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1 }}>×</button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          {attachments.length === 0 && (
+            <div style={{ textAlign:"center", padding:"20px 0", color:"rgba(255,255,255,0.35)", fontSize:13 }}>
+              No files attached yet — this step is optional
+            </div>
+          )}
+        </div>
+        <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+          <button onClick={onBack} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>
+          <button onClick={onNext} style={{ flex:1, padding:"13px", borderRadius:12, background:accentColor, color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>{nextLabel}</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Attach Evidence" onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontSize:14, color:"#555", marginBottom:16, lineHeight:1.5 }}>
             Attach photos from your camera or import PDF files from flue gas analysers, manometers, etc. These will be added as extra pages in the certificate PDF.
           </div>
@@ -11789,7 +11713,7 @@ function SigPad({ value, onChange, storageKey }) {
     e.preventDefault();
     const [x,y] = getPos(e, canvasRef.current);
     const ctx = canvasRef.current.getContext("2d");
-    ctx.lineWidth = 2.2; ctx.strokeStyle = "#1a1a2e";
+    ctx.lineWidth = 2.2; ctx.strokeStyle = "#e8edf2";
     ctx.lineTo(x,y); ctx.stroke();
   };
   const endDraw = () => {
@@ -11810,15 +11734,15 @@ function SigPad({ value, onChange, storageKey }) {
 
   return (
     <div>
-      <div style={{ border:"1.5px solid #ccc", borderRadius:10, overflow:"hidden", background:"#fff" }}>
+      <div style={{ border:"1px solid #2a4058", borderRadius:10, overflow:"hidden", background:"#1e3044" }}>
         <canvas ref={canvasRef} width={600} height={150}
           style={{ display:"block", width:"100%", touchAction:"none", cursor:"crosshair" }}
           onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
           onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
       </div>
       <button onClick={clear}
-        style={{ marginTop:6, padding:"5px 16px", background:"none", border:"1.5px solid #e5e7eb",
-                 borderRadius:8, fontSize:12, color:"#888", cursor:"pointer" }}>Clear</button>
+        style={{ marginTop:6, padding:"5px 16px", background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.15)",
+                 borderRadius:8, fontSize:12, color:"#e8edf2", cursor:"pointer" }}>Clear</button>
     </div>
   );
 }
@@ -11843,7 +11767,7 @@ function CustomerSigStep({ data, onChange, onNext, onBack, onHome, accentColor="
     return String(d.getDate()).padStart(2,"0")+"-"+months[d.getMonth()]+"-"+d.getFullYear();
   };
 
-  const lbl = t => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:6, marginTop:10 }}>{t}</div>;
+  const lbl = t => <div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:6, marginTop:10, textTransform:"uppercase", letterSpacing:0.5 }}>{t}</div>;
 
   // Choose the right field names — most certs use sigCustomerImg/sigCustomerName/sigCustomerDate
   // CoolOff uses sigClientImg/sigClient/sigClientDate
@@ -11853,40 +11777,22 @@ function CustomerSigStep({ data, onChange, onNext, onBack, onHome, accentColor="
   const dateKey = dateKeyOverride || (data.sigClientDate !== undefined ? "sigClientDate" : "sigCustomerDate");
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Customer Signature" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontWeight:700, fontSize:16, color:accentColor, borderBottom:`2px solid ${accentColor}30`, paddingBottom:8, marginBottom:14 }}>
-            Customer / Responsible Person
-          </div>
-          <div style={{ fontSize:13, color:"#555", lineHeight:1.6, marginBottom:16, background:"#f9f9f9", borderRadius:8, padding:"10px 12px" }}>
-            Please sign below to confirm satisfactory demonstration and receipt of documentation.
-          </div>
-          {lbl("Draw customer signature below")}
-          <SigPad
-            value={data[imgKey]}
-            onChange={v => onChange({...data, [imgKey]: v})}
-          />
-          {lbl("Customer printed name")}
-          <input
-            value={data[nameKey]||""}
-            onChange={e => onChange({...data, [nameKey]: e.target.value})}
-            placeholder="Customer full name"
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:15, outline:"none", marginBottom:2 }}
-          />
-          {lbl("Date")}
-          <input
-            type="date"
-            value={data[dateKey]||today}
-            onChange={e => onChange({...data, [dateKey]: e.target.value})}
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:15, outline:"none" }}
-          />
-          {data[dateKey] && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(data[dateKey])}</div>}
+    <GasFormShell title="Customer Signature" subtitle="Sign to confirm" step={6} totalSteps={7} stepLabels={["File Ref","Details","Appliances","Faults","Attachments","Declaration","Signatures"]} onBack={onBack} onPrev={onBack} onNext={onNext}>
+      <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+        <div style={GAS_SECTION}>Customer / Responsible Person</div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.6)", lineHeight:1.6, marginBottom:16, background:"rgba(255,255,255,0.04)", borderRadius:8, padding:"10px 12px" }}>
+          Please sign below to confirm satisfactory demonstration and receipt of documentation.
+        </div>
+        <span style={GAS_LABEL}>Draw customer signature below</span>
+        <SigPad value={data[imgKey]} onChange={v => onChange({...data, [imgKey]: v})}/>
+        <GASInput label="Customer printed name" value={data[nameKey]} onChange={v => onChange({...data, [nameKey]: v})} placeholder="Customer full name"/>
+        <div style={{ marginBottom:12 }}>
+          <span style={GAS_LABEL}>Date</span>
+          <input type="date" value={data[dateKey]||today} onChange={e => onChange({...data, [dateKey]: e.target.value})} style={GAS_INPUT}/>
+          {data[dateKey] && <div style={{ fontSize:12, color:"rgba(255,255,255,0.4)", marginTop:4 }}>{fmtDisplay(data[dateKey])}</div>}
         </div>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext} nextLabel={nextLabel}/>
-    </div>
+    </GasFormShell>
   );
 }
 
@@ -11906,38 +11812,20 @@ function SharedSigStep({ data, onChange, onNext, onBack, onHome, accentColor="#1
     return String(d.getDate()).padStart(2,"0")+"-"+months[d.getMonth()]+"-"+d.getFullYear();
   };
 
-  const sec = t => (
-    <div style={{ fontWeight:700, fontSize:14, color:accentColor,
-                  borderBottom:`2px solid ${accentColor}30`, paddingBottom:6, marginBottom:12, marginTop:16 }}>{t}</div>
-  );
-  const lbl = t => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:6, marginTop:10 }}>{t}</div>;
-
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Signatures & Dates" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-
-        {/* Engineer signature */}
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Report Issued By (Engineer)")}
-          {lbl("Draw engineer signature below")}
-          <SigPad
-            value={data.sigEngineerImg}
-            storageKey="gsc_engineer_sig"
-            onChange={v => onChange({...data, sigEngineerImg:v})}
-          />
-          {lbl("Printed name")}<input value={data.sigEngineerName||""} onChange={e=>onChange({...data,sigEngineerName:e.target.value})}
-            placeholder="Engineer full name"
-            style={{ width:"100%", boxSizing:"border-box", padding:"11px 13px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
-          {lbl("Date")}
-          <input type="date" value={data.sigDate||today} onChange={e=>onChange({...data,sigDate:e.target.value})}
-            style={{ width:"100%", boxSizing:"border-box", padding:"11px 13px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none" }}/>
-          {data.sigDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(data.sigDate)}</div>}
+    <GasFormShell title="Signatures & Dates" subtitle={certTitle} step={5} totalSteps={7} stepLabels={["File Ref","Details","Appliances","Faults","Attachments","Declaration","Signatures"]} onBack={onBack} onPrev={onBack} onNext={onNext}>
+      <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+        <div style={GAS_SECTION}>Report Issued By (Engineer)</div>
+        <span style={GAS_LABEL}>Draw engineer signature below</span>
+        <SigPad value={data.sigEngineerImg} storageKey="gsc_engineer_sig" onChange={v => onChange({...data, sigEngineerImg:v})}/>
+        <GASInput label="Printed name" value={data.sigEngineerName} onChange={v=>onChange({...data,sigEngineerName:v})} placeholder="Engineer full name"/>
+        <div style={{ marginBottom:12 }}>
+          <span style={GAS_LABEL}>Date</span>
+          <input type="date" value={data.sigDate||today} onChange={e=>onChange({...data,sigDate:e.target.value})} style={GAS_INPUT}/>
+          {data.sigDate && <div style={{ fontSize:12, color:"rgba(255,255,255,0.4)", marginTop:4 }}>{fmtDisplay(data.sigDate)}</div>}
         </div>
-
       </div>
-      <BottomBar onHome={onHome} onNext={onNext} nextLabel="Next: Customer Signature"/>
-    </div>
+    </GasFormShell>
   );
 }
 
@@ -11989,10 +11877,10 @@ function GasWorksForm({ data: initialData, onBack, onHome, onSave }) {
   if (showGwPDF) return <GasWorksPDFPreview form={form} onClose={()=>setShowGwPDF(false)}/>;
 
 
-  const gwInputStyle = { width:"100%", boxSizing:"border-box", padding:"11px 14px", border:"1.5px solid #e5e7eb", borderRadius:10, fontSize:15, color:"#1a1a2e", background:"#fafafa", fontFamily:"'Segoe UI',sans-serif", outline:"none" };
-  const gwLabelStyle = { fontSize:12, fontWeight:600, color:"#666", marginBottom:5, display:"block", fontFamily:"'Segoe UI',sans-serif" };
-  const gwSectionStyle = { background:"#fff", borderRadius:14, padding:20, marginBottom:14, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" };
-  const gwSectionTitleStyle = { fontSize:14, fontWeight:700, color:BLUE, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:14, fontFamily:"'Segoe UI',sans-serif" };
+  const gwInputStyle = GAS_INPUT;
+  const gwLabelStyle = GAS_LABEL;
+  const gwSectionStyle = { background:"rgba(255,255,255,0.04)", borderRadius:14, padding:20, marginBottom:14, border:"1px solid rgba(255,255,255,0.08)" };
+  const gwSectionTitleStyle = { ...GAS_SECTION };
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
@@ -12080,7 +11968,7 @@ function GasWorksForm({ data: initialData, onBack, onHome, onSave }) {
                 const active = form.meterBoxLocation===loc;
                 return (
                   <button key={loc} onClick={()=>set("meterBoxLocation",active?null:loc)}
-                    style={{ flex:1, padding:"10px", borderRadius:10, border:`2px solid ${active?BLUE:"#e5e7eb"}`, background:active?BLUE:"#fafafa", color:active?"#fff":"#444", fontWeight:600, fontSize:14, cursor:"pointer", transition:"all 0.15s" }}>
+                    style={{ flex:1, padding:"10px", borderRadius:10, border:`2px solid ${active?"#3b82f6":"rgba(255,255,255,0.12)"}`, background:active?"rgba(59,130,246,0.15)":"rgba(255,255,255,0.04)", color:active?"#3b82f6":"rgba(255,255,255,0.45)", fontWeight:600, fontSize:14, cursor:"pointer", transition:"all 0.15s" }}>
                     {loc}
                   </button>
                 );
@@ -12109,7 +11997,7 @@ function GasWorksForm({ data: initialData, onBack, onHome, onSave }) {
         {/* Signature */}
         <div style={gwSectionStyle}>
           <p style={gwSectionTitleStyle}>Signature</p>
-          <p style={{ fontSize:13, color:"#888", marginBottom:8 }}>Draw your signature below</p>
+          <p style={{ fontSize:13, color:"rgba(255,255,255,0.5)", marginBottom:8 }}>Draw your signature below</p>
           <GwSignaturePad onSign={dataUrl=>set("sigImage", dataUrl)}/>
         </div>
 
@@ -12117,14 +12005,14 @@ function GasWorksForm({ data: initialData, onBack, onHome, onSave }) {
       <BottomBar onHome={onHome} onNext={()=>setShowGwOptions(true)} nextLabel="Options"/>
       {showGwOptions && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"flex-end", zIndex:999 }} onClick={()=>setShowGwOptions(false)}>
-          <div style={{ background:"#fff", width:"100%", borderRadius:"20px 20px 0 0", padding:24 }} onClick={e=>e.stopPropagation()}>
-            <p style={{ fontWeight:700, fontSize:16, marginBottom:20, textAlign:"center", color:"#222" }}>Gas Works Record</p>
-            {[["🔍 Preview PDF", ()=>{ setShowGwOptions(false); setShowGwPDF(true); }],
-              ["💾 Save", ()=>{ if(onSave) onSave({...form}); setShowGwOptions(false); }]
+          <div style={{ background:"#1a2a3a", width:"100%", borderRadius:"20px 20px 0 0", padding:24, border:"1px solid rgba(255,255,255,0.1)", borderBottom:"none" }} onClick={e=>e.stopPropagation()}>
+            <p style={{ fontWeight:700, fontSize:16, marginBottom:20, textAlign:"center", color:"#e8edf2" }}>Gas Works Record</p>
+            {[["Preview PDF", ()=>{ setShowGwOptions(false); setShowGwPDF(true); }],
+              ["Save", ()=>{ if(onSave) onSave({...form}); setShowGwOptions(false); }]
             ].map(([label,fn])=>(
-              <button key={label} onClick={fn} style={{ display:"block", width:"100%", padding:"14px 20px", marginBottom:10, borderRadius:12, border:"1px solid #e8eaf0", background:"#fafafa", fontSize:15, fontWeight:600, color:"#222", cursor:"pointer", textAlign:"left" }}>{label}</button>
+              <button key={label} onClick={fn} style={{ display:"block", width:"100%", padding:"14px 20px", marginBottom:10, borderRadius:12, border:"1px solid rgba(255,255,255,0.12)", background:"rgba(255,255,255,0.04)", fontSize:15, fontWeight:600, color:"#e8edf2", cursor:"pointer", textAlign:"left" }}>{label}</button>
             ))}
-            <button onClick={()=>setShowGwOptions(false)} style={{ display:"block", width:"100%", padding:"14px 20px", borderRadius:12, border:"none", background:"#fee", fontSize:15, fontWeight:600, color:"#c00", cursor:"pointer", textAlign:"center" }}>Cancel</button>
+            <button onClick={()=>setShowGwOptions(false)} style={{ display:"block", width:"100%", padding:"14px 20px", borderRadius:12, border:"none", background:"rgba(239,68,68,0.1)", fontSize:15, fontWeight:600, color:"#ef4444", cursor:"pointer", textAlign:"center" }}>Cancel</button>
           </div>
         </div>
       )}
@@ -12191,11 +12079,11 @@ function GasWorksPDFPreview({ form, onClose, autoDownload, onDownloadDone, onCom
   const thStyle = { ...cellStyle, background:HEADER_BG, color:"#fff", fontWeight:700, fontSize:11 };
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:"#1a1a2e", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ background:"#0d1f2d", padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ background:"#0d1f2d", padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:8, padding:"6px 14px", color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer" }}>← Back</button>
         <span style={{ color:"#fff", fontWeight:700, fontSize:15 }}>Gas Works Record</span>
-        <button onClick={downloadPDF} disabled={downloading} style={{ background:"#fff200", color:"#111", border:"none", borderRadius:20, padding:"8px 18px", fontWeight:700, fontSize:13, cursor:"pointer" }}>
+        <button onClick={downloadPDF} disabled={downloading} style={{ background:"#3b82f6", color:"#fff", border:"none", borderRadius:20, padding:"8px 18px", fontWeight:700, fontSize:13, cursor:"pointer" }}>
           {downloading?"...":"⬇ Download"}
         </button>
       </div>
@@ -12338,17 +12226,13 @@ function GasWorksPDFPreview({ form, onClose, autoDownload, onDownloadDone, onCom
 // ── GAS SAFETY CERTIFICATE FLOW ───────────────────────────────────────────────
 
 // Step 1: File Reference
-function StepFileRef({ data, onChange, onNext, onBack, onHome }) {
+function StepFileRef({ data, onChange, onNext, onBack, onHome, gscStep, gscTotalSteps, gscStepLabels, onSetGscStep }) {
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Domestic/Landlord Gas Safety Certificate" onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto", padding:24, paddingBottom:80 }}>
-        <p style={{ color:"#888", fontSize:15, marginBottom:20, textAlign:"center" }}>Please enter a file reference</p>
-        <input value={data.certRef} onChange={e=>onChange({...data,certRef:e.target.value})} placeholder="Certificate Reference"
-          style={{ width:"100%", boxSizing:"border-box", padding:"14px 16px", border:"none", borderRadius:8, background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", boxShadow:"0 2px 8px rgba(0,0,0,0.08)", outline:"none" }}/>
-      </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
-    </div>
+    <GasFormShell title="Gas Safety Certificate" subtitle="Domestic / Landlord CP12" step={gscStep||0} totalSteps={gscTotalSteps||8} stepLabels={gscStepLabels} onBack={onBack} onNext={onNext} onSetStep={onSetGscStep}>
+      <div style={GAS_SECTION}>File Reference</div>
+      <p style={{ color:"rgba(255,255,255,0.5)", fontSize:13, marginBottom:16, textAlign:"center" }}>Please enter a file reference</p>
+      <GASInput label="Certificate Reference" value={data.certRef} onChange={v=>onChange({...data,certRef:v})} placeholder="Certificate Reference"/>
+    </GasFormShell>
   );
 }
 
@@ -12553,7 +12437,7 @@ async function openPhoneContacts(onSelect) {
 
 
 // Step 2: Client + Installation Details
-function StepClientDetails({ data, onChange, onNext, onBack, onHome, engData, onEngChange }) {
+function StepClientDetails({ data, onChange, onNext, onBack, onHome, engData, onEngChange, gscStep, gscTotalSteps, gscStepLabels, onSetGscStep }) {
   const [errorMsg, setErrorMsg] = useState("");
 
   const copy = () => onChange({...data, instName:data.clientName, instAddr1:data.clientAddr1, instAddr2:data.clientAddr2, instAddr3:data.clientAddr3, instPostcode:data.clientPostcode, instTel:data.clientTel});
@@ -12571,80 +12455,74 @@ function StepClientDetails({ data, onChange, onNext, onBack, onHome, engData, on
   };
 
   const ContactBtn = ({ target }) => (
-    <button onClick={() => setPickerTarget(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1a3a4a", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
-      👥 Add a Contact
+    <button onClick={() => setPickerTarget(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(59,130,246,0.15)", border:"1px solid rgba(59,130,246,0.4)", borderRadius:20, padding:"6px 14px", color:GAS_ACCENT, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+      👥 Add Contact
     </button>
   );
 
   const CopyBtn = () => (
-    <button onClick={copy} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1a3a4a", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
+    <button onClick={copy} style={{ background:"rgba(34,197,94,0.12)", border:"1px solid rgba(34,197,94,0.4)", borderRadius:20, padding:"6px 14px", color:"#22c55e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
   );
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto" }}>
-        {errorMsg && (
-          <div style={{ background:"#fff3cd", color:"#856404", padding:"10px 16px", fontSize:13, borderBottom:"1px solid #ffc107" }}>
-            ⚠️ {errorMsg}
-          </div>
-        )}
-        {engData && onEngChange && <>
-          <SectionHeader title="Engineers Details"/>
-          <FormInput label="Trading Title / Company Name" placeholder="Company name" value={engData.companyName||""} onChange={v=>onEngChange({...engData,companyName:v})}/>
-          <FormInput label="Address" placeholder="Address" value={engData.companyAddr||""} onChange={v=>onEngChange({...engData,companyAddr:v})}/>
-          <FormInput label="Town / City" placeholder="Town or city" value={engData.companyTown||""} onChange={v=>onEngChange({...engData,companyTown:v})}/>
-          <FormInput label="Post Code" placeholder="Postcode" value={engData.companyPostcode||""} onChange={v=>onEngChange({...engData,companyPostcode:v})}/>
-          <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={engData.gasSafeNo||""} onChange={v=>onEngChange({...engData,gasSafeNo:v})}/>
-          <FormInput label="Telephone No" placeholder="Telephone" value={engData.companyTel||""} onChange={v=>onEngChange({...engData,companyTel:v})}/>
-          <FormInput label="Engineer Name" placeholder="Engineer name" value={engData.engineerName||""} onChange={v=>onEngChange({...engData,engineerName:v})}/>
-          <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={engData.gasId||""} onChange={v=>onEngChange({...engData,gasId:v})}/>
-        </>}
-        <SectionHeader title="Client Details" actions={[<ContactBtn key="cp" target="client"/>]}/>
-        {[["clientName","Name"],["clientAddr1","Address line 1"],["clientAddr2","Address line 2"],["clientAddr3","Address line 3"],["clientPostcode","Postcode"],["clientTel","Telephone"],["clientEmail","Email"]].map(([k,p])=>(
-          <FormInput key={k} placeholder={p} value={data[k]||""} onChange={v=>onChange({...data,[k]:v})}/>
-        ))}
-        <SectionHeader title="Installation Details" actions={[
-          <CopyBtn key="copy"/>,
-          <ContactBtn key="cp" target="inst"/>
-        ]}/>
-        {[["instName","Name"],["instAddr1","Address line 1"],["instAddr2","Address line 2"],["instAddr3","Address line 3"],["instPostcode","Postcode"],["instTel","Telephone"]].map(([k,p])=>(
-          <FormInput key={k} placeholder={p} value={data[k]||""} onChange={v=>onChange({...data,[k]:v})}/>
-        ))}
-        <div style={{ height:20 }}/>
+    <GasFormShell title="Client & Installation" subtitle="Gas Safety Certificate" step={gscStep||1} totalSteps={gscTotalSteps||8} stepLabels={gscStepLabels} onBack={onBack} onPrev={onBack} onNext={onNext} onSetStep={onSetGscStep}>
+      {errorMsg && (
+        <div style={{ background:"rgba(239,68,68,0.15)", color:"#fca5a5", padding:"10px 16px", fontSize:13, borderRadius:8, marginBottom:12, border:"1px solid rgba(239,68,68,0.3)" }}>
+          ⚠️ {errorMsg}
+        </div>
+      )}
+      {engData && onEngChange && <>
+        <div style={GAS_SECTION}>Engineer Details</div>
+        <GASInput label="Trading Title / Company Name" placeholder="Company name" value={engData.companyName} onChange={v=>onEngChange({...engData,companyName:v})}/>
+        <GASInput label="Address" placeholder="Address" value={engData.companyAddr} onChange={v=>onEngChange({...engData,companyAddr:v})}/>
+        <GASInput label="Town / City" placeholder="Town or city" value={engData.companyTown} onChange={v=>onEngChange({...engData,companyTown:v})}/>
+        <GASInput label="Post Code" placeholder="Postcode" value={engData.companyPostcode} onChange={v=>onEngChange({...engData,companyPostcode:v})}/>
+        <GASInput label="Gas Safe No" placeholder="Gas Safe registration number" value={engData.gasSafeNo} onChange={v=>onEngChange({...engData,gasSafeNo:v})}/>
+        <GASInput label="Telephone No" placeholder="Telephone" value={engData.companyTel} onChange={v=>onEngChange({...engData,companyTel:v})}/>
+        <GASInput label="Engineer Name" placeholder="Engineer name" value={engData.engineerName} onChange={v=>onEngChange({...engData,engineerName:v})}/>
+        <GASInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={engData.gasId} onChange={v=>onEngChange({...engData,gasId:v})}/>
+      </>}
+      <div style={{ ...GAS_SECTION, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span>Client Details</span>
+        <ContactBtn target="client"/>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
+      {[["clientName","Name"],["clientAddr1","Address line 1"],["clientAddr2","Address line 2"],["clientAddr3","Address line 3"],["clientPostcode","Postcode"],["clientTel","Telephone"],["clientEmail","Email"]].map(([k,p])=>(
+        <GASInput key={k} label={p} placeholder={p} value={data[k]} onChange={v=>onChange({...data,[k]:v})}/>
+      ))}
+      <div style={{ ...GAS_SECTION, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span>Installation Details</span>
+        <div style={{ display:"flex", gap:6 }}><CopyBtn/><ContactBtn target="inst"/></div>
+      </div>
+      {[["instName","Name"],["instAddr1","Address line 1"],["instAddr2","Address line 2"],["instAddr3","Address line 3"],["instPostcode","Postcode"],["instTel","Telephone"]].map(([k,p])=>(
+        <GASInput key={k} label={p} placeholder={p} value={data[k]} onChange={v=>onChange({...data,[k]:v})}/>
+      ))}
       {pickerTarget && <ContactPickerModal
         title={pickerTarget==="client" ? "Choose Client" : "Choose Installation"}
         onSelect={c => handlePickContact(pickerTarget, c)}
         onClose={()=>setPickerTarget(null)}/>}
-    </div>
+    </GasFormShell>
   );
 }
 
 // Step 3: Appliance List
-function StepApplianceList({ appliances, onAdd, onEdit, onDelete, onNext, onBack, onHome }) {
+function StepApplianceList({ appliances, onAdd, onEdit, onDelete, onNext, onBack, onHome, gscStep, gscTotalSteps, gscStepLabels, onSetGscStep }) {
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="" onBack={onBack}
-        right={
-          <div style={{ display:"flex", gap:12, alignItems:"center" }}>
-            {appliances.length>0 && <button onClick={onDelete} style={{ background:"none", border:"none", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>DELETE</button>}
-            <button onClick={onAdd} style={{ background:"none", border:"none", color:"#fff", fontSize:24, cursor:"pointer", lineHeight:1 }}>+</button>
-          </div>
-        }
-      />
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <p style={{ color:"#aaa", fontSize:14, marginBottom:12 }}>Appliance List :</p>
-        {appliances.map((a,i)=>(
-          <div key={i} onClick={()=>onEdit(i)} style={{ background:"#fff", borderRadius:10, padding:"14px 16px", marginBottom:10, display:"flex", alignItems:"center", justifyContent:"space-between", boxShadow:"0 2px 8px rgba(0,0,0,0.06)", cursor:"pointer" }}>
-            <span style={{ fontSize:15, fontFamily:"'Segoe UI',sans-serif" }}>{a.type||a.location||`Appliance ${i+1}`}</span>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 3L10 8L5 13" stroke="#bbb" strokeWidth="2" strokeLinecap="round"/></svg>
-          </div>
-        ))}
+    <GasFormShell title="Appliance List" subtitle="Gas Safety Certificate" step={gscStep||2} totalSteps={gscTotalSteps||8} stepLabels={gscStepLabels} onBack={onBack} onPrev={onBack} onNext={onNext} onSetStep={onSetGscStep}>
+      <div style={{ ...GAS_SECTION, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span>Appliances</span>
+        <div style={{ display:"flex", gap:8 }}>
+          {appliances.length>0 && <button onClick={onDelete} style={{ background:"rgba(239,68,68,0.12)", border:"1px solid rgba(239,68,68,0.4)", borderRadius:8, padding:"5px 12px", color:"#ef4444", fontWeight:700, fontSize:12, cursor:"pointer" }}>Delete</button>}
+          <button onClick={onAdd} style={{ background:"rgba(59,130,246,0.15)", border:"1px solid rgba(59,130,246,0.4)", borderRadius:8, padding:"5px 14px", color:GAS_ACCENT, fontWeight:700, fontSize:12, cursor:"pointer" }}>+ Add</button>
+        </div>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
-    </div>
+      {appliances.length === 0 && <p style={{ color:"rgba(255,255,255,0.4)", fontSize:13, textAlign:"center", padding:"20px 0" }}>No appliances added yet. Tap + Add to begin.</p>}
+      {appliances.map((a,i)=>(
+        <div key={i} onClick={()=>onEdit(i)} style={{ background:"#1e3044", border:"1px solid #2a4058", borderRadius:10, padding:"14px 16px", marginBottom:10, display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
+          <span style={{ fontSize:14, fontFamily:"'Segoe UI',sans-serif", color:"#e8edf2" }}>{a.type||a.location||`Appliance ${i+1}`}</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 3L10 8L5 13" stroke="#8b9db0" strokeWidth="2" strokeLinecap="round"/></svg>
+        </div>
+      ))}
+    </GasFormShell>
   );
 }
 
@@ -14580,9 +14458,9 @@ function StepApplianceForm({ appliance, index, onSave, onBack }) {
 
   function PickField({ label, field }) {
     return (
-      <div style={{ display:"flex", alignItems:"center", padding:"12px 16px", background:"#fff", borderBottom:"1px solid #eee" }}>
-        <span style={{ flex:1, fontSize:14, color:"#666", fontFamily:"'Segoe UI',sans-serif" }}>{label}:</span>
-        <button onClick={()=>setPicker(field)} style={{ padding:"6px 12px", background:LIGHT_BG, border:`1px solid #ddd`, borderRadius:6, fontSize:14, cursor:"pointer", minWidth:100, textAlign:"left", color:a[field]?"#222":"#aaa" }}>
+      <div style={{ display:"flex", alignItems:"center", padding:"12px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+        <span style={{ flex:1, fontSize:14, color:"rgba(255,255,255,0.7)", fontFamily:"'Segoe UI',sans-serif" }}>{label}:</span>
+        <button onClick={()=>setPicker(field)} style={{ padding:"6px 12px", background:"#1e3044", border:"1px solid #2a4058", borderRadius:6, fontSize:14, cursor:"pointer", minWidth:100, textAlign:"left", color:a[field]?"#e8edf2":"rgba(255,255,255,0.35)" }}>
           {a[field]||"Select..."}
         </button>
       </div>
@@ -14592,12 +14470,12 @@ function StepApplianceForm({ appliance, index, onSave, onBack }) {
   function ReadingField({ label, field }) {
     const isActive = activeKeypad === field;
     return (
-      <div style={{ display:"flex", alignItems:"center", padding:"12px 16px", background: isActive ? "#eef1ff" : "#fff", borderBottom:"1px solid #eee", gap:12, borderLeft: isActive ? `3px solid ${BLUE}` : "3px solid transparent" }}>
-        <span style={{ flex:1, fontSize:14, color:"#666", fontFamily:"'Segoe UI',sans-serif", lineHeight:1.3 }}>{label}</span>
-        <span style={{ color:BLUE, fontSize:22, fontWeight:700 }}>+</span>
+      <div style={{ display:"flex", alignItems:"center", padding:"12px 0", borderBottom:"1px solid rgba(255,255,255,0.06)", gap:12, borderLeft: isActive ? `3px solid ${GAS_ACCENT}` : "3px solid transparent", paddingLeft: isActive ? 12 : 0 }}>
+        <span style={{ flex:1, fontSize:14, color:"rgba(255,255,255,0.7)", fontFamily:"'Segoe UI',sans-serif", lineHeight:1.3 }}>{label}</span>
+        <span style={{ color:GAS_ACCENT, fontSize:22, fontWeight:700 }}>+</span>
         <div onClick={()=>setActiveKeypad(isActive ? null : field)}
-          style={{ width:120, padding:"6px 10px", border:`2px solid ${isActive?BLUE:"#ddd"}`, borderRadius:6, fontSize:14, background:"#fff", cursor:"pointer", minHeight:32, display:"flex", alignItems:"center", color: a[field] ? "#222" : "#aaa" }}>
-          {a[field] || <span style={{color:"#ccc"}}>tap to enter</span>}
+          style={{ width:120, padding:"6px 10px", border:`2px solid ${isActive?GAS_ACCENT:"#2a4058"}`, borderRadius:6, fontSize:14, background:"#1e3044", cursor:"pointer", minHeight:32, display:"flex", alignItems:"center", color: a[field] ? "#e8edf2" : "rgba(255,255,255,0.35)" }}>
+          {a[field] || <span style={{color:"rgba(255,255,255,0.3)"}}>tap to enter</span>}
         </div>
       </div>
     );
@@ -14605,36 +14483,39 @@ function StepApplianceForm({ appliance, index, onSave, onBack }) {
 
   function RadioRow({ label, field, options }) {
     return (
-      <div style={{ padding:"14px 16px", background:"#fff", borderBottom:"1px solid #eee" }}>
-        <div style={{ fontSize:14, color:"#666", marginBottom:8, fontFamily:"'Segoe UI',sans-serif", lineHeight:1.3 }}>{label}</div>
-        <RadioGroup options={options} value={a[field]} onChange={v=>set(field,v)}/>
-      </div>
+      <GASToggle label={label} value={a[field]} onChange={v=>set(field,v)} options={options}/>
     );
   }
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title={`Appliance ${index+1}`} onBack={onBack}
-        right={<button onClick={()=>onSave(a)} style={{ background:"none", border:"none", color:"#fff", fontWeight:700, fontSize:16, cursor:"pointer" }}>Done</button>}/>
-      <div style={{ flex:1, overflowY:"auto" }} onClick={e => { if(!e.target.closest("[data-keypad-field]")) {} }}>
+    <div style={{ minHeight:"100dvh", background:GAS_BG, display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div style={{ flex:1 }}>
+          <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", margin:0 }}>Appliance {index+1}</h2>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>Gas Safety Certificate</div>
+        </div>
+        <button onClick={()=>onSave(a)} style={{ background:GAS_ACCENT, border:"none", borderRadius:8, padding:"8px 18px", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>Done</button>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }} onClick={e => { if(!e.target.closest("[data-keypad-field]")) {} }}>
+        <div style={GAS_SECTION}>Appliance Details</div>
         <PickField label="Location" field="location" />
         <PickField label="Type" field="type" />
         <PickField label="Make" field="make" />
         <PickField label="Model" field="model" />
         <PickField label="Flue Type" field="flueType" />
+        <div style={GAS_SECTION}>Inspection Results</div>
         <RadioRow label="Landlords Appliance" field="landlordsAppliance" options={["Yes","No","N/A"]}/>
         <RadioRow label="Appliance Inspected" field="applianceInspected" options={["Yes","No","N/A","VIO"]}/>
+        <div style={GAS_SECTION}>Readings</div>
         <ReadingField label="CO2 Reading" field="co2"/>
         <ReadingField label="CO Reading" field="co"/>
         <ReadingField label="Combustion Analyser Reading CO/CO2 Ratio" field="combustion"/>
-        <div style={{ padding:"12px 16px", background:"#fff", borderBottom:"1px solid #eee" }}>
-          <span style={{ fontSize:14, color:"#666" }}>Operating Pressure</span>
-          <input value={a.operatingPressure||""} onChange={e=>set("operatingPressure",e.target.value)} onFocus={()=>setActiveKeypad(null)} style={{ display:"block", width:"100%", marginTop:6, padding:"6px 10px", border:`1px solid #ddd`, borderRadius:6, fontSize:14, outline:"none", boxSizing:"border-box" }}/>
-        </div>
-        <div style={{ padding:"12px 16px", background:"#fff", borderBottom:"1px solid #eee" }}>
-          <span style={{ fontSize:14, color:"#666" }}>Heat Input</span>
-          <input value={a.heatInput||""} onChange={e=>set("heatInput",e.target.value)} onFocus={()=>setActiveKeypad(null)} style={{ display:"block", width:"100%", marginTop:6, padding:"6px 10px", border:`1px solid #ddd`, borderRadius:6, fontSize:14, outline:"none", boxSizing:"border-box" }}/>
-        </div>
+        <GASInput label="Operating Pressure" value={a.operatingPressure} onChange={v=>set("operatingPressure",v)} placeholder="Enter pressure"/>
+        <GASInput label="Heat Input" value={a.heatInput} onChange={v=>set("heatInput",v)} placeholder="Enter heat input"/>
+        <div style={GAS_SECTION}>Safety Checks</div>
         <RadioRow label="Spillage Test" field="spillageTest" options={["Pass","Fail","N/A"]}/>
         <RadioRow label="Flue Flow" field="flueFlow" options={["Pass","Fail","N/A"]}/>
         <RadioRow label="Ventilation Provision Satisfactory" field="ventilation" options={["Yes","No","N/A"]}/>
@@ -14643,7 +14524,6 @@ function StepApplianceForm({ appliance, index, onSave, onBack }) {
         <RadioRow label="Appliance Serviced" field="applianceServiced" options={["Yes","No","N/A"]}/>
         <RadioRow label="Appliance Safe To Use" field="applianceSafe" options={["Yes","No","N/A"]}/>
         <RadioRow label="Safety Devices(s) Correct Operation" field="safetyDevices" options={["Yes","No","N/A"]}/>
-        <div style={{ height:20 }}/>
       </div>
       {activeKeypad && (
         <NumericKeypad
@@ -14657,22 +14537,24 @@ function StepApplianceForm({ appliance, index, onSave, onBack }) {
 }
 
 // Step 5: Faults List
-function StepFaultList({ faults, onAdd, onEdit, onDelete, onNext, onBack, onHome }) {
+function StepFaultList({ faults, onAdd, onEdit, onDelete, onNext, onBack, onHome, gscStep, gscTotalSteps, gscStepLabels, onSetGscStep }) {
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="" onBack={onBack}
-        right={<button onClick={onAdd} style={{ background:"none", border:"none", color:"#fff", fontSize:24, cursor:"pointer" }}>+</button>}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <p style={{ color:"#aaa", fontSize:14, marginBottom:12 }}>Fault :</p>
-        {faults.map((f,i)=>(
-          <div key={i} onClick={()=>onEdit(i)} style={{ background:"#fff", borderRadius:10, padding:"14px 16px", marginBottom:10, display:"flex", alignItems:"center", justifyContent:"space-between", boxShadow:"0 2px 8px rgba(0,0,0,0.06)", cursor:"pointer" }}>
-            <span style={{ fontSize:15, fontFamily:"'Segoe UI',sans-serif" }}>{f.details?f.details.slice(0,40)+"...":f.remedial?f.remedial.slice(0,40)+"...":"Fault "+(i+1)}</span>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 3L10 8L5 13" stroke="#bbb" strokeWidth="2" strokeLinecap="round"/></svg>
-          </div>
-        ))}
+    <GasFormShell title="Fault List" subtitle="Gas Safety Certificate" step={gscStep||3} totalSteps={gscTotalSteps||8} stepLabels={gscStepLabels} onBack={onBack} onPrev={onBack} onNext={onNext} onSetStep={onSetGscStep}>
+      <div style={{ ...GAS_SECTION, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span>Faults</span>
+        <div style={{ display:"flex", gap:8 }}>
+          {faults.length>0 && <button onClick={onDelete} style={{ background:"rgba(239,68,68,0.12)", border:"1px solid rgba(239,68,68,0.4)", borderRadius:8, padding:"5px 12px", color:"#ef4444", fontWeight:700, fontSize:12, cursor:"pointer" }}>Delete</button>}
+          <button onClick={onAdd} style={{ background:"rgba(59,130,246,0.15)", border:"1px solid rgba(59,130,246,0.4)", borderRadius:8, padding:"5px 14px", color:GAS_ACCENT, fontWeight:700, fontSize:12, cursor:"pointer" }}>+ Add</button>
+        </div>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
-    </div>
+      {faults.length === 0 && <p style={{ color:"rgba(255,255,255,0.4)", fontSize:13, textAlign:"center", padding:"20px 0" }}>No faults recorded. Tap + Add if needed.</p>}
+      {faults.map((f,i)=>(
+        <div key={i} onClick={()=>onEdit(i)} style={{ background:"#1e3044", border:"1px solid #2a4058", borderRadius:10, padding:"14px 16px", marginBottom:10, display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
+          <span style={{ fontSize:14, fontFamily:"'Segoe UI',sans-serif", color:"#e8edf2" }}>{f.details?f.details.slice(0,40)+"...":f.remedial?f.remedial.slice(0,40)+"...":"Fault "+(i+1)}</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 3L10 8L5 13" stroke="#8b9db0" strokeWidth="2" strokeLinecap="round"/></svg>
+        </div>
+      ))}
+    </GasFormShell>
   );
 }
 
@@ -14680,83 +14562,65 @@ function StepFaultList({ faults, onAdd, onEdit, onDelete, onNext, onBack, onHome
 function StepFaultForm({ fault, index, onSave, onBack }) {
   const [f, setF] = useState(fault || { details:"", remedial:"", warningNotice:"Yes" });
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title={`Faults ${index+1}`} onBack={onBack}
-        right={<button onClick={()=>onSave(f)} style={{ background:"none", border:"none", color:"#fff", fontWeight:700, fontSize:16, cursor:"pointer" }}>DONE</button>}/>
-      <div style={{ flex:1, overflowY:"auto" }}>
-        <div style={{ padding:16, background:LIGHT_BG }}>
-          <p style={{ fontSize:14, color:"#666", marginBottom:8, fontFamily:"'Segoe UI',sans-serif" }}>Details Of Any Faults</p>
-          <textarea value={f.details} onChange={e=>setF(p=>({...p,details:e.target.value}))} maxLength={200}
-            style={{ width:"100%", boxSizing:"border-box", padding:12, border:"none", borderRadius:8, background:"#fff", fontSize:14, fontFamily:"'Segoe UI',sans-serif", resize:"none", height:100, outline:"none", boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}/>
-          <p style={{ fontSize:11, color:"#aaa", marginTop:4 }}>You Can Enter 200 Characters</p>
-
-          <p style={{ fontSize:14, color:"#666", marginBottom:8, marginTop:16, fontFamily:"'Segoe UI',sans-serif" }}>Remedial Action Taken</p>
-          <textarea value={f.remedial} onChange={e=>setF(p=>({...p,remedial:e.target.value}))} maxLength={200}
-            style={{ width:"100%", boxSizing:"border-box", padding:12, border:"none", borderRadius:8, background:"#fff", fontSize:14, fontFamily:"'Segoe UI',sans-serif", resize:"none", height:100, outline:"none", boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}/>
-          <p style={{ fontSize:11, color:"#aaa", marginTop:4 }}>You Can Enter 200 Characters</p>
-
-          <p style={{ fontSize:14, color:"#666", marginTop:16, marginBottom:8, fontFamily:"'Segoe UI',sans-serif" }}>Label And Warning Notice Issued :</p>
-          <RadioGroup options={["Yes","No","N/A"]} value={f.warningNotice} onChange={v=>setF(p=>({...p,warningNotice:v}))}/>
+    <div style={{ minHeight:"100dvh", background:GAS_BG, display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div style={{ flex:1 }}>
+          <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", margin:0 }}>Fault {index+1}</h2>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>Gas Safety Certificate</div>
         </div>
+        <button onClick={()=>onSave(f)} style={{ background:GAS_ACCENT, border:"none", borderRadius:8, padding:"8px 18px", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>Done</button>
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+        <GASTextarea label="Details Of Any Faults" value={f.details} onChange={v=>setF(p=>({...p,details:v}))} maxLength={200} placeholder="Describe the fault..."/>
+        <GASTextarea label="Remedial Action Taken" value={f.remedial} onChange={v=>setF(p=>({...p,remedial:v}))} maxLength={200} placeholder="Describe remedial action..."/>
+        <div style={GAS_SECTION}>Warning Notice</div>
+        <GASToggle label="Label And Warning Notice Issued" value={f.warningNotice} onChange={v=>setF(p=>({...p,warningNotice:v}))} options={["Yes","No","N/A"]}/>
       </div>
     </div>
   );
 }
 
 // Step 7: Final Checks
-function StepFinalChecks({ data, onChange, onNext, onBack, onHome }) {
+function StepFinalChecks({ data, onChange, onNext, onBack, onHome, gscStep, gscTotalSteps, gscStepLabels, onSetGscStep }) {
   const [showCal, setShowCal] = useState(false);
   const inspDate = data.inspectionDate || nextYear();
 
   function ToggleBtn({ label, field }) {
     const val = data[field] !== undefined ? data[field] : "YES";
-    // Ensure field is initialised in data on first render
     useEffect(() => {
       if (data[field] === undefined) onChange({...data, [field]: "YES"});
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     return (
-      <div style={{ display:"flex", alignItems:"center", padding:"14px 16px", background:"#fff", borderBottom:"1px solid #eee" }}>
-        <span style={{ flex:1, fontSize:14, color:"#666", fontFamily:"'Segoe UI',sans-serif" }}>{label}</span>
-        <button onClick={()=>onChange({...data,[field]:val==="YES"?"NO":"YES"})}
-          style={{ padding:"6px 16px", background:val==="YES"?BLUE:"#e74c3c", color:"#fff", border:"none", borderRadius:6, fontWeight:700, fontSize:13, cursor:"pointer", minWidth:60 }}>{val}</button>
-      </div>
-    );
-  }
-  function RadioRow({ label, field, options }) {
-    return (
-      <div style={{ padding:"14px 16px", background:"#fff", borderBottom:"1px solid #eee" }}>
-        <div style={{ fontSize:14, color:"#666", marginBottom:8, fontFamily:"'Segoe UI',sans-serif" }}>{label}</div>
-        <RadioGroup options={options} value={data[field]||"N/A"} onChange={v=>onChange({...data,[field]:v})}/>
-      </div>
+      <GASToggle label={label} value={val} onChange={v=>onChange({...data,[field]:v})} options={["YES","NO"]}/>
     );
   }
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Final Checks" onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto" }}>
-        <RadioRow label="Gas Tightness Pass" field="gasTightness" options={["Yes","No","N/A"]}/>
-        <ToggleBtn label="Gas Pipe Work Visual Pass" field="pipeworkVisual"/>
-        <ToggleBtn label="Emergency Control Accessible" field="emergencyControl"/>
-        <ToggleBtn label="Equipotential Bonding" field="bonding"/>
-        <ToggleBtn label="Installation Pass" field="installationPass"/>
-        <div style={{ padding:"14px 16px", background:"#fff", borderBottom:"1px solid #eee", display:"flex", alignItems:"center" }}>
-          <span style={{ flex:1, fontSize:13, color:"#666", fontFamily:"'Segoe UI',sans-serif", textTransform:"uppercase", fontWeight:600 }}>Next Inspection Due On Or Before</span>
-          <button onClick={()=>setShowCal(true)} style={{ padding:"6px 12px", background:"#fff", border:`2px solid ${BLUE}`, borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", color:"#222" }}>{formatDate(inspDate)}</button>
-        </div>
-        <RadioRow label="CO alarm fitted and working?" field="coAlarm" options={["Yes","No","N/A"]}/>
-        <RadioRow label="Smoke alarm fitted and working?" field="smokeAlarm" options={["Yes","No","N/A"]}/>
-        <div style={{ height:20 }}/>
+    <GasFormShell title="Final Checks" subtitle="Gas Safety Certificate" step={gscStep||4} totalSteps={gscTotalSteps||8} stepLabels={gscStepLabels} onBack={onBack} onPrev={onBack} onNext={onNext} onSetStep={onSetGscStep}>
+      <div style={GAS_SECTION}>Safety Checks</div>
+      <GASToggle label="Gas Tightness Pass" value={data.gasTightness||"N/A"} onChange={v=>onChange({...data,gasTightness:v})} options={["Yes","No","N/A"]}/>
+      <ToggleBtn label="Gas Pipe Work Visual Pass" field="pipeworkVisual"/>
+      <ToggleBtn label="Emergency Control Accessible" field="emergencyControl"/>
+      <ToggleBtn label="Equipotential Bonding" field="bonding"/>
+      <ToggleBtn label="Installation Pass" field="installationPass"/>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+        <span style={{ color:"rgba(255,255,255,0.7)", fontSize:13, fontWeight:600, textTransform:"uppercase", flex:1 }}>Next Inspection Due On Or Before</span>
+        <button onClick={()=>setShowCal(true)} style={{ padding:"6px 12px", background:"#1e3044", border:`2px solid ${GAS_ACCENT}`, borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", color:"#e8edf2" }}>{formatDate(inspDate)}</button>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
+      <div style={GAS_SECTION}>Alarm Checks</div>
+      <GASToggle label="CO alarm fitted and working?" value={data.coAlarm||"N/A"} onChange={v=>onChange({...data,coAlarm:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Smoke alarm fitted and working?" value={data.smokeAlarm||"N/A"} onChange={v=>onChange({...data,smokeAlarm:v})} options={["Yes","No","N/A"]}/>
       {showCal && <CalendarModal value={inspDate} onChange={d=>onChange({...data,inspectionDate:d})} onClose={()=>setShowCal(false)}/>}
-    </div>
+    </GasFormShell>
   );
 }
 
 // Step 8: Signature
-function StepSignature({ data, onChange, onNext, onBack, onHome }) {
+function StepSignature({ data, onChange, onNext, onBack, onHome, gscStep, gscTotalSteps, gscStepLabels, onSetGscStep }) {
   const today = new Date().toISOString().slice(0,10);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const fmtDisplay = iso => {
@@ -14771,60 +14635,44 @@ function StepSignature({ data, onChange, onNext, onBack, onHome }) {
     if (!data.sigCustomerDate) updates.sigCustomerDate = today;
     if (Object.keys(updates).length) onChange({...data,...updates});
   }, []);
-  const lbl = t => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:6, marginTop:10 }}>{t}</div>;
-  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:BLUE, borderBottom:`2px solid ${BLUE}30`, paddingBottom:6, marginBottom:12, marginTop:16 }}>{t}</div>;
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Signatures & Dates" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        {/* Engineer signature */}
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Engineer Signature")}
-          <div style={{ fontSize:13, color:"#555", lineHeight:1.6, marginBottom:14, background:"#f9f9f9", borderRadius:8, padding:"10px 12px" }}>
-            I confirm that the gas installation described on this certificate has been inspected and is in the condition noted above.
-          </div>
-          {lbl("Draw engineer signature below")}
-          <SigPad value={data.engineerSigImage} storageKey="gsc_engineer_sig" onChange={v=>onChange({...data,engineerSigImage:v})}/>
-          {lbl("Engineer printed name")}
-          <input value={data.engineerSigName||""} onChange={e=>onChange({...data,engineerSigName:e.target.value})} placeholder="Engineer full name"
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
-          {lbl("Date")}
-          <input type="date" value={data.sigDate||today} onChange={e=>onChange({...data,sigDate:e.target.value})}
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none" }}/>
-          {data.sigDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(data.sigDate)}</div>}
+    <GasFormShell title="Signatures & Dates" subtitle="Gas Safety Certificate" step={gscStep||6} totalSteps={gscTotalSteps||8} stepLabels={gscStepLabels} onBack={onBack} onPrev={onBack} onNext={onNext} onSetStep={onSetGscStep}>
+      {/* Engineer signature */}
+      <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+        <div style={GAS_SECTION}>Engineer Signature</div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.6, marginBottom:14, background:"#1e3044", borderRadius:8, padding:"10px 12px" }}>
+          I confirm that the gas installation described on this certificate has been inspected and is in the condition noted above.
         </div>
-        {/* Data protection */}
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Data Protection")}
-          <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
-            <input type="checkbox" id="dp" checked={data.dataProtection||false} onChange={e=>onChange({...data,dataProtection:e.target.checked})} style={{ width:20, height:20, accentColor:BLUE, marginTop:2, flexShrink:0, cursor:"pointer" }}/>
-            <label htmlFor="dp" style={{ fontSize:13, color:"#444", cursor:"pointer", lineHeight:1.5 }}>
-              Customer agrees to allow storage of their personal data in line with GDPR data protection laws.{" "}
-              <span onClick={()=>setShowPrivacy(true)} style={{ color:BLUE, textDecoration:"underline", cursor:"pointer" }}>Read more</span>
-            </label>
-          </div>
-        </div>
-        {/* Customer signature */}
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Customer / Responsible Person")}
-          <div style={{ fontSize:13, color:"#555", lineHeight:1.6, marginBottom:14, background:"#f9f9f9", borderRadius:8, padding:"10px 12px" }}>
-            Please sign below to confirm satisfactory demonstration and receipt of documentation.
-          </div>
-          {lbl("Draw customer signature below")}
-          <SigPad value={data.customerSigImage} onChange={v=>onChange({...data,customerSigImage:v})}/>
-          {lbl("Customer printed name")}
-          <input value={data.customerSigName||""} onChange={e=>onChange({...data,customerSigName:e.target.value})} placeholder="Customer full name"
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
-          {lbl("Customer declaration")}
-          <input value={data.customerDeclaration||""} onChange={e=>onChange({...data,customerDeclaration:e.target.value})} placeholder="e.g. I have received a copy of this certificate"
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
-          {lbl("Date")}
-          <input type="date" value={data.sigCustomerDate||today} onChange={e=>onChange({...data,sigCustomerDate:e.target.value})}
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none" }}/>
-          {data.sigCustomerDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(data.sigCustomerDate)}</div>}
+        <span style={GAS_LABEL}>Draw engineer signature below</span>
+        <SigPad value={data.engineerSigImage} storageKey="gsc_engineer_sig" onChange={v=>onChange({...data,engineerSigImage:v})}/>
+        <GASInput label="Engineer printed name" value={data.engineerSigName} onChange={v=>onChange({...data,engineerSigName:v})} placeholder="Engineer full name"/>
+        <GASInput label="Date" value={data.sigDate||today} onChange={v=>onChange({...data,sigDate:v})} type="date"/>
+        {data.sigDate && <div style={{ fontSize:12, color:"rgba(255,255,255,0.4)", marginTop:4 }}>{fmtDisplay(data.sigDate)}</div>}
+      </div>
+      {/* Data protection */}
+      <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+        <div style={GAS_SECTION}>Data Protection</div>
+        <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+          <input type="checkbox" id="dp" checked={data.dataProtection||false} onChange={e=>onChange({...data,dataProtection:e.target.checked})} style={{ width:20, height:20, accentColor:GAS_ACCENT, marginTop:2, flexShrink:0, cursor:"pointer" }}/>
+          <label htmlFor="dp" style={{ fontSize:13, color:"rgba(255,255,255,0.7)", cursor:"pointer", lineHeight:1.5 }}>
+            Customer agrees to allow storage of their personal data in line with GDPR data protection laws.{" "}
+            <span onClick={()=>setShowPrivacy(true)} style={{ color:GAS_ACCENT, textDecoration:"underline", cursor:"pointer" }}>Read more</span>
+          </label>
         </div>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext} nextLabel="Next: Engineer Details"/>
+      {/* Customer signature */}
+      <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+        <div style={GAS_SECTION}>Customer / Responsible Person</div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.6, marginBottom:14, background:"#1e3044", borderRadius:8, padding:"10px 12px" }}>
+          Please sign below to confirm satisfactory demonstration and receipt of documentation.
+        </div>
+        <span style={GAS_LABEL}>Draw customer signature below</span>
+        <SigPad value={data.customerSigImage} onChange={v=>onChange({...data,customerSigImage:v})}/>
+        <GASInput label="Customer printed name" value={data.customerSigName} onChange={v=>onChange({...data,customerSigName:v})} placeholder="Customer full name"/>
+        <GASInput label="Customer declaration" value={data.customerDeclaration} onChange={v=>onChange({...data,customerDeclaration:v})} placeholder="e.g. I have received a copy of this certificate"/>
+        <GASInput label="Date" value={data.sigCustomerDate||today} onChange={v=>onChange({...data,sigCustomerDate:v})} type="date"/>
+        {data.sigCustomerDate && <div style={{ fontSize:12, color:"rgba(255,255,255,0.4)", marginTop:4 }}>{fmtDisplay(data.sigCustomerDate)}</div>}
+      </div>
       {showPrivacy && (
         <Modal title="Data Privacy Act" onClose={()=>setShowPrivacy(false)}>
           <p style={{ fontSize:14, lineHeight:1.7, color:"#333", textAlign:"center", fontFamily:"'Segoe UI',sans-serif", fontWeight:600 }}>
@@ -14832,40 +14680,32 @@ function StepSignature({ data, onChange, onNext, onBack, onHome }) {
           </p>
         </Modal>
       )}
-    </div>
+    </GasFormShell>
   );
 }
 
 // Step 9: Engineer/Company Details
-function StepEngineerDetails({ data, onChange, onOptions, onBack, onHome }) {
+function StepEngineerDetails({ data, onChange, onOptions, onBack, onHome, gscStep, gscTotalSteps, gscStepLabels, onSetGscStep }) {
   const [showCal, setShowCal] = useState(false);
   const certDate = data.certDate || today();
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Engineer Details" onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto" }}>
-        <div style={{ padding:"8px 16px 4px", background:LIGHT_BG }}>
-          <p style={{ fontSize:13, color:"#888", margin:"8px 0 4px", fontWeight:600 }}>Company Details</p>
-        </div>
-        <FormInput placeholder="Company Name" value={data.companyName||""} onChange={v=>onChange({...data,companyName:v})}/>
-        <div style={{ padding:"8px 16px 4px", background:LIGHT_BG }}><p style={{ fontSize:13, color:"#888", margin:"4px 0", fontWeight:600 }}>Address</p></div>
-        <FormInput placeholder="Address" value={data.companyAddr||""} onChange={v=>onChange({...data,companyAddr:v})} multiline/>
-        <FormInput placeholder="Postcode" value={data.companyPostcode||""} onChange={v=>onChange({...data,companyPostcode:v})}/>
-        <FormInput placeholder="Telephone" value={data.companyTel||""} onChange={v=>onChange({...data,companyTel:v})}/>
-        <FormInput placeholder="Gas Safe Registration No." value={data.gasSafeNo||""} onChange={v=>onChange({...data,gasSafeNo:v})}/>
-        <div style={{ padding:"8px 16px 4px", background:LIGHT_BG }}><p style={{ fontSize:13, color:"#888", margin:"8px 0 4px", fontWeight:600 }}>Report Issued By</p></div>
-        <FormInput placeholder="Engineer Name" value={data.engineerName||""} onChange={v=>onChange({...data,engineerName:v})}/>
-        <FormInput placeholder="Gas ID Number" value={data.gasId||""} onChange={v=>onChange({...data,gasId:v})}/>
-        <div style={{ padding:"12px 16px", background:"#fff", borderBottom:"1px solid #eee", display:"flex", alignItems:"center" }}>
-          <span style={{ flex:1, fontSize:14, color:"#666" }}>Date</span>
-          <button onClick={()=>setShowCal(true)} style={{ padding:"6px 12px", background:"#fff", border:`2px solid ${BLUE}`, borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", color:"#222" }}>{formatDate(certDate)}</button>
-        </div>
-        <div style={{ height:20 }}/>
+    <GasFormShell title="Engineer Details" subtitle="Gas Safety Certificate" step={gscStep||7} totalSteps={gscTotalSteps||8} stepLabels={gscStepLabels} onBack={onBack} onPrev={onBack} onOptions={onOptions} onSetStep={onSetGscStep}>
+      <div style={GAS_SECTION}>Company Details</div>
+      <GASInput label="Company Name" value={data.companyName} onChange={v=>onChange({...data,companyName:v})} placeholder="Company Name"/>
+      <GASInput label="Address" value={data.companyAddr} onChange={v=>onChange({...data,companyAddr:v})} placeholder="Address"/>
+      <GASInput label="Postcode" value={data.companyPostcode} onChange={v=>onChange({...data,companyPostcode:v})} placeholder="Postcode"/>
+      <GASInput label="Telephone" value={data.companyTel} onChange={v=>onChange({...data,companyTel:v})} placeholder="Telephone"/>
+      <GASInput label="Gas Safe Registration No." value={data.gasSafeNo} onChange={v=>onChange({...data,gasSafeNo:v})} placeholder="Gas Safe Registration No."/>
+      <div style={GAS_SECTION}>Report Issued By</div>
+      <GASInput label="Engineer Name" value={data.engineerName} onChange={v=>onChange({...data,engineerName:v})} placeholder="Engineer Name"/>
+      <GASInput label="Gas ID Number" value={data.gasId} onChange={v=>onChange({...data,gasId:v})} placeholder="Gas ID Number"/>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+        <span style={{ color:"rgba(255,255,255,0.7)", fontSize:13 }}>Date</span>
+        <button onClick={()=>setShowCal(true)} style={{ padding:"6px 12px", background:"#1e3044", border:`2px solid ${GAS_ACCENT}`, borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", color:"#e8edf2" }}>{formatDate(certDate)}</button>
       </div>
-      <BottomBar onHome={onHome} onOptions={onOptions}/>
       {showCal && <CalendarModal value={certDate} onChange={d=>onChange({...data,certDate:d})} onClose={()=>setShowCal(false)}/>}
-    </div>
+    </GasFormShell>
   );
 }
 
@@ -15159,7 +14999,7 @@ function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, 
   });
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"#666", zIndex:2000, overflowY:"auto", overflowX:"hidden", fontFamily:"Arial,Helvetica,sans-serif" }}>
+    <div style={{ position:"fixed", inset:0, background:"#0d1f2d", zIndex:2000, overflowY:"auto", overflowX:"hidden", fontFamily:"Arial,Helvetica,sans-serif" }}>
       {/* Sticky top bar */}
       <div style={{ background:"#0d1f2d", padding:"12px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
@@ -16866,7 +16706,7 @@ function QuotePDFPreview({ quoteData: q, onClose, onSave }) {
   const fmtDate = new Date(q.createdAt).toLocaleDateString("en-GB");
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"#555", zIndex:4000, overflowY:"auto", overflowX:"hidden", fontFamily:"Arial,Helvetica,sans-serif" }}>
+    <div style={{ position:"fixed", inset:0, background:"#0d1f2d", zIndex:4000, overflowY:"auto", overflowX:"hidden", fontFamily:"Arial,Helvetica,sans-serif" }}>
       <div style={{ background:"#0d1f2d", padding:"12px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:10 }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -16988,7 +16828,7 @@ function QuotesScreen({ quotes, onBack, onHome, onDelete, onConvertToInvoice }) 
       <Header title="Quotes" onBack={onBack}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
         {quotes.length===0 ? (
-          <div style={{ textAlign:"center", color:"#aaa", marginTop:60, fontSize:15 }}>No quotes yet</div>
+          <div style={{ textAlign:"center", color:"rgba(255,255,255,0.4)", marginTop:60, fontSize:15 }}>No quotes yet</div>
         ) : quotes.map((q,i)=>(
           <div key={i} onClick={()=>setSelected(i)}
             style={{ background:"#fff", borderRadius:10, padding:"14px 16px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", borderLeft:`4px solid ${BLUE}`, cursor:"pointer" }}>
@@ -17511,17 +17351,17 @@ function RecordActionSheet({ title, onClose, onPreview, onDownload, onEdit, onDe
   ];
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"flex-end", zIndex:2000 }} onClick={onClose}>
-      <div style={{ background:"#fff", width:"100%", borderRadius:"20px 20px 0 0", padding:24 }} onClick={e=>e.stopPropagation()}>
-        <div style={{ fontWeight:700, fontSize:15, color:"#222", marginBottom:4, textAlign:"center" }}>{title}</div>
-        <div style={{ fontSize:12, color:"#aaa", textAlign:"center", marginBottom:20 }}>Choose an action</div>
+      <div style={{ background:"#1a2a3a", width:"100%", borderRadius:"20px 20px 0 0", padding:24, border:"1px solid rgba(255,255,255,0.1)", borderBottom:"none" }} onClick={e=>e.stopPropagation()}>
+        <div style={{ fontWeight:700, fontSize:15, color:"#e8edf2", marginBottom:4, textAlign:"center" }}>{title}</div>
+        <div style={{ fontSize:12, color:"rgba(255,255,255,0.4)", textAlign:"center", marginBottom:20 }}>Choose an action</div>
         {actions.map(({label, fn, color})=>(
           <button key={label} onClick={fn}
-            style={{ display:"block", width:"100%", padding:"14px 20px", marginBottom:10, borderRadius:12, border:"1px solid #e8eaf0", background:"#fafafa", fontSize:15, fontWeight:600, color, cursor:"pointer", textAlign:"left" }}>
+            style={{ display:"block", width:"100%", padding:"14px 20px", marginBottom:10, borderRadius:12, border:"1px solid rgba(255,255,255,0.12)", background:"rgba(255,255,255,0.04)", fontSize:15, fontWeight:600, color:"#e8edf2", cursor:"pointer", textAlign:"left" }}>
             {label}
           </button>
         ))}
         <button onClick={onClose}
-          style={{ display:"block", width:"100%", padding:"14px 20px", borderRadius:12, border:"none", background:"#f0f0f0", fontSize:15, fontWeight:600, color:"#666", cursor:"pointer", textAlign:"center" }}>
+          style={{ display:"block", width:"100%", padding:"14px 20px", borderRadius:12, border:"none", background:"rgba(255,255,255,0.06)", fontSize:15, fontWeight:600, color:"rgba(255,255,255,0.5)", cursor:"pointer", textAlign:"center" }}>
           Cancel
         </button>
       </div>
@@ -17532,12 +17372,12 @@ function RecordActionSheet({ title, onClose, onPreview, onDownload, onEdit, onDe
 function ConfirmDeleteModal({ onCancel, onConfirm }) {
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:3000, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
-      <div style={{ background:"#fff", borderRadius:16, padding:24, maxWidth:320, width:"100%", textAlign:"center" }}>
-        <div style={{ fontSize:32, marginBottom:12 }}>🗑️</div>
-        <div style={{ fontWeight:700, fontSize:16, marginBottom:8 }}>Delete Record?</div>
-        <div style={{ color:"#666", fontSize:13, marginBottom:20 }}>This cannot be undone.</div>
+      <div style={{ background:"#1a2a3a", borderRadius:16, padding:24, maxWidth:320, width:"100%", textAlign:"center", border:"1px solid rgba(255,255,255,0.1)" }}>
+        <div style={{ fontSize:32, marginBottom:12 }}>Delete</div>
+        <div style={{ fontWeight:700, fontSize:16, marginBottom:8, color:"#e8edf2" }}>Delete Record?</div>
+        <div style={{ color:"rgba(255,255,255,0.5)", fontSize:13, marginBottom:20 }}>This cannot be undone.</div>
         <div style={{ display:"flex", gap:10 }}>
-          <button onClick={onCancel} style={{ flex:1, padding:"10px", background:"#f0f0f0", border:"none", borderRadius:8, fontWeight:600, cursor:"pointer" }}>Cancel</button>
+          <button onClick={onCancel} style={{ flex:1, padding:"10px", background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.15)", borderRadius:8, fontWeight:600, cursor:"pointer", color:"#e8edf2" }}>Cancel</button>
           <button onClick={onConfirm} style={{ flex:1, padding:"10px", background:"#c00", color:"#fff", border:"none", borderRadius:8, fontWeight:700, cursor:"pointer" }}>Delete</button>
         </div>
       </div>
@@ -17899,7 +17739,7 @@ function BoilerServiceRecordsScreen({ records, onBack, onHome, onDelete, onCreat
       )}
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
         {bsRecords.length===0 ? (
-          <div style={{ textAlign:"center", color:"#aaa", marginTop:60, fontSize:15 }}>No service records saved yet</div>
+          <div style={{ textAlign:"center", color:"rgba(255,255,255,0.4)", marginTop:60, fontSize:15 }}>No service records saved yet</div>
         ) : bsRecords.map((r,i)=>{
           const due = bsIsDueSoon(r);
           const days = bsDaysLeft(r);
@@ -17976,7 +17816,7 @@ function WarningNoticeRecordsScreen({ records, onBack, onHome, onDelete, onCreat
       <Header title="⚠️ Warning Notices" onBack={onBack}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
         {wnRecords.length===0 ? (
-          <div style={{ textAlign:"center", color:"#aaa", marginTop:60, fontSize:15 }}>No warning notices saved yet</div>
+          <div style={{ textAlign:"center", color:"rgba(255,255,255,0.4)", marginTop:60, fontSize:15 }}>No warning notices saved yet</div>
         ) : wnRecords.map((r,i)=>{
           const addr = [r.wnFormData?.instAddr1, r.wnFormData?.instAddr2, r.wnFormData?.instPostcode].filter(Boolean).join(", ");
           const client = r.wnFormData?.clientName || "Unknown Client";
@@ -18055,7 +17895,7 @@ function GenericCertRecordsScreen({ type, records, onBack, onHome, onDelete, onC
       <Header title={title} onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
         {typeRecords.length === 0 ? (
-          <div style={{ textAlign:"center", color:"#aaa", marginTop:60, fontSize:15 }}>No records saved yet</div>
+          <div style={{ textAlign:"center", color:"rgba(255,255,255,0.4)", marginTop:60, fontSize:15 }}>No records saved yet</div>
         ) : typeRecords.map((r, i) => {
           const client = r.form?.clientName || "Unknown Client";
           const addr = r.form?.clientAddr || "";
@@ -18143,7 +17983,7 @@ function GasWorksRecordsScreen({ records, onBack, onHome, onDelete, onEdit, onCr
         </div>
       )}
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        {gwRecords.length===0 && <div style={{ textAlign:"center", color:"#aaa", marginTop:60, fontSize:15 }}>No Gas Works records yet</div>}
+        {gwRecords.length===0 && <div style={{ textAlign:"center", color:"rgba(255,255,255,0.4)", marginTop:60, fontSize:15 }}>No Gas Works records yet</div>}
         {gwRecords.map((r,i)=>(
           <div key={i} onClick={()=> multiSelect ? toggleCheck(i) : setSelected(i)}
             style={{ background:"#fff", borderRadius:12, padding:"14px 16px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", borderLeft:`4px solid ${GW_COLOR}`, cursor:"pointer", display:"flex", alignItems:"center", gap:12,
@@ -18237,7 +18077,7 @@ function GasIsolationRecordsScreen({ records, onBack, onHome, onDelete, onEdit, 
         </div>
       )}
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        {giRecords.length === 0 && <div style={{ textAlign:"center", color:"#aaa", marginTop:60, fontSize:15 }}>No Gas Isolation records yet</div>}
+        {giRecords.length === 0 && <div style={{ textAlign:"center", color:"rgba(255,255,255,0.4)", marginTop:60, fontSize:15 }}>No Gas Isolation records yet</div>}
         {giRecords.map((r, i) => (
           <div key={i} onClick={()=> multiSelect ? toggleCheck(i) : setSelected(i)}
             style={{ background:"#fff", borderRadius:12, padding:"14px 16px", marginBottom:12, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", borderLeft:`4px solid ${GI_COLOR}`, cursor:"pointer", display:"flex", alignItems:"center", gap:12,
@@ -18639,7 +18479,7 @@ function CombinedRecordsScreen({ records, type, onBack, onHome, onDelete }) {
       <Header title={title} onBack={onBack} />
       <div style={{ flex:1, overflowY:"auto", padding:"12px 16px 100px" }}>
         {myRecords.length === 0 ? (
-          <div style={{ textAlign:"center", color:"#aaa", marginTop:60, fontSize:15 }}>No combined records yet</div>
+          <div style={{ textAlign:"center", color:"rgba(255,255,255,0.4)", marginTop:60, fontSize:15 }}>No combined records yet</div>
         ) : myRecords.map((rec) => {
           const dateStr = rec.savedAt ? new Date(rec.savedAt).toLocaleDateString("en-GB") : "";
           const isThis = combiningIdx === rec._origIdx;
@@ -19793,18 +19633,11 @@ function EmailImportScreen({ onBack, onHome, onImportCerts, defaultEngineerData 
 // Screen 1: File Reference
 function BSStepFileRef({ data, onChange, onNext, onBack, onHome }) {
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG }}>
-      <Header title="Domestic/Landlord Gas Safety Certificate" onBack={onBack}/>
-      <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, paddingBottom:80 }}>
-        <p style={{ color:"#888", fontFamily:"'Segoe UI',sans-serif", fontSize:14, marginBottom:16 }}>Please enter a file reference</p>
-        <input
-          value={data.certRef} onChange={e=>onChange({...data, certRef:e.target.value})}
-          placeholder="Certificate Reference"
-          style={{ width:"100%", maxWidth:360, padding:"14px 18px", borderRadius:12, border:"none", background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", boxShadow:"0 2px 12px rgba(0,0,0,0.07)", outline:"none", boxSizing:"border-box" }}
-        />
-      </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
-    </div>
+    <GasFormShell title="Boiler Service Record" subtitle="Gas Safety" step={0} totalSteps={8} stepLabels={["File Ref","Client","Appliance","Checks","Notes","Attachments","Signatures","Engineer"]} onBack={onBack} onNext={onNext}>
+      <div style={GAS_SECTION}>File Reference</div>
+      <p style={{ color:"rgba(255,255,255,0.5)", fontSize:13, marginBottom:16, textAlign:"center" }}>Please enter a file reference</p>
+      <GASInput label="Certificate Reference" value={data.certRef} onChange={v=>onChange({...data,certRef:v})} placeholder="Certificate Reference"/>
+    </GasFormShell>
   );
 }
 
@@ -19819,54 +19652,40 @@ function BSStepClientDetails({ data, onChange, onNext, onBack, onHome, engData, 
     else onChange({...data, instName:f.name||data.instName, instTel:f.phone||data.instTel, instAddr1:f.addr1||data.instAddr1, instAddr2:f.addr2||data.instAddr2, instAddr3:f.addr3||data.instAddr3, instPostcode:f.postcode||data.instPostcode});
     setBsPickerTarget(null);
   };
-  const contactBtn = (onClick) => (
-    <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:6, background:"#1a3a4a", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
-      👥 Add a Contact
+  const ContactBtn = ({target}) => (
+    <button onClick={()=>setBsPickerTarget(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(59,130,246,0.15)", border:"1px solid rgba(59,130,246,0.4)", borderRadius:20, padding:"6px 14px", color:GAS_ACCENT, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+      👥 Add Contact
     </button>
   );
-  const copyBtn = (
-    <button onClick={copyClientToInst} style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1a3a4a", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
-      ✓ Copy
-    </button>
+  const CopyBtn = () => (
+    <button onClick={copyClientToInst} style={{ background:"rgba(34,197,94,0.12)", border:"1px solid rgba(34,197,94,0.4)", borderRadius:20, padding:"6px 14px", color:"#22c55e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
   );
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG }}>
-      <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto" }}>
-        {engData && onEngChange && <>
-          <SectionHeader title="Engineers Details"/>
-          <FormInput label="Trading Title / Company Name" placeholder="Company name" value={engData.companyName||""} onChange={v=>onEngChange({...engData,companyName:v})}/>
-          <FormInput label="Address" placeholder="Address" value={engData.companyAddr||""} onChange={v=>onEngChange({...engData,companyAddr:v})}/>
-          <FormInput label="Town / City" placeholder="Town or city" value={engData.companyTown||""} onChange={v=>onEngChange({...engData,companyTown:v})}/>
-          <FormInput label="Post Code" placeholder="Postcode" value={engData.companyPostcode||""} onChange={v=>onEngChange({...engData,companyPostcode:v})}/>
-          <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={engData.gasSafeNo||""} onChange={v=>onEngChange({...engData,gasSafeNo:v})}/>
-          <FormInput label="Telephone No" placeholder="Telephone" value={engData.companyTel||""} onChange={v=>onEngChange({...engData,companyTel:v})}/>
-          <FormInput label="Engineer Name" placeholder="Engineer name" value={engData.engineerName||""} onChange={v=>onEngChange({...engData,engineerName:v})}/>
-          <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={engData.gasId||""} onChange={v=>onEngChange({...engData,gasId:v})}/>
-        </>}
-        <SectionHeader title="Client Details" actions={[contactBtn(()=>setBsPickerTarget("client"))]}/>
-        <FormInput placeholder="Name" value={data.clientName} onChange={v=>onChange({...data,clientName:v})}/>
-        <FormInput placeholder="Address line 1" value={data.clientAddr1} onChange={v=>onChange({...data,clientAddr1:v})}/>
-        <FormInput placeholder="Address line 2" value={data.clientAddr2} onChange={v=>onChange({...data,clientAddr2:v})}/>
-        <FormInput placeholder="Address line 3" value={data.clientAddr3} onChange={v=>onChange({...data,clientAddr3:v})}/>
-        <FormInput placeholder="Postcode" value={data.clientPostcode} onChange={v=>onChange({...data,clientPostcode:v})}/>
-        <FormInput placeholder="Telephone" value={data.clientTel} onChange={v=>onChange({...data,clientTel:v})}/>
-        <FormInput placeholder="Email" value={data.clientEmail} onChange={v=>onChange({...data,clientEmail:v})}/>
-        <SectionHeader title="Installation Details" actions={[copyBtn, contactBtn(()=>setBsPickerTarget("inst"))]}/>
-        <FormInput placeholder="Name" value={data.instName} onChange={v=>onChange({...data,instName:v})}/>
-        <FormInput placeholder="Address line 1" value={data.instAddr1} onChange={v=>onChange({...data,instAddr1:v})}/>
-        <FormInput placeholder="Address line 2" value={data.instAddr2} onChange={v=>onChange({...data,instAddr2:v})}/>
-        <FormInput placeholder="Address line 3" value={data.instAddr3} onChange={v=>onChange({...data,instAddr3:v})}/>
-        <FormInput placeholder="Postcode" value={data.instPostcode} onChange={v=>onChange({...data,instPostcode:v})}/>
-        <FormInput placeholder="Telephone" value={data.instTel} onChange={v=>onChange({...data,instTel:v})}/>
-        <div style={{height:16}}/>
-      </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
+    <GasFormShell title="Client & Installation" subtitle="Boiler Service Record" step={1} totalSteps={8} stepLabels={["File Ref","Client","Appliance","Checks","Notes","Attachments","Signatures","Engineer"]} onBack={onBack} onPrev={onBack} onNext={onNext}>
+      {engData && onEngChange && <>
+        <div style={GAS_SECTION}>Engineer Details</div>
+        <GASInput label="Trading Title / Company Name" placeholder="Company name" value={engData.companyName} onChange={v=>onEngChange({...engData,companyName:v})}/>
+        <GASInput label="Address" placeholder="Address" value={engData.companyAddr} onChange={v=>onEngChange({...engData,companyAddr:v})}/>
+        <GASInput label="Town / City" placeholder="Town or city" value={engData.companyTown} onChange={v=>onEngChange({...engData,companyTown:v})}/>
+        <GASInput label="Post Code" placeholder="Postcode" value={engData.companyPostcode} onChange={v=>onEngChange({...engData,companyPostcode:v})}/>
+        <GASInput label="Gas Safe No" placeholder="Gas Safe registration number" value={engData.gasSafeNo} onChange={v=>onEngChange({...engData,gasSafeNo:v})}/>
+        <GASInput label="Telephone No" placeholder="Telephone" value={engData.companyTel} onChange={v=>onEngChange({...engData,companyTel:v})}/>
+        <GASInput label="Engineer Name" placeholder="Engineer name" value={engData.engineerName} onChange={v=>onEngChange({...engData,engineerName:v})}/>
+        <GASInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={engData.gasId} onChange={v=>onEngChange({...engData,gasId:v})}/>
+      </>}
+      <div style={{ ...GAS_SECTION, display:"flex", alignItems:"center", justifyContent:"space-between" }}><span>Client Details</span><ContactBtn target="client"/></div>
+      {[["clientName","Name"],["clientAddr1","Address line 1"],["clientAddr2","Address line 2"],["clientAddr3","Address line 3"],["clientPostcode","Postcode"],["clientTel","Telephone"],["clientEmail","Email"]].map(([k,p])=>(
+        <GASInput key={k} label={p} placeholder={p} value={data[k]} onChange={v=>onChange({...data,[k]:v})}/>
+      ))}
+      <div style={{ ...GAS_SECTION, display:"flex", alignItems:"center", justifyContent:"space-between" }}><span>Installation Details</span><div style={{ display:"flex", gap:6 }}><CopyBtn/><ContactBtn target="inst"/></div></div>
+      {[["instName","Name"],["instAddr1","Address line 1"],["instAddr2","Address line 2"],["instAddr3","Address line 3"],["instPostcode","Postcode"],["instTel","Telephone"]].map(([k,p])=>(
+        <GASInput key={k} label={p} placeholder={p} value={data[k]} onChange={v=>onChange({...data,[k]:v})}/>
+      ))}
       {bsPickerTarget && <ContactPickerModal
         title={bsPickerTarget==="client" ? "Choose Client" : "Choose Installation"}
         onSelect={c=>pickContact(bsPickerTarget,c)}
         onClose={()=>setBsPickerTarget(null)}/>}
-    </div>
+    </GasFormShell>
   );
 }
 
@@ -19879,109 +19698,72 @@ function BSStepApplianceDetails({ data, onChange, onNext, onBack, onHome }) {
   if(bsPicker==="applianceMake") return <PickerScreen title="Appliance Make" options={ALL_MAKES} onSelect={v=>{onChange({...data,applianceMake:v,applianceModel:""});setBsPicker(null);}} onBack={()=>setBsPicker(null)} allowCustom={true} onSaveCustom={v=>rememberApplianceValue("make",v)}/>;
   if(bsPicker==="applianceModel") return <PickerScreen title="Appliance Model" options={data.applianceMake ? getModelsForMake(data.applianceMake) : []} onSelect={v=>{onChange({...data,applianceModel:v});setBsPicker(null);}} onBack={()=>setBsPicker(null)} allowCustom={true} onSaveCustom={v=>rememberApplianceValue("model",v)}/>;
 
-  const row = (label, field) => (
-    <div style={{ display:"flex", alignItems:"center", padding:"10px 16px", borderBottom:"1px solid #e8eaf0", background:"#fff" }}>
-      <span style={{ flex:1, fontSize:14, color:"#555", fontFamily:"'Segoe UI',sans-serif" }}>{label}</span>
-      <RadioGroup options={["Yes","No","N/A"]} value={data[field]||"N/A"} onChange={v=>onChange({...data,[field]:v})}/>
-    </div>
-  );
-  const inp = (label, field) => (
-    <div style={{ display:"flex", alignItems:"center", padding:"8px 16px", borderBottom:"1px solid #e8eaf0", background:"#fff", gap:12 }}>
-      <span style={{ width:160, fontSize:14, color:"#555", fontFamily:"'Segoe UI',sans-serif", flexShrink:0 }}>{label}</span>
-      <input value={data[field]||""} onChange={e=>onChange({...data,[field]:e.target.value})}
-        style={{ flex:1, padding:"8px 10px", border:"1px solid #ddd", borderRadius:4, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", background:"#f9f9f9" }}/>
+  const pickRow = (label, field) => (
+    <div onClick={()=>setBsPicker(field)} style={{ display:"flex", alignItems:"center", padding:"10px 0", borderBottom:"1px solid rgba(255,255,255,0.06)", cursor:"pointer" }}>
+      <span style={{ flex:1, fontSize:14, color:"rgba(255,255,255,0.7)", fontFamily:"'Segoe UI',sans-serif" }}>{label}</span>
+      <span style={{ padding:"6px 12px", background:"#1e3044", border:"1px solid #2a4058", borderRadius:6, fontSize:14, color: data[field] ? "#e8edf2" : "rgba(255,255,255,0.35)" }}>{data[field] || "Select..."}</span>
     </div>
   );
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG }}>
-      <Header title="Appliance Details" onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto" }}>
-        <div style={{ padding:"12px 16px 4px", fontSize:14, color:"#666", fontFamily:"'Segoe UI',sans-serif" }}>Appliance Details</div>
-        <div style={{ padding:"8px 16px 4px", fontSize:14, color:"#666", fontFamily:"'Segoe UI',sans-serif" }}>Type of Work :</div>
-        {row("Service", "typeOfWorkService")}
-        {row("Breakdown", "typeOfWorkBreakdown")}
-        <div onClick={()=>setBsPicker("boilerMake")} style={{ display:"flex", alignItems:"center", padding:"8px 16px", borderBottom:"1px solid #e8eaf0", background:"#fff", gap:12, cursor:"pointer" }}><span style={{ width:160, fontSize:14, color:"#555", fontFamily:"'Segoe UI',sans-serif", flexShrink:0 }}>Boiler Make :</span><span style={{ flex:1, padding:"8px 10px", border:"1px solid #ddd", borderRadius:4, fontSize:14, fontFamily:"'Segoe UI',sans-serif", background:"#f9f9f9", color: data.boilerMake ? "#222" : "#aaa" }}>{data.boilerMake || "Select..."}</span></div>
-        <div onClick={()=>setBsPicker("boilerModel")} style={{ display:"flex", alignItems:"center", padding:"8px 16px", borderBottom:"1px solid #e8eaf0", background:"#fff", gap:12, cursor:"pointer" }}><span style={{ width:160, fontSize:14, color:"#555", fontFamily:"'Segoe UI',sans-serif", flexShrink:0 }}>Boiler Model :</span><span style={{ flex:1, padding:"8px 10px", border:"1px solid #ddd", borderRadius:4, fontSize:14, fontFamily:"'Segoe UI',sans-serif", background:"#f9f9f9", color: data.boilerModel ? "#222" : "#aaa" }}>{data.boilerModel || "Select..."}</span></div>
-        {inp("Serial Number :", "boilerSerial")}
-        <div onClick={()=>setBsPicker("applianceMake")} style={{ display:"flex", alignItems:"center", padding:"8px 16px", borderBottom:"1px solid #e8eaf0", background:"#fff", gap:12, cursor:"pointer" }}><span style={{ width:160, fontSize:14, color:"#555", fontFamily:"'Segoe UI',sans-serif", flexShrink:0 }}>Appliance Make :</span><span style={{ flex:1, padding:"8px 10px", border:"1px solid #ddd", borderRadius:4, fontSize:14, fontFamily:"'Segoe UI',sans-serif", background:"#f9f9f9", color: data.applianceMake ? "#222" : "#aaa" }}>{data.applianceMake || "Select..."}</span></div>
-        <div onClick={()=>setBsPicker("applianceModel")} style={{ display:"flex", alignItems:"center", padding:"8px 16px", borderBottom:"1px solid #e8eaf0", background:"#fff", gap:12, cursor:"pointer" }}><span style={{ width:160, fontSize:14, color:"#555", fontFamily:"'Segoe UI',sans-serif", flexShrink:0 }}>Appliance Model :</span><span style={{ flex:1, padding:"8px 10px", border:"1px solid #ddd", borderRadius:4, fontSize:14, fontFamily:"'Segoe UI',sans-serif", background:"#f9f9f9", color: data.applianceModel ? "#222" : "#aaa" }}>{data.applianceModel || "Select..."}</span></div>
-        {inp("Serial No :", "applianceSerial")}
-        {inp("CO Reading", "coReading")}
-        {inp("CO2 Reading", "co2Reading")}
-        <div style={{height:16}}/>
-      </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
-    </div>
+    <GasFormShell title="Appliance Details" subtitle="Boiler Service Record" step={2} totalSteps={8} stepLabels={["File Ref","Client","Appliance","Checks","Notes","Attachments","Signatures","Engineer"]} onBack={onBack} onPrev={onBack} onNext={onNext}>
+      <div style={GAS_SECTION}>Type of Work</div>
+      <GASToggle label="Service" value={data.typeOfWorkService||"N/A"} onChange={v=>onChange({...data,typeOfWorkService:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Breakdown" value={data.typeOfWorkBreakdown||"N/A"} onChange={v=>onChange({...data,typeOfWorkBreakdown:v})} options={["Yes","No","N/A"]}/>
+      <div style={GAS_SECTION}>Boiler Details</div>
+      {pickRow("Boiler Make","boilerMake")}
+      {pickRow("Boiler Model","boilerModel")}
+      <GASInput label="Serial Number" value={data.boilerSerial} onChange={v=>onChange({...data,boilerSerial:v})} placeholder="Serial number"/>
+      <div style={GAS_SECTION}>Appliance Details</div>
+      {pickRow("Appliance Make","applianceMake")}
+      {pickRow("Appliance Model","applianceModel")}
+      <GASInput label="Serial No" value={data.applianceSerial} onChange={v=>onChange({...data,applianceSerial:v})} placeholder="Serial number"/>
+      <div style={GAS_SECTION}>Readings</div>
+      <GASInput label="CO Reading" value={data.coReading} onChange={v=>onChange({...data,coReading:v})} placeholder="CO reading"/>
+      <GASInput label="CO2 Reading" value={data.co2Reading} onChange={v=>onChange({...data,co2Reading:v})} placeholder="CO2 reading"/>
+    </GasFormShell>
   );
 }
 
 // Screen 3: Appliance Details
 function BSStepPrelimChecks({ data, onChange, onNext, onBack, onHome }) {
-  const row = (label, field) => (
-    <div style={{ display:"flex", alignItems:"center", padding:"12px 16px", borderBottom:"1px solid #e8eaf0", background:"#fff", gap:8 }}>
-      <span style={{ flex:1, fontSize:14, color:"#555", fontFamily:"'Segoe UI',sans-serif", lineHeight:1.3 }}>{label}</span>
-      <RadioGroup options={["Yes","No","N/A"]} value={data[field]||"N/A"} onChange={v=>onChange({...data,[field]:v})}/>
-    </div>
-  );
-  const secH = (t) => <div style={{ padding:"8px 16px", fontSize:13, color:"#666", fontFamily:"'Segoe UI',sans-serif", background:LIGHT_BG }}>{t}</div>;
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG }}>
-      <Header title="Preliminary Checks" onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto" }}>
-        {secH("Preliminary Checks")}
-        {row("Flue:Atmospheric/Fan Assisted/Fan Dilution","flueType")}
-        {row("Ventilation Size/HL","ventilationSize")}
-        {row("Water/Fuel-Sound","waterFuelSound")}
-        {row("Electrically Fused","electricallyFused")}
-        {row("Correct Valving Arrangements","correctValving")}
-        {row("Isolation available - electrical/fuel (Within 1 meter)","isolationAvailable")}
-        {row("Boiler Plantroom Clean And Clear","boilerPlantroom")}
-        {secH("Service Checks")}
-        {row("Heat Exchanger","heatExchanger")}
-        {row("Ignition","ignition")}
-        {row("Gas Valve","gasValve")}
-        {row("Fan","fan")}
-        {row("Safety Device","safetyDevice")}
-        {row("Control Box","controlBox")}
-        {row("Burners And Pilot","burnersAndPilot")}
-        {row("Fuel Pressure And Type","fuelPressure")}
-        {secH("Service Operations")}
-        {row("Burner Washed And Cleaned","burnerWashed")}
-        {row("Pilot Assembly Cleaned And Adjusted","pilotAssembly")}
-        {row("Ignition System Cleaned And Adjusted","ignitionSystem")}
-        {row("Burner Fan And Airways Cleaned","burnerFan")}
-        {row("Heat Exchanger/Flueways Clean And Clear","heatExchangerFlueways")}
-        {row("Fuel And Electrical Supply Connected And Sound","fuelElectrical")}
-        <div style={{height:16}}/>
-      </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
-    </div>
+    <GasFormShell title="Preliminary Checks" subtitle="Boiler Service Record" step={3} totalSteps={8} stepLabels={["File Ref","Client","Appliance","Checks","Notes","Attachments","Signatures","Engineer"]} onBack={onBack} onPrev={onBack} onNext={onNext}>
+      <div style={GAS_SECTION}>Preliminary Checks</div>
+      <GASToggle label="Flue:Atmospheric/Fan Assisted/Fan Dilution" value={data.flueType||"N/A"} onChange={v=>onChange({...data,flueType:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Ventilation Size/HL" value={data.ventilationSize||"N/A"} onChange={v=>onChange({...data,ventilationSize:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Water/Fuel-Sound" value={data.waterFuelSound||"N/A"} onChange={v=>onChange({...data,waterFuelSound:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Electrically Fused" value={data.electricallyFused||"N/A"} onChange={v=>onChange({...data,electricallyFused:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Correct Valving Arrangements" value={data.correctValving||"N/A"} onChange={v=>onChange({...data,correctValving:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Isolation available - electrical/fuel (Within 1 meter)" value={data.isolationAvailable||"N/A"} onChange={v=>onChange({...data,isolationAvailable:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Boiler Plantroom Clean And Clear" value={data.boilerPlantroom||"N/A"} onChange={v=>onChange({...data,boilerPlantroom:v})} options={["Yes","No","N/A"]}/>
+      <div style={GAS_SECTION}>Service Checks</div>
+      <GASToggle label="Heat Exchanger" value={data.heatExchanger||"N/A"} onChange={v=>onChange({...data,heatExchanger:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Ignition" value={data.ignition||"N/A"} onChange={v=>onChange({...data,ignition:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Gas Valve" value={data.gasValve||"N/A"} onChange={v=>onChange({...data,gasValve:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Fan" value={data.fan||"N/A"} onChange={v=>onChange({...data,fan:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Safety Device" value={data.safetyDevice||"N/A"} onChange={v=>onChange({...data,safetyDevice:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Control Box" value={data.controlBox||"N/A"} onChange={v=>onChange({...data,controlBox:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Burners And Pilot" value={data.burnersAndPilot||"N/A"} onChange={v=>onChange({...data,burnersAndPilot:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Fuel Pressure And Type" value={data.fuelPressure||"N/A"} onChange={v=>onChange({...data,fuelPressure:v})} options={["Yes","No","N/A"]}/>
+      <div style={GAS_SECTION}>Service Operations</div>
+      <GASToggle label="Burner Washed And Cleaned" value={data.burnerWashed||"N/A"} onChange={v=>onChange({...data,burnerWashed:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Pilot Assembly Cleaned And Adjusted" value={data.pilotAssembly||"N/A"} onChange={v=>onChange({...data,pilotAssembly:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Ignition System Cleaned And Adjusted" value={data.ignitionSystem||"N/A"} onChange={v=>onChange({...data,ignitionSystem:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Burner Fan And Airways Cleaned" value={data.burnerFan||"N/A"} onChange={v=>onChange({...data,burnerFan:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Heat Exchanger/Flueways Clean And Clear" value={data.heatExchangerFlueways||"N/A"} onChange={v=>onChange({...data,heatExchangerFlueways:v})} options={["Yes","No","N/A"]}/>
+      <GASToggle label="Fuel And Electrical Supply Connected And Sound" value={data.fuelElectrical||"N/A"} onChange={v=>onChange({...data,fuelElectrical:v})} options={["Yes","No","N/A"]}/>
+    </GasFormShell>
   );
 }
 
 function BSStepNotes({ data, onChange, onNext, onBack, onHome }) {
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG }}>
-      <Header title="Notes" onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ marginBottom:16 }}>
-          <div style={{ fontSize:14, color:"#666", fontFamily:"'Segoe UI',sans-serif", marginBottom:6 }}>Additional Notes</div>
-          <textarea value={data.additionalNotes||""} onChange={e=>onChange({...data,additionalNotes:e.target.value})}
-            style={{ width:"100%", boxSizing:"border-box", padding:12, border:"1px solid #ddd", borderRadius:6, background:"#fff", fontSize:14, fontFamily:"'Segoe UI',sans-serif", resize:"none", height:130, outline:"none" }}/>
-        </div>
-        <div style={{ marginBottom:16 }}>
-          <div style={{ fontSize:14, color:"#666", fontFamily:"'Segoe UI',sans-serif", marginBottom:6 }}>Spares Required</div>
-          <textarea value={data.sparesRequired||""} onChange={e=>onChange({...data,sparesRequired:e.target.value})}
-            style={{ width:"100%", boxSizing:"border-box", padding:12, border:"1px solid #ddd", borderRadius:6, background:"#fff", fontSize:14, fontFamily:"'Segoe UI',sans-serif", resize:"none", height:130, outline:"none" }}/>
-        </div>
-        <div>
-          <div style={{ fontSize:14, color:"#666", fontFamily:"'Segoe UI',sans-serif", marginBottom:6 }}>CO/CO2 Ratio</div>
-          <input value={data.coCo2Ratio||""} onChange={e=>onChange({...data,coCo2Ratio:e.target.value})}
-            style={{ width:140, padding:"8px 12px", border:"1px solid #ddd", borderRadius:6, background:"#fff", fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none" }}/>
-        </div>
-      </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
-    </div>
+    <GasFormShell title="Notes" subtitle="Boiler Service Record" step={4} totalSteps={8} stepLabels={["File Ref","Client","Appliance","Checks","Notes","Attachments","Signatures","Engineer"]} onBack={onBack} onPrev={onBack} onNext={onNext}>
+      <div style={GAS_SECTION}>Notes & Spares</div>
+      <GASTextarea label="Additional Notes" value={data.additionalNotes} onChange={v=>onChange({...data,additionalNotes:v})} placeholder="Additional notes..."/>
+      <GASTextarea label="Spares Required" value={data.sparesRequired} onChange={v=>onChange({...data,sparesRequired:v})} placeholder="List spares..."/>
+      <GASInput label="CO/CO2 Ratio" value={data.coCo2Ratio} onChange={v=>onChange({...data,coCo2Ratio:v})} placeholder="CO/CO2 ratio"/>
+    </GasFormShell>
   );
 }
 
@@ -20000,66 +19782,44 @@ function BSStepSignature({ data, onChange, onNext, onBack, onHome }) {
     if (!data.sigCustomerDate) updates.sigCustomerDate = today;
     if (Object.keys(updates).length) onChange({...data,...updates});
   }, []);
-  const lbl = t => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:6, marginTop:10, fontFamily:"'Segoe UI',sans-serif" }}>{t}</div>;
-  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:BLUE, borderBottom:`2px solid ${BLUE}30`, paddingBottom:6, marginBottom:12, marginTop:16, fontFamily:"'Segoe UI',sans-serif" }}>{t}</div>;
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Signatures & Dates" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        {/* Engineer signature */}
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Engineer Signature")}
-          <div style={{ fontSize:13, color:"#555", lineHeight:1.6, marginBottom:14, background:"#f9f9f9", borderRadius:8, padding:"10px 12px" }}>
-            I confirm that the boiler service described on this record has been satisfactorily completed.
-          </div>
-          {lbl("Draw engineer signature below")}
-          <SigPad value={data.engineerSigImage} storageKey="gsc_engineer_sig" onChange={v=>onChange({...data,engineerSigImage:v})}/>
-          {lbl("Engineer printed name")}
-          <input value={data.engineerSigName||""} onChange={e=>onChange({...data,engineerSigName:e.target.value})} placeholder="Engineer full name"
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
-          {lbl("Date")}
-          <input type="date" value={data.sigDate||today} onChange={e=>onChange({...data,sigDate:e.target.value})}
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none" }}/>
-          {data.sigDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(data.sigDate)}</div>}
+    <GasFormShell title="Signatures & Dates" subtitle="Boiler Service Record" step={6} totalSteps={8} stepLabels={["File Ref","Client","Appliance","Checks","Notes","Attachments","Signatures","Engineer"]} onBack={onBack} onPrev={onBack} onNext={onNext}>
+      <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+        <div style={GAS_SECTION}>Engineer Signature</div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.6, marginBottom:14, background:"#1e3044", borderRadius:8, padding:"10px 12px" }}>
+          I confirm that the boiler service described on this record has been satisfactorily completed.
         </div>
-        {/* Data protection */}
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Data Protection")}
-          <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
-            <input type="checkbox" id="bsdp" checked={data.dataProtection||false} onChange={e=>onChange({...data,dataProtection:e.target.checked})} style={{ width:20, height:20, accentColor:BLUE, marginTop:2, flexShrink:0, cursor:"pointer" }}/>
-            <label htmlFor="bsdp" style={{ fontSize:13, color:"#444", cursor:"pointer", lineHeight:1.5 }}>
-              Customer agrees to allow storage of their personal data in line with GDPR data protection laws.{" "}
-              <span onClick={()=>setShowPrivacy(true)} style={{ color:BLUE, textDecoration:"underline", cursor:"pointer" }}>Read more</span>
-            </label>
-          </div>
-        </div>
-        {/* Customer signature */}
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Customer / Responsible Person")}
-          <div style={{ fontSize:13, color:"#555", lineHeight:1.6, marginBottom:14, background:"#f9f9f9", borderRadius:8, padding:"10px 12px" }}>
-            Please sign below to confirm satisfactory receipt of the boiler service documentation.
-          </div>
-          {lbl("Draw customer signature below")}
-          <SigPad value={data.customerSigImage} onChange={v=>onChange({...data,customerSigImage:v})}/>
-          {lbl("Customer printed name")}
-          <input value={data.customerSigName||""} onChange={e=>onChange({...data,customerSigName:e.target.value})} placeholder="Customer full name"
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
-          {lbl("Customer declaration")}
-          <input value={data.customerDeclaration||""} onChange={e=>onChange({...data,customerDeclaration:e.target.value})} placeholder="e.g. I have received a copy of this service record"
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
-          {lbl("Date")}
-          <input type="date" value={data.sigCustomerDate||today} onChange={e=>onChange({...data,sigCustomerDate:e.target.value})}
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none" }}/>
-          {data.sigCustomerDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(data.sigCustomerDate)}</div>}
+        <span style={GAS_LABEL}>Draw engineer signature below</span>
+        <SigPad value={data.engineerSigImage} storageKey="gsc_engineer_sig" onChange={v=>onChange({...data,engineerSigImage:v})}/>
+        <GASInput label="Engineer printed name" value={data.engineerSigName} onChange={v=>onChange({...data,engineerSigName:v})} placeholder="Engineer full name"/>
+        <GASInput label="Date" value={data.sigDate||today} onChange={v=>onChange({...data,sigDate:v})} type="date"/>
+      </div>
+      <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+        <div style={GAS_SECTION}>Data Protection</div>
+        <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+          <input type="checkbox" id="bsdp" checked={data.dataProtection||false} onChange={e=>onChange({...data,dataProtection:e.target.checked})} style={{ width:20, height:20, accentColor:GAS_ACCENT, marginTop:2, flexShrink:0, cursor:"pointer" }}/>
+          <label htmlFor="bsdp" style={{ fontSize:13, color:"rgba(255,255,255,0.7)", cursor:"pointer", lineHeight:1.5 }}>
+            Customer agrees to allow storage of their personal data in line with GDPR data protection laws.
+          </label>
         </div>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext} nextLabel="Next: Engineer Details"/>
+      <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+        <div style={GAS_SECTION}>Customer / Responsible Person</div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.6, marginBottom:14, background:"#1e3044", borderRadius:8, padding:"10px 12px" }}>
+          Please sign below to confirm satisfactory receipt of the boiler service documentation.
+        </div>
+        <span style={GAS_LABEL}>Draw customer signature below</span>
+        <SigPad value={data.customerSigImage} onChange={v=>onChange({...data,customerSigImage:v})}/>
+        <GASInput label="Customer printed name" value={data.customerSigName} onChange={v=>onChange({...data,customerSigName:v})} placeholder="Customer full name"/>
+        <GASInput label="Customer declaration" value={data.customerDeclaration} onChange={v=>onChange({...data,customerDeclaration:v})} placeholder="e.g. I have received a copy of this service record"/>
+        <GASInput label="Date" value={data.sigCustomerDate||today} onChange={v=>onChange({...data,sigCustomerDate:v})} type="date"/>
+      </div>
       {showPrivacy && (
         <Modal title="Data Privacy Act" onClose={()=>setShowPrivacy(false)}>
           <p style={{ fontFamily:"'Segoe UI',sans-serif", fontSize:14, color:"#333", lineHeight:1.5 }}>Your personal data is collected to provide gas safety services. It will be stored securely and not shared with third parties without your consent. You can opt out at any time.</p>
         </Modal>
       )}
-    </div>
+    </GasFormShell>
   );
 }
 
@@ -20069,33 +19829,24 @@ function BSStepEngineerDetails({ data, onChange, onOptions, onBack, onHome }) {
   const fmtTime = () => { const d=new Date(); let h=d.getHours(); const m=String(d.getMinutes()).padStart(2,"0"); const ampm=h>=12?"PM":"AM"; h=h%12||12; return `${String(h).padStart(2,"0")}:${m} ${ampm}`; };
   if (!data.timeArrival) { const t=fmtTime(); onChange({...data, timeArrival:t, timeDeparture:t, reportDate:fmtDate()}); }
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG }}>
-      <Header title="Engineer Details" onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto" }}>
-        <div style={{ fontSize:13, color:"#999", padding:"10px 16px 4px", fontFamily:"'Segoe UI',sans-serif" }}>Company Details</div>
-        <FormInput label="" placeholder="Company Name" value={data.companyName||""} onChange={v=>onChange({...data,companyName:v})}/>
-        <div style={{ fontSize:13, color:"#999", padding:"8px 16px 2px", fontFamily:"'Segoe UI',sans-serif" }}>Address</div>
-        <textarea value={data.companyAddr||""} onChange={e=>onChange({...data,companyAddr:e.target.value})}
-          style={{ width:"100%", boxSizing:"border-box", padding:"12px 16px", border:"none", borderBottom:"1px solid #e8eaf0", background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", resize:"none", height:80, outline:"none" }}/>
-        <FormInput label="" placeholder="Postcode" value={data.companyPostcode||""} onChange={v=>onChange({...data,companyPostcode:v})}/>
-        <FormInput label="" placeholder="Telephone" value={data.companyTel||""} onChange={v=>onChange({...data,companyTel:v})}/>
-        <FormInput label="" placeholder="Gas Safe No" value={data.gasSafeNo||""} onChange={v=>onChange({...data,gasSafeNo:v})}/>
-        <div style={{ fontSize:13, color:"#999", padding:"8px 16px 2px", fontFamily:"'Segoe UI',sans-serif" }}>Time of Arrival</div>
-        <input value={data.timeArrival||""} onChange={e=>onChange({...data,timeArrival:e.target.value})}
-          style={{ width:"100%", boxSizing:"border-box", padding:"12px 16px", border:"none", borderBottom:"1px solid #e8eaf0", background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", fontWeight:700, outline:"none" }}/>
-        <div style={{ fontSize:13, color:"#999", padding:"8px 16px 2px", fontFamily:"'Segoe UI',sans-serif" }}>Time of Departure</div>
-        <input value={data.timeDeparture||""} onChange={e=>onChange({...data,timeDeparture:e.target.value})}
-          style={{ width:"100%", boxSizing:"border-box", padding:"12px 16px", border:"none", borderBottom:"1px solid #e8eaf0", background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", fontWeight:700, outline:"none" }}/>
-        <div style={{ fontSize:13, color:"#999", padding:"10px 16px 4px", fontFamily:"'Segoe UI',sans-serif" }}>Report Issued By</div>
-        <FormInput label="" placeholder="Name" value={data.engineerName||""} onChange={v=>onChange({...data,engineerName:v})}/>
-        <FormInput label="" placeholder="Gas ID No" value={data.gasId||""} onChange={v=>onChange({...data,gasId:v})}/>
-        <div style={{ padding:"12px 16px", border:"none", borderBottom:"1px solid #e8eaf0", background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", fontWeight:700 }}>
-          {data.reportDate || fmtDate()}
-        </div>
-        <div style={{height:16}}/>
+    <GasFormShell title="Engineer Details" subtitle="Boiler Service Record" step={7} totalSteps={8} stepLabels={["File Ref","Client","Appliance","Checks","Notes","Attachments","Signatures","Engineer"]} onBack={onBack} onPrev={onBack} onOptions={onOptions}>
+      <div style={GAS_SECTION}>Company Details</div>
+      <GASInput label="Company Name" value={data.companyName} onChange={v=>onChange({...data,companyName:v})} placeholder="Company Name"/>
+      <GASInput label="Address" value={data.companyAddr} onChange={v=>onChange({...data,companyAddr:v})} placeholder="Address"/>
+      <GASInput label="Postcode" value={data.companyPostcode} onChange={v=>onChange({...data,companyPostcode:v})} placeholder="Postcode"/>
+      <GASInput label="Telephone" value={data.companyTel} onChange={v=>onChange({...data,companyTel:v})} placeholder="Telephone"/>
+      <GASInput label="Gas Safe No" value={data.gasSafeNo} onChange={v=>onChange({...data,gasSafeNo:v})} placeholder="Gas Safe No"/>
+      <div style={GAS_SECTION}>Time</div>
+      <GASInput label="Time of Arrival" value={data.timeArrival} onChange={v=>onChange({...data,timeArrival:v})} placeholder="Time of arrival"/>
+      <GASInput label="Time of Departure" value={data.timeDeparture} onChange={v=>onChange({...data,timeDeparture:v})} placeholder="Time of departure"/>
+      <div style={GAS_SECTION}>Report Issued By</div>
+      <GASInput label="Engineer Name" value={data.engineerName} onChange={v=>onChange({...data,engineerName:v})} placeholder="Name"/>
+      <GASInput label="Gas ID No" value={data.gasId} onChange={v=>onChange({...data,gasId:v})} placeholder="Gas ID No"/>
+      <div style={{ padding:"12px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+        <span style={GAS_LABEL}>Report Date</span>
+        <div style={{ color:"#e8edf2", fontSize:15, fontWeight:700 }}>{data.reportDate || fmtDate()}</div>
       </div>
-      <BottomBar onHome={onHome} onOptions={onOptions}/>
-    </div>
+    </GasFormShell>
   );
 }
 
@@ -20118,15 +19869,10 @@ function BSOptionsMenu({ onPreview, onSave, onCopyToInvoice, onClose }) {
 // WN Step 1: File Reference (mirrors StepFileRef)
 function WNStepFileRef({ data, onChange, onNext, onBack, onHome }) {
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Warning Notice" onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto", padding:24, paddingBottom:80 }}>
-        <p style={{ color:"#888", fontSize:15, marginBottom:20, textAlign:"center" }}>Please enter a file reference</p>
-        <input value={data.certRef||""} onChange={e=>onChange({...data,certRef:e.target.value})} placeholder="e.g. 2 Coppice Close WR2 6JR Warning"
-          style={{ width:"100%", boxSizing:"border-box", padding:"14px 16px", border:"none", borderRadius:8, background:"#fff", fontSize:15, fontFamily:"'Segoe UI',sans-serif", boxShadow:"0 2px 8px rgba(0,0,0,0.08)", outline:"none" }}/>
-      </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
-    </div>
+    <GasFormShell title="Warning Notice" subtitle="File Reference" step={0} totalSteps={6} stepLabels={["File Ref","Client","Notice","Attachments","Signatures","Engineer"]} onBack={onBack} onPrev={null} onNext={onNext}>
+      <p style={{ color:"rgba(255,255,255,0.5)", fontSize:14, marginBottom:16, textAlign:"center" }}>Please enter a file reference</p>
+      <GASInput label="File Reference" value={data.certRef} onChange={v=>onChange({...data,certRef:v})} placeholder="e.g. 2 Coppice Close WR2 6JR Warning"/>
+    </GasFormShell>
   );
 }
 
@@ -20144,50 +19890,48 @@ function WNStepClientDetails({ data, onChange, onNext, onBack, onHome, engData, 
   };
 
   const ContactBtn = ({ target }) => (
-    <button onClick={() => setWnPickerTarget(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"#1a3a4a", border:"none", borderRadius:20, padding:"6px 14px", color:"#fff200", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
-      👥 Add a Contact
+    <button onClick={() => setWnPickerTarget(target)} style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(59,130,246,0.15)", border:"1px solid rgba(59,130,246,0.4)", borderRadius:20, padding:"6px 14px", color:"#3b82f6", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+      Add Contact
     </button>
   );
 
   const CopyBtn = () => (
-    <button onClick={copy} style={{ background:"rgba(255,255,255,0.9)", border:"1.5px solid rgba(29,74,46,0.3)", borderRadius:20, padding:"6px 14px", color:"#1a3a4a", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>✓ Copy</button>
+    <button onClick={copy} style={{ background:"rgba(34,197,94,0.12)", border:"1px solid rgba(34,197,94,0.4)", borderRadius:20, padding:"6px 14px", color:"#22c55e", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:"inherit" }}>Copy</button>
   );
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Engineers, Client & Installation Details" onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto" }}>
-        {errorMsg && <div style={{ background:"#fff3cd", color:"#856404", padding:"10px 16px", fontSize:13, borderBottom:"1px solid #ffc107" }}>⚠️ {errorMsg}</div>}
-        {engData && onEngChange && <>
-          <SectionHeader title="Engineers Details"/>
-          <FormInput label="Trading Title / Company Name" placeholder="Company name" value={engData.companyName||""} onChange={v=>onEngChange({...engData,companyName:v})}/>
-          <FormInput label="Address" placeholder="Address" value={engData.companyAddr||""} onChange={v=>onEngChange({...engData,companyAddr:v})}/>
-          <FormInput label="Town / City" placeholder="Town or city" value={engData.companyTown||""} onChange={v=>onEngChange({...engData,companyTown:v})}/>
-          <FormInput label="Post Code" placeholder="Postcode" value={engData.companyPostcode||""} onChange={v=>onEngChange({...engData,companyPostcode:v})}/>
-          <FormInput label="Gas Safe No" placeholder="Gas Safe registration number" value={engData.gasSafeNo||""} onChange={v=>onEngChange({...engData,gasSafeNo:v})}/>
-          <FormInput label="Telephone No" placeholder="Telephone" value={engData.companyTel||""} onChange={v=>onEngChange({...engData,companyTel:v})}/>
-          <FormInput label="Engineer Name" placeholder="Engineer name" value={engData.engineerName||""} onChange={v=>onEngChange({...engData,engineerName:v})}/>
-          <FormInput label="Gas ID Number (Engineer ID)" placeholder="Engineer ID card number" value={engData.gasId||""} onChange={v=>onEngChange({...engData,gasId:v})}/>
-        </>}
-        <SectionHeader title="Client Details" actions={[<ContactBtn key="cp" target="client"/>]}/>
-        {[["clientName","Name"],["clientAddr1","Address line 1"],["clientAddr2","Address line 2"],["clientAddr3","Address line 3"],["clientPostcode","Postcode"],["clientTel","Telephone"],["clientEmail","Email"]].map(([k,p])=>(
-          <FormInput key={k} placeholder={p} value={data[k]||""} onChange={v=>onChange({...data,[k]:v})}/>
-        ))}
-        <SectionHeader title="Installation Details" actions={[
-          <CopyBtn key="copy"/>,
-          <ContactBtn key="cp" target="inst"/>
-        ]}/>
-        {[["instName","Name"],["instAddr1","Address line 1"],["instAddr2","Address line 2"],["instAddr3","Address line 3"],["instPostcode","Postcode"],["instTel","Telephone"]].map(([k,p])=>(
-          <FormInput key={k} placeholder={p} value={data[k]||""} onChange={v=>onChange({...data,[k]:v})}/>
-        ))}
-        <div style={{ height:20 }}/>
+    <GasFormShell title="Warning Notice" subtitle="Client & Installation Details" step={1} totalSteps={6} stepLabels={["File Ref","Client","Notice","Attachments","Signatures","Engineer"]} onBack={onBack} onPrev={onBack} onNext={onNext}>
+      {errorMsg && <div style={{ background:"rgba(239,68,68,0.15)", color:"#ef4444", padding:"10px 16px", fontSize:13, borderRadius:8, marginBottom:12 }}>{errorMsg}</div>}
+      {engData && onEngChange && <>
+        <div style={GAS_SECTION}>Engineer Details</div>
+        <GASInput label="Trading Title / Company Name" value={engData.companyName} onChange={v=>onEngChange({...engData,companyName:v})} placeholder="Company name"/>
+        <GASInput label="Address" value={engData.companyAddr} onChange={v=>onEngChange({...engData,companyAddr:v})} placeholder="Address"/>
+        <GASInput label="Town / City" value={engData.companyTown} onChange={v=>onEngChange({...engData,companyTown:v})} placeholder="Town or city"/>
+        <GASInput label="Post Code" value={engData.companyPostcode} onChange={v=>onEngChange({...engData,companyPostcode:v})} placeholder="Postcode"/>
+        <GASInput label="Gas Safe No" value={engData.gasSafeNo} onChange={v=>onEngChange({...engData,gasSafeNo:v})} placeholder="Gas Safe registration number"/>
+        <GASInput label="Telephone No" value={engData.companyTel} onChange={v=>onEngChange({...engData,companyTel:v})} placeholder="Telephone"/>
+        <GASInput label="Engineer Name" value={engData.engineerName} onChange={v=>onEngChange({...engData,engineerName:v})} placeholder="Engineer name"/>
+        <GASInput label="Gas ID Number (Engineer ID)" value={engData.gasId} onChange={v=>onEngChange({...engData,gasId:v})} placeholder="Engineer ID card number"/>
+      </>}
+      <div style={{ ...GAS_SECTION, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span>Client Details</span>
+        <ContactBtn target="client"/>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext}/>
+      {[["clientName","Name"],["clientAddr1","Address line 1"],["clientAddr2","Address line 2"],["clientAddr3","Address line 3"],["clientPostcode","Postcode"],["clientTel","Telephone"],["clientEmail","Email"]].map(([k,p])=>(
+        <GASInput key={k} label={p} value={data[k]} onChange={v=>onChange({...data,[k]:v})} placeholder={p}/>
+      ))}
+      <div style={{ ...GAS_SECTION, display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+        <span>Installation Details</span>
+        <div style={{ display:"flex", gap:6 }}><CopyBtn/><ContactBtn target="inst"/></div>
+      </div>
+      {[["instName","Name"],["instAddr1","Address line 1"],["instAddr2","Address line 2"],["instAddr3","Address line 3"],["instPostcode","Postcode"],["instTel","Telephone"]].map(([k,p])=>(
+        <GASInput key={k} label={p} value={data[k]} onChange={v=>onChange({...data,[k]:v})} placeholder={p}/>
+      ))}
       {wnPickerTarget && <ContactPickerModal
         title={wnPickerTarget==="client" ? "Choose Client" : "Choose Installation"}
         onSelect={c=>handlePickWN(wnPickerTarget,c)}
         onClose={()=>setWnPickerTarget(null)}/>}
-    </div>
+    </GasFormShell>
   );
 }
 
@@ -20199,54 +19943,44 @@ function WNStepNoticeDetails({ data, onChange, onNext, onBack, onHome, embeddedM
   if(wnPicker==="make") return <PickerScreen title="Make" options={ALL_MAKES} onSelect={v=>{set("make",v);set("model","");setWnPicker(null);}} onBack={()=>setWnPicker(null)} allowCustom={true} onSaveCustom={v=>rememberApplianceValue("make",v)}/>;
   if(wnPicker==="model") return <PickerScreen title="Model" options={data.make ? getModelsForMake(data.make) : []} onSelect={v=>{set("model",v);setWnPicker(null);}} onBack={()=>setWnPicker(null)} allowCustom={true} onSaveCustom={v=>rememberApplianceValue("model",v)}/>;
 
-  function CheckRow({ label, field }) {
-    return (
-      <div style={{ display:"flex", alignItems:"center", padding:"12px 16px", background:"#fff", borderBottom:"1px solid #eee" }}>
-        <span style={{ flex:1, fontSize:14, color:"#555", fontFamily:"'Segoe UI',sans-serif", lineHeight:1.4 }}>{label}</span>
-        <RadioGroup options={["YES","NO","NA"]} value={data[field]||"NO"} onChange={v=>set(field,v)}/>
-      </div>
-    );
-  }
-
-  const headerTitle = embeddedMode
-    ? <span><span style={{color:"#ff3333",fontWeight:700}}>Warning</span> Notice Details</span>
-    : "Notice Details";
+  const headerTitle = embeddedMode ? "Warning Notice Details" : "Notice Details";
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title={headerTitle} onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto" }}>
-        <SectionHeader title="1. The Gas Appliance / Gas Installation"/>
-        <div onClick={()=>setWnPicker("make")} style={{ padding:"12px 16px", background:"#fff", borderBottom:"1px solid #eee", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center" }}><span style={{ flex:1, color:"#666" }}>Make:</span><span style={{ color: data.make ? "#222" : "#aaa" }}>{data.make || "Select..."}</span></div>
-        <div onClick={()=>setWnPicker("model")} style={{ padding:"12px 16px", background:"#fff", borderBottom:"1px solid #eee", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center" }}><span style={{ flex:1, color:"#666" }}>Model:</span><span style={{ color: data.model ? "#222" : "#aaa" }}>{data.model || "Select..."}</span></div>
-        <FormInput placeholder="Type" value={data.type||""} onChange={v=>set("type",v)}/>
-        <FormInput placeholder="Serial No" value={data.serialNo||""} onChange={v=>set("serialNo",v)}/>
-        <FormInput placeholder="Installation Details (e.g. gas pipework, gas meter)" value={data.installationDetails||""} onChange={v=>set("installationDetails",v)}/>
-        <FormInput placeholder="Fixed in room / location (if known)" value={data.locationRoom||""} onChange={v=>set("locationRoom",v)}/>
-
-        <SectionHeader title="2. Immediately Dangerous (ID)"/>
-        <CheckRow label="A gas escape has been detected on the appliance / installation" field="idGasEscape"/>
-        <CheckRow label="With permission it has been disconnected from the gas supply and a DANGER DO NOT USE label attached" field="idDisconnected"/>
-        <CheckRow label="As you have refused to allow it to be made safe, a DANGER DO NOT USE label has been attached" field="idRefused"/>
-        <FormInput placeholder="Gas Emergency Contact Centre Reference (or n/a)" value={data.gasEmergencyRef||""} onChange={v=>set("gasEmergencyRef",v)}/>
-
-        <SectionHeader title="3. At Risk (AR)"/>
-        <FormInput placeholder="Reason unsafe / At Risk description" value={data.arReason||""} onChange={v=>set("arReason",v)} multiline/>
-        <CheckRow label="With permission it has been TURNED OFF and a DANGER DO NOT USE label attached" field="arTurnedOff"/>
-        <CheckRow label="As you have refused to allow it to be made safe, a DANGER DO NOT USE label has been attached" field="arRefused"/>
-        <CheckRow label="Turning off will not reduce the risk — contact the following for further investigation" field="arTurningOffNoHelp"/>
-        <FormInput placeholder="Contact Name (or n/a)" value={data.contactName||""} onChange={v=>set("contactName",v)}/>
-        <FormInput placeholder="Contact Tel No (or n/a)" value={data.contactTel||""} onChange={v=>set("contactTel",v)}/>
-
-        <SectionHeader title="4. RIDDOR"/>
-        <CheckRow label="The unsafe situation(s) identified is reportable to the HSE under RIDDOR" field="riddor"/>
-
-        <SectionHeader title="5. Remedial Action Required"/>
-        <FormInput placeholder="Describe remedial action taken..." value={data.remedialAction||""} onChange={v=>set("remedialAction",v)} multiline/>
-        <div style={{ height:20 }}/>
+    <GasFormShell title={headerTitle} subtitle="Warning Notice" step={2} totalSteps={6} stepLabels={["File Ref","Client","Notice","Attachments","Signatures","Engineer"]} onBack={onBack} onPrev={onBack} onNext={onNext}>
+      <div style={GAS_SECTION}>1. The Gas Appliance / Gas Installation</div>
+      <div onClick={()=>setWnPicker("make")} style={{ display:"flex", alignItems:"center", padding:"10px 0", borderBottom:"1px solid rgba(255,255,255,0.06)", cursor:"pointer" }}>
+        <span style={{ flex:1, color:"rgba(255,255,255,0.7)", fontSize:14 }}>Make:</span>
+        <span style={{ padding:"6px 12px", background:"#1e3044", border:"1px solid #2a4058", borderRadius:6, color: data.make ? "#e8edf2" : "rgba(255,255,255,0.35)", fontSize:14 }}>{data.make || "Select..."}</span>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext} nextLabel={nextLabelOverride || (embeddedMode ? "Next: Signatures" : "Next")}/>
-    </div>
+      <div onClick={()=>setWnPicker("model")} style={{ display:"flex", alignItems:"center", padding:"10px 0", borderBottom:"1px solid rgba(255,255,255,0.06)", cursor:"pointer" }}>
+        <span style={{ flex:1, color:"rgba(255,255,255,0.7)", fontSize:14 }}>Model:</span>
+        <span style={{ padding:"6px 12px", background:"#1e3044", border:"1px solid #2a4058", borderRadius:6, color: data.model ? "#e8edf2" : "rgba(255,255,255,0.35)", fontSize:14 }}>{data.model || "Select..."}</span>
+      </div>
+      <GASInput label="Type" value={data.type} onChange={v=>set("type",v)} placeholder="Type"/>
+      <GASInput label="Serial No" value={data.serialNo} onChange={v=>set("serialNo",v)} placeholder="Serial No"/>
+      <GASInput label="Installation Details" value={data.installationDetails} onChange={v=>set("installationDetails",v)} placeholder="e.g. gas pipework, gas meter"/>
+      <GASInput label="Location / Room" value={data.locationRoom} onChange={v=>set("locationRoom",v)} placeholder="Fixed in room / location"/>
+
+      <div style={GAS_SECTION}>2. Immediately Dangerous (ID)</div>
+      <GASToggle label="A gas escape has been detected on the appliance / installation" value={data.idGasEscape||"NO"} onChange={v=>set("idGasEscape",v)} options={["YES","NO","NA"]}/>
+      <GASToggle label="With permission disconnected and DANGER label attached" value={data.idDisconnected||"NO"} onChange={v=>set("idDisconnected",v)} options={["YES","NO","NA"]}/>
+      <GASToggle label="Refused to allow safe — DANGER label attached" value={data.idRefused||"NO"} onChange={v=>set("idRefused",v)} options={["YES","NO","NA"]}/>
+      <GASInput label="Gas Emergency Contact Centre Reference" value={data.gasEmergencyRef} onChange={v=>set("gasEmergencyRef",v)} placeholder="Reference or n/a"/>
+
+      <div style={GAS_SECTION}>3. At Risk (AR)</div>
+      <GASTextarea label="Reason unsafe / At Risk description" value={data.arReason} onChange={v=>set("arReason",v)} placeholder="Describe..."/>
+      <GASToggle label="With permission TURNED OFF and DANGER label attached" value={data.arTurnedOff||"NO"} onChange={v=>set("arTurnedOff",v)} options={["YES","NO","NA"]}/>
+      <GASToggle label="Refused to allow safe — DANGER label attached" value={data.arRefused||"NO"} onChange={v=>set("arRefused",v)} options={["YES","NO","NA"]}/>
+      <GASToggle label="Turning off will not reduce the risk" value={data.arTurningOffNoHelp||"NO"} onChange={v=>set("arTurningOffNoHelp",v)} options={["YES","NO","NA"]}/>
+      <GASInput label="Contact Name" value={data.contactName} onChange={v=>set("contactName",v)} placeholder="Contact Name or n/a"/>
+      <GASInput label="Contact Tel No" value={data.contactTel} onChange={v=>set("contactTel",v)} placeholder="Contact Tel or n/a"/>
+
+      <div style={GAS_SECTION}>4. RIDDOR</div>
+      <GASToggle label="Reportable to HSE under RIDDOR" value={data.riddor||"NO"} onChange={v=>set("riddor",v)} options={["YES","NO","NA"]}/>
+
+      <div style={GAS_SECTION}>5. Remedial Action Required</div>
+      <GASTextarea label="Remedial Action" value={data.remedialAction} onChange={v=>set("remedialAction",v)} placeholder="Describe remedial action taken..."/>
+    </GasFormShell>
   );
 }
 
@@ -20264,45 +19998,37 @@ function WNStepSignature({ sigData, onChange, onNext, onBack, onHome }) {
     const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     return String(d.getDate()).padStart(2,"0")+"-"+m[d.getMonth()]+"-"+d.getFullYear();
   };
-  const lbl = t => <div style={{ fontSize:12, fontWeight:600, color:"#555", marginBottom:6, marginTop:10 }}>{t}</div>;
-  const sec = t => <div style={{ fontWeight:700, fontSize:14, color:"#b91c1c", borderBottom:"2px solid #b91c1c30", paddingBottom:6, marginBottom:12, marginTop:16 }}>{t}</div>;
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Signatures" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Gas Operative Signature")}
-          <div style={{ fontSize:13, color:"#555", lineHeight:1.6, marginBottom:14, background:"#f9f9f9", borderRadius:8, padding:"10px 12px" }}>
-            I confirm that the situation(s) recorded above has been identified and brought to the attention of the Gas User/Responsible Person.
-          </div>
-          {lbl("Draw engineer signature below")}
-          <SigPad value={sigData.engSigImg} storageKey="gsc_engineer_sig" onChange={v=>onChange({...sigData,engSigImg:v})}/>
-          {lbl("Engineer printed name")}
-          <input value={sigData.engSigName||""} onChange={e=>onChange({...sigData,engSigName:e.target.value})} placeholder="Engineer full name"
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
-          {lbl("Date")}
-          <input type="date" value={sigData.engSigDate||today} onChange={e=>onChange({...sigData,engSigDate:e.target.value})}
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none" }}/>
-          {sigData.engSigDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(sigData.engSigDate)}</div>}
+    <GasFormShell title="Warning Notice" subtitle="Signatures" step={4} totalSteps={6} stepLabels={["File Ref","Client","Notice","Attachments","Signatures","Engineer"]} onBack={onBack} onPrev={onBack} onNext={onNext}>
+      <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+        <div style={GAS_SECTION}>Gas Operative Signature</div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.6)", lineHeight:1.6, marginBottom:14, background:"rgba(255,255,255,0.04)", borderRadius:8, padding:"10px 12px" }}>
+          I confirm that the situation(s) recorded above has been identified and brought to the attention of the Gas User/Responsible Person.
         </div>
-        <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
-          {sec("Gas User / Responsible Person Signature")}
-          <div style={{ fontSize:13, color:"#555", lineHeight:1.6, marginBottom:14, background:"#fff8f8", borderRadius:8, padding:"10px 12px", border:"1px solid #f5c6c6" }}>
-            I confirm that I have received this Warning Notice concerning the safety of the gas installation.
-          </div>
-          {lbl("Draw customer signature below")}
-          <SigPad value={sigData.custSigImg} onChange={v=>onChange({...sigData,custSigImg:v})}/>
-          {lbl("Customer printed name")}
-          <input value={sigData.custSigName||""} onChange={e=>onChange({...sigData,custSigName:e.target.value})} placeholder="Customer full name"
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none", marginBottom:2 }}/>
-          {lbl("Date")}
-          <input type="date" value={sigData.custSigDate||today} onChange={e=>onChange({...sigData,custSigDate:e.target.value})}
-            style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px", border:"1px solid #ddd", borderRadius:8, fontSize:14, outline:"none" }}/>
-          {sigData.custSigDate && <div style={{ fontSize:12, color:"#888", marginTop:4 }}>{fmtDisplay(sigData.custSigDate)}</div>}
+        <span style={GAS_LABEL}>Draw engineer signature below</span>
+        <SigPad value={sigData.engSigImg} storageKey="gsc_engineer_sig" onChange={v=>onChange({...sigData,engSigImg:v})}/>
+        <GASInput label="Engineer printed name" value={sigData.engSigName} onChange={v=>onChange({...sigData,engSigName:v})} placeholder="Engineer full name"/>
+        <div style={{ marginBottom:12 }}>
+          <span style={GAS_LABEL}>Date</span>
+          <input type="date" value={sigData.engSigDate||today} onChange={e=>onChange({...sigData,engSigDate:e.target.value})} style={GAS_INPUT}/>
+          {sigData.engSigDate && <div style={{ fontSize:12, color:"rgba(255,255,255,0.4)", marginTop:4 }}>{fmtDisplay(sigData.engSigDate)}</div>}
         </div>
       </div>
-      <BottomBar onHome={onHome} onNext={onNext} nextLabel="Next: Engineer Details"/>
-    </div>
+      <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
+        <div style={GAS_SECTION}>Gas User / Responsible Person Signature</div>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.6)", lineHeight:1.6, marginBottom:14, background:"rgba(239,68,68,0.06)", borderRadius:8, padding:"10px 12px", border:"1px solid rgba(239,68,68,0.2)" }}>
+          I confirm that I have received this Warning Notice concerning the safety of the gas installation.
+        </div>
+        <span style={GAS_LABEL}>Draw customer signature below</span>
+        <SigPad value={sigData.custSigImg} onChange={v=>onChange({...sigData,custSigImg:v})}/>
+        <GASInput label="Customer printed name" value={sigData.custSigName} onChange={v=>onChange({...sigData,custSigName:v})} placeholder="Customer full name"/>
+        <div style={{ marginBottom:12 }}>
+          <span style={GAS_LABEL}>Date</span>
+          <input type="date" value={sigData.custSigDate||today} onChange={e=>onChange({...sigData,custSigDate:e.target.value})} style={GAS_INPUT}/>
+          {sigData.custSigDate && <div style={{ fontSize:12, color:"rgba(255,255,255,0.4)", marginTop:4 }}>{fmtDisplay(sigData.custSigDate)}</div>}
+        </div>
+      </div>
+    </GasFormShell>
   );
 }
 
@@ -20311,41 +20037,36 @@ function WNStepEngineerDetails({ data, onChange, onOptions, onBack, onHome }) {
   const issueDate = data.issueDate || today();
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-      <Header title="Engineer Details" onBack={onBack}/>
-      <div style={{ flex:1, overflowY:"auto" }}>
-        <div style={{ padding:"8px 16px 4px", background:LIGHT_BG }}>
-          <p style={{ fontSize:13, color:"#888", margin:"8px 0 4px", fontWeight:600 }}>Company Details</p>
+    <GasFormShell title="Warning Notice" subtitle="Engineer Details" step={5} totalSteps={6} stepLabels={["File Ref","Client","Notice","Attachments","Signatures","Engineer"]} onBack={onBack} onPrev={onBack} onNext={null} onOptions={onOptions}>
+      <div style={GAS_SECTION}>Company Details</div>
+      <GASInput label="Company Name" value={data.companyName} onChange={v=>onChange({...data,companyName:v})} placeholder="Company Name"/>
+      <GASInput label="Address" value={data.companyAddr} onChange={v=>onChange({...data,companyAddr:v})} placeholder="Address"/>
+      <GASInput label="Postcode" value={data.companyPostcode} onChange={v=>onChange({...data,companyPostcode:v})} placeholder="Postcode"/>
+      <GASInput label="Telephone" value={data.companyTel} onChange={v=>onChange({...data,companyTel:v})} placeholder="Telephone"/>
+      <GASInput label="Gas Safe Registration No." value={data.gasSafeNo} onChange={v=>onChange({...data,gasSafeNo:v})} placeholder="Gas Safe Registration No."/>
+      <div style={GAS_SECTION}>Report Issued By</div>
+      <GASInput label="Engineer Name" value={data.engineerName} onChange={v=>onChange({...data,engineerName:v})} placeholder="Engineer Name"/>
+      <GASInput label="Gas ID Number" value={data.gasId} onChange={v=>onChange({...data,gasId:v})} placeholder="Gas ID Number"/>
+      <div style={{ marginBottom:12 }}>
+        <span style={GAS_LABEL}>Issue Date</span>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ flex:1, padding:"10px 12px", background:"#1e3044", border:"1px solid #2a4058", borderRadius:10, color:"#e8edf2", fontSize:14 }}>{formatDate(issueDate)}</div>
+          <button onClick={()=>setShowCal(true)} style={{ padding:"10px 16px", background:"rgba(59,130,246,0.15)", border:"1px solid rgba(59,130,246,0.4)", borderRadius:10, color:"#3b82f6", fontSize:13, fontWeight:700, cursor:"pointer" }}>Change</button>
         </div>
-        <FormInput placeholder="Company Name" value={data.companyName||""} onChange={v=>onChange({...data,companyName:v})}/>
-        <div style={{ padding:"8px 16px 4px", background:LIGHT_BG }}><p style={{ fontSize:13, color:"#888", margin:"4px 0", fontWeight:600 }}>Address</p></div>
-        <FormInput placeholder="Address" value={data.companyAddr||""} onChange={v=>onChange({...data,companyAddr:v})} multiline/>
-        <FormInput placeholder="Postcode" value={data.companyPostcode||""} onChange={v=>onChange({...data,companyPostcode:v})}/>
-        <FormInput placeholder="Telephone" value={data.companyTel||""} onChange={v=>onChange({...data,companyTel:v})}/>
-        <FormInput placeholder="Gas Safe Registration No." value={data.gasSafeNo||""} onChange={v=>onChange({...data,gasSafeNo:v})}/>
-        <div style={{ padding:"8px 16px 4px", background:LIGHT_BG }}><p style={{ fontSize:13, color:"#888", margin:"8px 0 4px", fontWeight:600 }}>Report Issued By</p></div>
-        <FormInput placeholder="Engineer Name" value={data.engineerName||""} onChange={v=>onChange({...data,engineerName:v})}/>
-        <FormInput placeholder="Gas ID Number" value={data.gasId||""} onChange={v=>onChange({...data,gasId:v})}/>
-        <div style={{ padding:"12px 16px", background:"#fff", borderBottom:"1px solid #eee", display:"flex", alignItems:"center" }}>
-          <span style={{ flex:1, fontSize:14, color:"#666" }}>Issue Date</span>
-          <button onClick={()=>setShowCal(true)} style={{ padding:"6px 12px", background:"#fff", border:`2px solid ${BLUE}`, borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", color:"#222" }}>{formatDate(issueDate)}</button>
-        </div>
-        <FormInput placeholder="Issue Time (e.g. 09:30 AM)" value={data.issueTime||""} onChange={v=>onChange({...data,issueTime:v})}/>
-        <div style={{ height:20 }}/>
       </div>
-      <BottomBar onHome={onHome} onOptions={onOptions}/>
+      <GASInput label="Issue Time" value={data.issueTime} onChange={v=>onChange({...data,issueTime:v})} placeholder="e.g. 09:30 AM"/>
       {showCal && <CalendarModal value={issueDate} onChange={d=>onChange({...data,issueDate:d})} onClose={()=>setShowCal(false)}/>}
-    </div>
+    </GasFormShell>
   );
 }
 
 // WN Options menu (mirrors OptionsMenu)
 function WNOptionsMenu({ onPreview, onSave, onClose }) {
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.3)", display:"flex", alignItems:"flex-end", zIndex:1000 }} onClick={onClose}>
-      <div style={{ width:"100%", background:"#fff", borderRadius:"20px 20px 0 0", overflow:"hidden" }} onClick={e=>e.stopPropagation()}>
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"flex-end", zIndex:1000 }} onClick={onClose}>
+      <div style={{ width:"100%", background:"#1a2a3a", borderRadius:"20px 20px 0 0", overflow:"hidden", border:"1px solid rgba(255,255,255,0.1)", borderBottom:"none" }} onClick={e=>e.stopPropagation()}>
         {[["PREVIEW PDF", onPreview],["SAVE", onSave]].map(([label, action])=>(
-          <button key={label} onClick={action} style={{ display:"block", width:"100%", padding:20, background:"#fff", border:"none", borderBottom:"1px solid #eee", fontSize:16, fontWeight:600, color:"#555", cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", letterSpacing:0.5 }}>{label}</button>
+          <button key={label} onClick={action} style={{ display:"block", width:"100%", padding:20, background:"transparent", border:"none", borderBottom:"1px solid rgba(255,255,255,0.08)", fontSize:16, fontWeight:600, color:"#e8edf2", cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", letterSpacing:0.5 }}>{label}</button>
         ))}
         <div style={{ height:20 }}/>
       </div>
@@ -20631,8 +20352,8 @@ function BSPDFPreview({ serviceData, engineerData, signatureData, onClose, autoD
   );
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"#333", display:"flex", flexDirection:"column", zIndex:500 }}>
-      <div style={{ display:"flex", alignItems:"center", background:HEADER_BG, padding:"12px 16px", gap:12, flexShrink:0 }}>
+    <div style={{ position:"fixed", inset:0, background:"#0d1f2d", display:"flex", flexDirection:"column", zIndex:500 }}>
+      <div style={{ display:"flex", alignItems:"center", background:"#0d1f2d", padding:"12px 16px", gap:12, flexShrink:0, borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:"50%", width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
           <svg width="18" height="18" viewBox="0 0 18 18"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round"/></svg>
         </button>
@@ -25396,6 +25117,118 @@ function FSSignature({ sigRef, sigData, onUpdate }) {
   );
 }
 
+// ─── Shared Gas Certificate Style Constants (matches EICR/Fire dark theme) ──
+const GAS_ACCENT = "#3b82f6";
+const GAS_BG = "linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)";
+const GAS_INPUT = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
+const GAS_SELECT = { ...GAS_INPUT, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+const GAS_SECTION = { color:GAS_ACCENT, fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(59,130,246,0.3)", paddingBottom:6 };
+const GAS_LABEL = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4, display:"block" };
+
+function GasFormShell({ title, subtitle, step, totalSteps, stepLabels, onBack, onPrev, onNext, onSave, onPDF, onSetStep, onOptions, children }) {
+  return (
+    <div style={{ minHeight:"100dvh", background:GAS_BG, display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <div style={{ flex:1 }}>
+          <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", margin:0 }}>{title}</h2>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>{subtitle || "Gas Safety Certificate"}</div>
+        </div>
+        <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", background:"rgba(255,255,255,0.06)", borderRadius:8, padding:"4px 8px" }}>{step+1}/{totalSteps}</div>
+      </div>
+      {stepLabels && stepLabels.length > 0 && (
+        <div style={{ overflowX:"auto", display:"flex", gap:6, padding:"10px 16px", flexShrink:0, scrollbarWidth:"none" }}>
+          {stepLabels.map((s,i) => (
+            <button key={i} onClick={() => onSetStep && onSetStep(i)}
+              style={{ flexShrink:0, padding:"5px 12px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap",
+                border:"1px solid",
+                borderColor: i===step ? GAS_ACCENT : i<step ? "rgba(34,197,94,0.4)" : "rgba(255,255,255,0.12)",
+                background: i===step ? "rgba(59,130,246,0.2)" : i<step ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.04)",
+                color: i===step ? GAS_ACCENT : i<step ? "#22c55e" : "rgba(255,255,255,0.45)"
+              }}>
+              {i<step?"✓ ":""}{s}
+            </button>
+          ))}
+        </div>
+      )}
+      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+        {children}
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+        {step > 0 && onPrev && (
+          <button onClick={onPrev} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>
+        )}
+        {onOptions ? (
+          <button onClick={onOptions} style={{ flex:1, padding:"13px", borderRadius:12, background:GAS_ACCENT, color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Options</button>
+        ) : onSave ? (
+          <>
+            <button onClick={onSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save Certificate</button>
+            {onPDF && <button onClick={onPDF} style={{ flex:1, padding:"13px", borderRadius:12, background:"rgba(255,255,255,0.1)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>}
+          </>
+        ) : onNext ? (
+          <button onClick={onNext} style={{ flex:1, padding:"13px", borderRadius:12, background:GAS_ACCENT, color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function GASField({ label, children }) {
+  return <div style={{ marginBottom:12 }}><span style={GAS_LABEL}>{label}</span>{children}</div>;
+}
+function GASInput({ label, value, onChange, type, placeholder }) {
+  return <GASField label={label}><input type={type || "text"} style={GAS_INPUT} value={value||""} onChange={e => onChange(e.target.value)} placeholder={placeholder}/></GASField>;
+}
+function GASSelect({ label, value, onChange, options }) {
+  return <GASField label={label}><select style={GAS_SELECT} value={value||""} onChange={e => onChange(e.target.value)}><option value="">Select...</option>{options.map(o => <option key={o} value={o}>{o}</option>)}</select></GASField>;
+}
+function GASTextarea({ label, value, onChange, placeholder, maxLength }) {
+  return <GASField label={label}><textarea style={{ ...GAS_INPUT, resize:"vertical", minHeight:80 }} value={value||""} onChange={e => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength}/>{maxLength && <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:4 }}>You Can Enter {maxLength} Characters</div>}</GASField>;
+}
+function GASToggle({ label, value, onChange, options }) {
+  const opts = options || ["Yes","No","N/A"];
+  return (
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+      <span style={{ color:"rgba(255,255,255,0.8)", fontSize:13, flex:1 }}>{label}</span>
+      <div style={{ display:"flex", gap:6 }}>
+        {opts.map(v => (
+          <button key={v} onClick={() => onChange(v)} style={{
+            padding:"8px 12px", borderRadius:8, fontSize:12, fontWeight:700, cursor:"pointer",
+            border:"1px solid",
+            borderColor: value === v ? (v==="Pass"||v==="Yes"||v==="Satisfactory"||v==="YES" ? "#22c55e" : v==="Fail"||v==="No"||v==="Unsatisfactory"||v==="NO" ? "#ef4444" : GAS_ACCENT) : "rgba(255,255,255,0.12)",
+            background: value === v ? (v==="Pass"||v==="Yes"||v==="Satisfactory"||v==="YES" ? "rgba(34,197,94,0.15)" : v==="Fail"||v==="No"||v==="Unsatisfactory"||v==="NO" ? "rgba(239,68,68,0.15)" : "rgba(59,130,246,0.15)") : "rgba(255,255,255,0.04)",
+            color: value === v ? (v==="Pass"||v==="Yes"||v==="Satisfactory"||v==="YES" ? "#22c55e" : v==="Fail"||v==="No"||v==="Unsatisfactory"||v==="NO" ? "#ef4444" : GAS_ACCENT) : "rgba(255,255,255,0.45)"
+          }}>{v}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GASSigPad({ sigRef, sigData, onUpdate, label }) {
+  const [isDrawing, setIsDrawing] = useState(false);
+  const initSig = (canvas) => { if (!canvas) return; sigRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#e8edf2"; ctx.lineCap = "round"; };
+  const startDraw = (e) => { setIsDrawing(true); const c = sigRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
+  const draw = (e) => { if (!isDrawing) return; const c = sigRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
+  const endDraw = () => { setIsDrawing(false); if (sigRef.current) onUpdate(sigRef.current.toDataURL()); };
+  const clearSig = () => { if (sigRef.current) { const ctx = sigRef.current.getContext("2d"); ctx.clearRect(0, 0, sigRef.current.width, sigRef.current.height); } onUpdate(null); };
+  return (
+    <>
+      <div style={GAS_SECTION}>{label || "Signature"}</div>
+      <span style={GAS_LABEL}>Sign below</span>
+      <div style={{ background:"#1e3044", border:"1px solid #2a4058", borderRadius:10, overflow:"hidden", marginBottom:12, position:"relative" }}>
+        <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
+          onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+          onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
+        <button onClick={clearSig} style={{ position:"absolute", top:6, right:6, background:"rgba(255,255,255,0.1)", color:"#e8edf2", border:"1px solid rgba(255,255,255,0.15)", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+      </div>
+    </>
+  );
+}
+
 // ─── Fire Safety Certificate Forms ──────────────────────────────────────────
 
 function FireRiskAssessmentForm({ onBack, onSave, currentUser }) {
@@ -29892,20 +29725,20 @@ function TradeRecordsSubScreen({ type, label, color, records, onBack, onHome, on
       <Header title={label} onBack={onBack} onHome={onHome}/>
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
         {typeRecords.length === 0 ? (
-          <div style={{ textAlign:"center", color:"#aaa", marginTop:60, fontSize:15 }}>No records saved yet</div>
+          <div style={{ textAlign:"center", color:"rgba(255,255,255,0.4)", marginTop:60, fontSize:15 }}>No records saved yet</div>
         ) : typeRecords.map((r, i) => {
           const client = r.clientName || r.form?.clientName || r.companyName || "Unknown Client";
           const addr = r.clientAddr || r.form?.clientAddr || r.siteAddress || r.address || "";
           const date = r.date ? new Date(r.date).toLocaleDateString("en-GB") : (r.savedAt ? new Date(r.savedAt).toLocaleDateString("en-GB") : "");
           return (
             <div key={i} onClick={()=>setSelected(i)}
-              style={{ background:"#fff", borderRadius:10, padding:"14px 16px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", borderLeft:`4px solid ${color}`, cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
+              style={{ background:"rgba(255,255,255,0.04)", borderRadius:10, padding:"14px 16px", marginBottom:10, border:"1px solid rgba(255,255,255,0.08)", borderLeft:`4px solid ${color}`, cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
               <div style={{ flex:1 }}>
-                <div style={{ fontWeight:700, fontSize:15, color:"#222" }}>{client}</div>
-                <div style={{ fontSize:13, color:"#888", marginTop:3 }}>{addr}</div>
+                <div style={{ fontWeight:700, fontSize:15, color:"#e8edf2" }}>{client}</div>
+                <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)", marginTop:3 }}>{addr}</div>
                 <div style={{ fontSize:12, color, marginTop:3 }}>{label} · {date}</div>
               </div>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 3L10 8L5 13" stroke="#bbb" strokeWidth="2" strokeLinecap="round"/></svg>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 3L10 8L5 13" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round"/></svg>
             </div>
           );
         })}
@@ -29951,17 +29784,17 @@ function ElectricalRecordsScreen({ records, onBack, onHome, onDelete }) {
           const count = records.filter(r=>r.type===f.id).length;
           return (
             <div key={f.id} onClick={()=>setFolder(f.id)}
-              style={{ background:"#fff", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 2px 10px rgba(0,0,0,0.07)", display:"flex", alignItems:"center", gap:16, cursor:"pointer" }}
-              onMouseEnter={e=>e.currentTarget.style.background="#f0f4ff"}
-              onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"16px 18px", marginBottom:12, border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:16, cursor:"pointer" }}
+              onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.08)"}
+              onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.04)"}>
               <div style={{ width:52, height:52, borderRadius:12, background:`${f.color}18`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:26 }}>
                 {f.icon}
               </div>
               <div style={{ flex:1 }}>
-                <div style={{ fontWeight:700, fontSize:15, color:"#222" }}>{f.label}</div>
-                <div style={{ fontSize:13, color:"#888", marginTop:2 }}>{count} record{count!==1?"s":""}</div>
+                <div style={{ fontWeight:700, fontSize:15, color:"#e8edf2" }}>{f.label}</div>
+                <div style={{ fontSize:13, color:"rgba(255,255,255,0.45)", marginTop:2 }}>{count} record{count!==1?"s":""}</div>
               </div>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke="#bbb" strokeWidth="2.2" strokeLinecap="round"/></svg>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke="rgba(255,255,255,0.3)" strokeWidth="2.2" strokeLinecap="round"/></svg>
             </div>
           );
         })}
@@ -29996,17 +29829,17 @@ function FireSafetyRecordsScreen({ records, onBack, onHome, onDelete }) {
           const count = records.filter(r=>r.type===f.id).length;
           return (
             <div key={f.id} onClick={()=>setFolder(f.id)}
-              style={{ background:"#fff", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 2px 10px rgba(0,0,0,0.07)", display:"flex", alignItems:"center", gap:16, cursor:"pointer" }}
-              onMouseEnter={e=>e.currentTarget.style.background="#fff5f5"}
-              onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"16px 18px", marginBottom:12, border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:16, cursor:"pointer" }}
+              onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.08)"}
+              onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.04)"}>
               <div style={{ width:52, height:52, borderRadius:12, background:`${f.color}18`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:26 }}>
                 {f.icon}
               </div>
               <div style={{ flex:1 }}>
-                <div style={{ fontWeight:700, fontSize:15, color:"#222" }}>{f.label}</div>
-                <div style={{ fontSize:13, color:"#888", marginTop:2 }}>{count} record{count!==1?"s":""}</div>
+                <div style={{ fontWeight:700, fontSize:15, color:"#e8edf2" }}>{f.label}</div>
+                <div style={{ fontSize:13, color:"rgba(255,255,255,0.45)", marginTop:2 }}>{count} record{count!==1?"s":""}</div>
               </div>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke="#bbb" strokeWidth="2.2" strokeLinecap="round"/></svg>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke="rgba(255,255,255,0.3)" strokeWidth="2.2" strokeLinecap="round"/></svg>
             </div>
           );
         })}
@@ -30041,17 +29874,17 @@ function PlumbingRecordsScreen({ records, onBack, onHome, onDelete }) {
           const count = records.filter(r=>r.type===f.id).length;
           return (
             <div key={f.id} onClick={()=>setFolder(f.id)}
-              style={{ background:"#fff", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 2px 10px rgba(0,0,0,0.07)", display:"flex", alignItems:"center", gap:16, cursor:"pointer" }}
-              onMouseEnter={e=>e.currentTarget.style.background="#f0fdfa"}
-              onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"16px 18px", marginBottom:12, border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:16, cursor:"pointer" }}
+              onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.08)"}
+              onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.04)"}>
               <div style={{ width:52, height:52, borderRadius:12, background:`${f.color}18`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:26 }}>
                 {f.icon}
               </div>
               <div style={{ flex:1 }}>
-                <div style={{ fontWeight:700, fontSize:15, color:"#222" }}>{f.label}</div>
-                <div style={{ fontSize:13, color:"#888", marginTop:2 }}>{count} record{count!==1?"s":""}</div>
+                <div style={{ fontWeight:700, fontSize:15, color:"#e8edf2" }}>{f.label}</div>
+                <div style={{ fontSize:13, color:"rgba(255,255,255,0.45)", marginTop:2 }}>{count} record{count!==1?"s":""}</div>
               </div>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke="#bbb" strokeWidth="2.2" strokeLinecap="round"/></svg>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke="rgba(255,255,255,0.3)" strokeWidth="2.2" strokeLinecap="round"/></svg>
             </div>
           );
         })}
@@ -30088,17 +29921,17 @@ function OilRenewablesRecordsScreen({ records, onBack, onHome, onDelete }) {
           const count = records.filter(r=>r.type===f.id).length;
           return (
             <div key={f.id} onClick={()=>setFolder(f.id)}
-              style={{ background:"#fff", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 2px 10px rgba(0,0,0,0.07)", display:"flex", alignItems:"center", gap:16, cursor:"pointer" }}
-              onMouseEnter={e=>e.currentTarget.style.background="#f0fdf4"}
-              onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"16px 18px", marginBottom:12, border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:16, cursor:"pointer" }}
+              onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.08)"}
+              onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.04)"}>
               <div style={{ width:52, height:52, borderRadius:12, background:`${f.color}18`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:26 }}>
                 {f.icon}
               </div>
               <div style={{ flex:1 }}>
-                <div style={{ fontWeight:700, fontSize:15, color:"#222" }}>{f.label}</div>
-                <div style={{ fontSize:13, color:"#888", marginTop:2 }}>{count} record{count!==1?"s":""}</div>
+                <div style={{ fontWeight:700, fontSize:15, color:"#e8edf2" }}>{f.label}</div>
+                <div style={{ fontSize:13, color:"rgba(255,255,255,0.45)", marginTop:2 }}>{count} record{count!==1?"s":""}</div>
               </div>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke="#bbb" strokeWidth="2.2" strokeLinecap="round"/></svg>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke="rgba(255,255,255,0.3)" strokeWidth="2.2" strokeLinecap="round"/></svg>
             </div>
           );
         })}
@@ -31046,22 +30879,27 @@ function App({ onLogout }) {
 
   // GSC flow
   if (screen === "gsc") {
-    if (subScreen === "fileRef") return <StepFileRef data={certData} onChange={setCertData} onBack={()=>setScreen("newJob")} onHome={goHome} onNext={()=>setSubScreen("clientDetails")}/>;
-    if (subScreen === "clientDetails") return <StepClientDetails data={certData} onChange={setCertData} engData={engineerData} onEngChange={setEngineerData} onBack={()=>setSubScreen("fileRef")} onHome={goHome} onNext={()=>setSubScreen("applianceList")}/>;
+    const GSC_STEP_LABELS = ["File Ref","Client","Appliances","Faults","Checks","Attachments","Signatures","Engineer"];
+    const GSC_TOTAL = GSC_STEP_LABELS.length;
+    const gscStepMap = { fileRef:0, clientDetails:1, applianceList:2, faultList:3, finalChecks:4, attachments:5, signature:6, engineerDetails:7 };
+    const gscCurrentStep = gscStepMap[subScreen] !== undefined ? gscStepMap[subScreen] : 0;
+    const gscNavTo = (i) => { const screens = ["fileRef","clientDetails","applianceList","faultList","finalChecks","attachments","signature","engineerDetails"]; if (screens[i]) setSubScreen(screens[i]); };
+
+    if (subScreen === "fileRef") return <StepFileRef data={certData} onChange={setCertData} onBack={()=>setScreen("newJob")} onHome={goHome} onNext={()=>setSubScreen("clientDetails")} gscStep={0} gscTotalSteps={GSC_TOTAL} gscStepLabels={GSC_STEP_LABELS} onSetGscStep={gscNavTo}/>;
+    if (subScreen === "clientDetails") return <StepClientDetails data={certData} onChange={setCertData} engData={engineerData} onEngChange={setEngineerData} onBack={()=>setSubScreen("fileRef")} onHome={goHome} onNext={()=>setSubScreen("applianceList")} gscStep={1} gscTotalSteps={GSC_TOTAL} gscStepLabels={GSC_STEP_LABELS} onSetGscStep={gscNavTo}/>;
     if (subScreen === "applianceList") return (
       <>
         <StepApplianceList appliances={appliances} onAdd={()=>{setEditIndex(null);setSubScreen("applianceForm");}} onEdit={i=>{setEditIndex(i);setSubScreen("applianceForm");}}
-          onDelete={()=>setAppliances(appliances.slice(0,-1))} onNext={()=>setSubScreen("faultList")} onBack={()=>setSubScreen("clientDetails")} onHome={goHome}/>
+          onDelete={()=>setAppliances(appliances.slice(0,-1))} onNext={()=>setSubScreen("faultList")} onBack={()=>setSubScreen("clientDetails")} onHome={goHome} gscStep={2} gscTotalSteps={GSC_TOTAL} gscStepLabels={GSC_STEP_LABELS} onSetGscStep={gscNavTo}/>
       </>
     );
     if (subScreen === "faultList") return <StepFaultList faults={faults} onAdd={()=>{setEditIndex(null);setSubScreen("faultForm");}} onEdit={i=>{setEditIndex(i);setSubScreen("faultForm");}}
-      onDelete={()=>setFaults(faults.slice(0,-1))} onNext={()=>setSubScreen("finalChecks")} onBack={()=>setSubScreen("applianceList")} onHome={goHome}/>;
-    if (subScreen === "finalChecks") return <StepFinalChecks data={finalChecks} onChange={setFinalChecks} onNext={()=>setSubScreen("attachments")} onBack={()=>setSubScreen("faultList")} onHome={goHome}/>;
+      onDelete={()=>setFaults(faults.slice(0,-1))} onNext={()=>setSubScreen("finalChecks")} onBack={()=>setSubScreen("applianceList")} onHome={goHome} gscStep={3} gscTotalSteps={GSC_TOTAL} gscStepLabels={GSC_STEP_LABELS} onSetGscStep={gscNavTo}/>;
+    if (subScreen === "finalChecks") return <StepFinalChecks data={finalChecks} onChange={setFinalChecks} onNext={()=>setSubScreen("attachments")} onBack={()=>setSubScreen("faultList")} onHome={goHome} gscStep={4} gscTotalSteps={GSC_TOTAL} gscStepLabels={GSC_STEP_LABELS} onSetGscStep={gscNavTo}/>;
     if (subScreen === "attachments") {
       const _hasWN = faults.some(f => f.warningNotice === "Yes");
       const _hasBS = appliances.some(a => a.applianceServiced === "Yes");
       const goToWnDetails = () => {
-        // Pre-populate gscWnData from first appliance (if fields are still blank)
         if (appliances.length > 0 && !gscWnData.make && !gscWnData.model) {
           const app = appliances[0];
           setGscWnData(prev => ({
@@ -31074,7 +30912,7 @@ function App({ onLogout }) {
         }
         setSubScreen("wnDetails");
       };
-      return <AttachmentsStep data={{attachments:gscAttachments}} onChange={d=>setGscAttachments(d.attachments||[])} onBack={()=>setSubScreen("finalChecks")} onHome={goHome} onNext={()=>_hasWN ? goToWnDetails() : setSubScreen(_hasBS ? "bsApplianceDetails" : "signature")} nextLabel={_hasWN ? "Next: Warning Notice" : (_hasBS ? "Next: Boiler Service" : "Next: Signatures")}/>;
+      return <AttachmentsStep data={{attachments:gscAttachments}} onChange={d=>setGscAttachments(d.attachments||[])} onBack={()=>setSubScreen("finalChecks")} onHome={goHome} onNext={()=>_hasWN ? goToWnDetails() : setSubScreen(_hasBS ? "bsApplianceDetails" : "signature")} nextLabel={_hasWN ? "Next: Warning Notice" : (_hasBS ? "Next: Boiler Service" : "Next: Signatures")} accentColor={GAS_ACCENT}/>;
     }
     if (subScreen === "wnDetails") {
       const _hasBS = appliances.some(a => a.applianceServiced === "Yes");
@@ -31086,12 +30924,12 @@ function App({ onLogout }) {
     if (subScreen === "signature") {
       const _hasWN = faults.some(f => f.warningNotice === "Yes");
       const _hasBS = appliances.some(a => a.applianceServiced === "Yes");
-      return <StepSignature data={signatureData} onChange={setSignatureData} onNext={()=>setSubScreen("engineerDetails")} onBack={()=>setSubScreen(_hasBS ? "bsNotes" : (_hasWN ? "wnDetails" : "attachments"))} onHome={goHome}/>;
+      return <StepSignature data={signatureData} onChange={setSignatureData} onNext={()=>setSubScreen("engineerDetails")} onBack={()=>setSubScreen(_hasBS ? "bsNotes" : (_hasWN ? "wnDetails" : "attachments"))} onHome={goHome} gscStep={6} gscTotalSteps={GSC_TOTAL} gscStepLabels={GSC_STEP_LABELS} onSetGscStep={gscNavTo}/>;
     }
     if (subScreen === "engineerDetails") return (
       <>
         <StepEngineerDetails data={engineerData} onChange={setEngineerData} onBack={()=>setSubScreen("signature")} onHome={goHome}
-          onOptions={()=>setShowOptions(true)}/>
+          onOptions={()=>setShowOptions(true)} gscStep={7} gscTotalSteps={GSC_TOTAL} gscStepLabels={GSC_STEP_LABELS} onSetGscStep={gscNavTo}/>
         {showOptions && (() => {
           const _blocked = false;
           return <OptionsMenu
@@ -31457,7 +31295,7 @@ function GasIsolationForm({ data: initialData, onBack, onHome, onSave }) {
 
   const inp = { width:"100%", boxSizing:"border-box", padding:"10px 13px", border:"1.5px solid #e5e7eb", borderRadius:8, fontSize:14, color:"#1a1a2e", background:"#fafafa", fontFamily:"'Segoe UI',sans-serif", outline:"none" };
   const lbl = { fontSize:12, fontWeight:600, color:"#555", marginBottom:4, display:"block" };
-  const sec = { background:"#fff", borderRadius:12, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" };
+  const sec = { background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" };
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
@@ -31572,12 +31410,12 @@ function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone, o
 
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:"#1a1a2e", fontFamily:"'Segoe UI',sans-serif" }}>
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       {/* toolbar */}
-      <div style={{ background: TEAL, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+      <div style={{ background:"#0d1f2d", padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:8, padding:"6px 14px", color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer" }}>← Back</button>
         <span style={{ color:"#fff", fontWeight:700, fontSize:15 }}>Gas Isolation Certificate</span>
-        <button onClick={downloadPDF} disabled={downloading} style={{ background:"#fff", color:TEAL, border:"none", borderRadius:20, padding:"8px 18px", fontWeight:700, fontSize:13, cursor:"pointer" }}>
+        <button onClick={downloadPDF} disabled={downloading} style={{ background:"#3b82f6", color:"#fff", border:"none", borderRadius:20, padding:"8px 18px", fontWeight:700, fontSize:13, cursor:"pointer" }}>
           {downloading ? "..." : "⬇ Download"}
         </button>
       </div>
