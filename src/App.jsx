@@ -21873,6 +21873,963 @@ function ComplianceHub({ onBack, currentUser }) {
 // ─── ELECTRICAL DASHBOARD ────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ─── ELECTRICAL PDF GENERATION ──────────────────────────────────────────────
+async function generateElectricalPDF(certType, certData, circuits, testResults, observations, inspectionItems) {
+  await new Promise((res, rej) => {
+    if (window.jspdf) return res();
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  const { jsPDF } = window.jspdf;
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  function drawTableRow(pdf, y, cells, colWidths, options) {
+    const opts = options || {};
+    const bold = opts.bold || false;
+    const bgColor = opts.bgColor || null;
+    const fontSize = opts.fontSize != null ? opts.fontSize : 9;
+    const rowHeight = opts.rowHeight != null ? opts.rowHeight : 7;
+    const borderColor = opts.borderColor || "#cccccc";
+    const textColor = opts.textColor || null;
+    const wrap = opts.wrap || false;
+    let x = 10;
+    const totalW = colWidths.reduce(function(a, b) { return a + b; }, 0);
+    if (bgColor) {
+      pdf.setFillColor(bgColor);
+      pdf.rect(x, y, totalW, rowHeight, "F");
+    }
+    pdf.setFontSize(fontSize);
+    pdf.setDrawColor(borderColor);
+    cells.forEach(function(cell, i) {
+      pdf.rect(x, y, colWidths[i], rowHeight);
+      pdf.setFont("helvetica", bold ? "bold" : "normal");
+      const tc = textColor || (bgColor === "#333333" ? "#ffffff" : "#000000");
+      pdf.setTextColor(tc);
+      const text = String(cell == null ? "" : cell);
+      if (wrap && text.length > 0) {
+        const lines = pdf.splitTextToSize(text, colWidths[i] - 4);
+        pdf.text(lines, x + 2, y + 4.5);
+      } else {
+        pdf.text(text, x + 2, y + rowHeight / 2 + 1.5, { maxWidth: colWidths[i] - 4 });
+      }
+      x += colWidths[i];
+    });
+    return y + rowHeight;
+  }
+
+  function sectionHeader(pdf, y, title, colWidths) {
+    const totalW = colWidths.reduce(function(a, b) { return a + b; }, 0);
+    return drawTableRow(pdf, y, [title], [totalW], { bold: true, bgColor: "#333333", fontSize: 10, rowHeight: 8 });
+  }
+
+  function checkPageBreak(pdf, y, needed, certRef) {
+    if (y + needed > 282) {
+      pdf.addPage();
+      pdf.setFontSize(8);
+      pdf.setTextColor("#666666");
+      pdf.setFont("helvetica", "normal");
+      pdf.text("Certificate No: " + certRef, 10, 8);
+      pdf.text("Page " + pdf.getNumberOfPages(), 200, 8, { align: "right" });
+      pdf.setTextColor("#000000");
+      return 15;
+    }
+    return y;
+  }
+
+  function addPageHeader(pdf, certRef, title, subtitle) {
+    pdf.setFillColor("#1a1a2e");
+    pdf.rect(0, 0, 210, 22, "F");
+    pdf.setFontSize(12);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor("#ffffff");
+    pdf.text(title, 10, 10);
+    pdf.setFontSize(8);
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor("#aaaaaa");
+    if (subtitle) pdf.text(subtitle, 10, 16);
+    pdf.setFontSize(8);
+    pdf.setTextColor("#888888");
+    pdf.text("Certificate No: " + certRef, 200, 8, { align: "right" });
+    pdf.text("Page " + pdf.getNumberOfPages(), 200, 15, { align: "right" });
+    pdf.setTextColor("#000000");
+    return 26;
+  }
+
+  function twoColRow(pdf, y, label, value, colWidths, altRow) {
+    const bg = altRow ? "#f5f5f5" : "#ffffff";
+    return drawTableRow(pdf, y, [label, value], colWidths, { bgColor: bg, fontSize: 9, rowHeight: 7 });
+  }
+
+  function fmt(val, suffix) { return val ? String(val) + (suffix || "") : ""; }
+  function fmtDate(d) { if (!d) return ""; try { return new Date(d).toLocaleDateString("en-GB"); } catch(e) { return d; } }
+
+  const certRef = certData.certRef || "N/A";
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EICR
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (certType === "eicr") {
+    const labelW = 80, valueW = 110;
+    const cw2 = [labelW, valueW];
+
+    // ── PAGE 1 ─────────────────────────────────────────────────────────────
+    let y = addPageHeader(pdf, certRef,
+      "ELECTRICAL INSTALLATION CONDITION REPORT",
+      "BS 7671: Requirements for Electrical Installations — 18th Edition (2018) Amendment 2"
+    );
+
+    // Section A
+    y = sectionHeader(pdf, y, "SECTION A — Details of Person Ordering the Report", cw2);
+    y = twoColRow(pdf, y, "Name / Organisation", certData.clientName || "", cw2, false);
+    y = twoColRow(pdf, y, "Address", [certData.clientAddress, certData.clientPostcode].filter(Boolean).join(", "), cw2, true);
+    y = twoColRow(pdf, y, "Telephone", certData.clientTel || "", cw2, false);
+    y = twoColRow(pdf, y, "Email", certData.clientEmail || "", cw2, true);
+    y += 2;
+
+    // Section B
+    y = sectionHeader(pdf, y, "SECTION B — Reason for Producing Report / Date of Next Inspection", cw2);
+    y = twoColRow(pdf, y, "Date of Inspection", fmtDate(certData.date), cw2, false);
+    y = twoColRow(pdf, y, "Recommended Date of Next Inspection", fmtDate(certData.nextInspectionDate), cw2, true);
+    y = twoColRow(pdf, y, "Reason for Report", certData.reasonForReport || "Periodic Inspection", cw2, false);
+    y += 2;
+
+    // Section C
+    y = sectionHeader(pdf, y, "SECTION C — Details of the Installation", cw2);
+    y = twoColRow(pdf, y, "Occupier / Premises Name", certData.clientName || "", cw2, false);
+    y = twoColRow(pdf, y, "Installation Address", [certData.clientAddress, certData.clientPostcode].filter(Boolean).join(", "), cw2, true);
+    y = twoColRow(pdf, y, "Type of Premises", certData.premisesType || certData.installDescription || "", cw2, false);
+    y = twoColRow(pdf, y, "Estimated Age of Wiring (years)", certData.wiringAge || "", cw2, true);
+    y = twoColRow(pdf, y, "Evidence of Additions / Alterations", certData.additionsAlterations || "None observed", cw2, false);
+    y = twoColRow(pdf, y, "Installation Records Available", certData.recordsAvailable || "No", cw2, true);
+    y = twoColRow(pdf, y, "Date of Last Inspection (if known)", fmtDate(certData.lastInspection), cw2, false);
+    y += 2;
+
+    // Section D — Extent and Limitations
+    y = sectionHeader(pdf, y, "SECTION D — Extent and Limitations of the Inspection and Testing", cw2);
+    var extentLines = pdf.splitTextToSize(certData.extentOfInspection || "All accessible parts of the fixed electrical installation", 106);
+    var extentH = Math.max(7, extentLines.length * 5 + 4);
+    pdf.setFillColor("#ffffff");
+    pdf.rect(10, y, 190, extentH, "F");
+    pdf.setDrawColor("#cccccc");
+    pdf.rect(10, y, 80, extentH);
+    pdf.rect(90, y, 110, extentH);
+    pdf.setFontSize(9); pdf.setFont("helvetica", "normal"); pdf.setTextColor("#000000");
+    pdf.text("Extent of Inspection", 12, y + 5);
+    pdf.text(extentLines, 92, y + 5);
+    y += extentH;
+    var limitLines = pdf.splitTextToSize(certData.agreedLimitations || "None agreed", 106);
+    var limitH = Math.max(7, limitLines.length * 5 + 4);
+    pdf.setFillColor("#f5f5f5");
+    pdf.rect(10, y, 190, limitH, "F");
+    pdf.rect(10, y, 80, limitH);
+    pdf.rect(90, y, 110, limitH);
+    pdf.text("Agreed Limitations", 12, y + 5);
+    pdf.text(limitLines, 92, y + 5);
+    y += limitH;
+    if (certData.operationalLimitations) {
+      var opLines = pdf.splitTextToSize(certData.operationalLimitations, 106);
+      var opH = Math.max(7, opLines.length * 5 + 4);
+      pdf.setFillColor("#ffffff");
+      pdf.rect(10, y, 190, opH, "F");
+      pdf.rect(10, y, 80, opH);
+      pdf.rect(90, y, 110, opH);
+      pdf.text("Operational Limitations", 12, y + 5);
+      pdf.text(opLines, 92, y + 5);
+      y += opH;
+    }
+    y += 2;
+
+    // Section E — Overall assessment
+    y = sectionHeader(pdf, y, "SECTION E — Summary of Condition / Overall Assessment", cw2);
+    var isSatisfactory = certData.result === "Satisfactory" || certData.result === "SATISFACTORY";
+    var resultText = isSatisfactory ? "SATISFACTORY" : "UNSATISFACTORY";
+    pdf.setFillColor(isSatisfactory ? "#d4edda" : "#f8d7da");
+    pdf.rect(10, y, 190, 12, "F");
+    pdf.setDrawColor("#cccccc");
+    pdf.rect(10, y, 190, 12);
+    pdf.setFontSize(13);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(isSatisfactory ? "#155724" : "#721c24");
+    pdf.text("Overall Assessment: " + resultText, 105, y + 8, { align: "center" });
+    y += 12;
+    pdf.setTextColor("#000000");
+    y += 2;
+
+    // Section F — Recommendations
+    y = sectionHeader(pdf, y, "SECTION F — Recommendations", cw2);
+    y = twoColRow(pdf, y, "Recommended Date of Next Inspection", fmtDate(certData.nextInspectionDate), cw2, false);
+    var obsCode = certData.observationCode || "";
+    var obsCodeLabel = obsCode === "C1" ? obsCode + " — Danger present, risk of injury"
+      : obsCode === "C2" ? obsCode + " — Potentially dangerous"
+      : obsCode === "C3" ? obsCode + " — Improvement recommended"
+      : obsCode === "FI" ? obsCode + " — Further investigation required"
+      : "None";
+    y = twoColRow(pdf, y, "Highest Classification Code Found", obsCodeLabel, cw2, true);
+    y += 2;
+
+    // Section G — Declaration
+    y = sectionHeader(pdf, y, "SECTION G — Declaration", cw2);
+    var declText = "I/We, being the person(s) responsible for the inspection and testing of the electrical installation (as indicated by my/our signature(s) below), particulars of which are described above, having exercised reasonable skill and care when carrying out the inspection and testing, hereby declare that the information in this report, including the observations and the attached schedules, provides an accurate assessment of the condition of the electrical installation taking into account the stated extent and limitations agreed with the person ordering the report.";
+    var declLines = pdf.splitTextToSize(declText, 186);
+    pdf.setFillColor("#f9f9f9");
+    var declH = declLines.length * 4.5 + 6;
+    pdf.rect(10, y, 190, declH, "F");
+    pdf.setDrawColor("#cccccc");
+    pdf.rect(10, y, 190, declH);
+    pdf.setFontSize(8);
+    pdf.setFont("helvetica", "italic");
+    pdf.setTextColor("#333333");
+    pdf.text(declLines, 12, y + 5);
+    y += declH + 3;
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor("#000000");
+
+    // Two signature blocks
+    var sigBlockW = 93;
+    var sigBlockH = 28;
+    pdf.setFillColor("#f5f5f5");
+    pdf.rect(10, y, sigBlockW, sigBlockH, "F");
+    pdf.setDrawColor("#cccccc");
+    pdf.rect(10, y, sigBlockW, sigBlockH);
+    pdf.setFontSize(8); pdf.setFont("helvetica", "bold"); pdf.setTextColor("#000000");
+    pdf.text("Inspector", 12, y + 5);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Name: " + (certData.engineerName || ""), 12, y + 11);
+    pdf.text("Qualifications: " + (certData.qualifications || ""), 12, y + 16);
+    pdf.text("Scheme: " + (certData.scheme || "") + (certData.schemeNumber ? " / " + certData.schemeNumber : ""), 12, y + 21);
+    if (certData.signatureData) {
+      try { pdf.addImage(certData.signatureData, "PNG", 60, y + 8, 38, 16); } catch(e) { /* ignore */ }
+    } else {
+      pdf.setDrawColor("#aaaaaa");
+      pdf.line(12, y + 26, 100, y + 26);
+      pdf.setFontSize(7); pdf.setTextColor("#aaaaaa");
+      pdf.text("Signature", 12, y + 28);
+    }
+    pdf.setFillColor("#f5f5f5");
+    pdf.rect(107, y, sigBlockW, sigBlockH, "F");
+    pdf.setDrawColor("#cccccc");
+    pdf.rect(107, y, sigBlockW, sigBlockH);
+    pdf.setFontSize(8); pdf.setFont("helvetica", "bold"); pdf.setTextColor("#000000");
+    pdf.text("Authoriser (if different)", 109, y + 5);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Name:", 109, y + 11);
+    pdf.text("On behalf of:", 109, y + 16);
+    pdf.setDrawColor("#aaaaaa");
+    pdf.line(109, y + 26, 197, y + 26);
+    pdf.setFontSize(7); pdf.setTextColor("#aaaaaa");
+    pdf.text("Signature", 109, y + 28);
+    y += sigBlockH + 4;
+    pdf.setTextColor("#000000");
+
+    // Section H
+    y = checkPageBreak(pdf, y, 20, certRef);
+    y = sectionHeader(pdf, y, "SECTION H — Schedule References", cw2);
+    y = twoColRow(pdf, y, "Inspection Schedule (see pages 3–4)", "Attached", cw2, false);
+    y = twoColRow(pdf, y, "Circuit Details & Test Results (see pages 5–6)", "Attached", cw2, true);
+    y = twoColRow(pdf, y, "Inspector Company", certData.companyName || "", cw2, false);
+    y = twoColRow(pdf, y, "Inspector Name", certData.engineerName || "", cw2, true);
+    y = twoColRow(pdf, y, "Date of Report", fmtDate(certData.date), cw2, false);
+
+    // ── PAGE 2: Supply Characteristics + Installation Particulars + Observations ──
+    pdf.addPage();
+    y = addPageHeader(pdf, certRef,
+      "EICR — Supply Characteristics & Installation Particulars",
+      "BS 7671: 18th Edition"
+    );
+
+    // Section I
+    y = sectionHeader(pdf, y, "SECTION I — Supply Characteristics and Earthing Arrangements", cw2);
+    var earthArr = certData.systemType || "";
+    y = drawTableRow(pdf, y, ["Earthing Arrangement",
+      (earthArr === "TN-S" ? "\u2611" : "\u2610") + " TN-S   " +
+      (earthArr === "TN-C-S" ? "\u2611" : "\u2610") + " TN-C-S   " +
+      (earthArr === "TT" ? "\u2611" : "\u2610") + " TT   " +
+      (earthArr === "IT" ? "\u2611" : "\u2610") + " IT"
+    ], cw2, { bgColor: "#ffffff", fontSize: 9 });
+    var ph1 = (!certData.numPhases || certData.numPhases === "1") ? "\u2611" : "\u2610";
+    var ph3 = certData.numPhases === "3" ? "\u2611" : "\u2610";
+    y = drawTableRow(pdf, y, ["Number of Live Conductors", ph1 + " 2-wire (1-phase)   " + ph3 + " 4-wire (3-phase)"], cw2, { bgColor: "#f5f5f5", fontSize: 9 });
+    y = twoColRow(pdf, y, "Nominal Voltage (V)", fmt(certData.nominalVoltage, " V"), cw2, false);
+    y = twoColRow(pdf, y, "Nominal Frequency (Hz)", fmt(certData.nominalFrequency, " Hz"), cw2, true);
+    y = twoColRow(pdf, y, "Prospective Fault Current (kA)", fmt(certData.prospectiveFaultCurrent, " kA"), cw2, false);
+    y = twoColRow(pdf, y, "External Loop Impedance Ze (\u03a9)", fmt(certData.ze, " \u03a9"), cw2, true);
+    y = twoColRow(pdf, y, "Supply Protective Device Type", certData.supplyProtectiveType || "", cw2, false);
+    y = twoColRow(pdf, y, "Supply Protective Device Rating (A)", fmt(certData.supplyProtectiveRating, " A"), cw2, true);
+    y += 3;
+
+    // Section J
+    y = sectionHeader(pdf, y, "SECTION J — Particulars of Installation at the Origin", cw2);
+    y = twoColRow(pdf, y, "Means of Earthing", certData.meansOfEarthing || earthArr, cw2, false);
+    y = twoColRow(pdf, y, "Earth Electrode (if applicable)", certData.earthElectrode ? "Installed — R = " + fmt(certData.earthElectrodeResistance, " \u03a9") : "Not applicable", cw2, true);
+    y = twoColRow(pdf, y, "Main Protective Bonding Conductor", certData.bondingConductor || "As installed", cw2, false);
+    y = twoColRow(pdf, y, "Main Switch / Circuit-Breaker Location", certData.mainSwitchLocation || "", cw2, true);
+    y = twoColRow(pdf, y, "Main Switch Rating (A)", certData.mainSwitchRating ? fmt(certData.mainSwitchRating, " A") : fmt(certData.supplyProtectiveRating, " A"), cw2, false);
+    y = twoColRow(pdf, y, "RCD — Type", certData.rcdType || "N/A", cw2, true);
+    y = twoColRow(pdf, y, "RCD — Rating (mA)", certData.rcdRating ? fmt(certData.rcdRating, " mA") : "N/A", cw2, false);
+    y = twoColRow(pdf, y, "RCD — Operation Time (ms)", certData.rcdTime ? fmt(certData.rcdTime, " ms") : "N/A", cw2, true);
+    y += 3;
+
+    // Section K — Observations
+    var kCols = [140, 30, 20];
+    y = sectionHeader(pdf, y, "SECTION K — Observations", kCols);
+    y = drawTableRow(pdf, y, ["Observation", "Classification", "Code"], kCols, { bold: true, bgColor: "#555555", fontSize: 9, textColor: "#ffffff" });
+    var obsArr = Array.isArray(observations) && observations.length > 0
+      ? observations
+      : certData.observations
+        ? [{ text: certData.observations, code: certData.observationCode || "" }]
+        : [{ text: "No observations recorded", code: "" }];
+    obsArr.forEach(function(obs, idx) {
+      y = checkPageBreak(pdf, y, 10, certRef);
+      var obsText = obs.text || obs.observation || String(obs);
+      var oCode = obs.code || obs.classification || "";
+      var codeLabel = oCode === "C1" ? "Danger present" : oCode === "C2" ? "Potentially dangerous" : oCode === "C3" ? "Improvement recommended" : oCode === "FI" ? "Further investigation" : "";
+      y = drawTableRow(pdf, y, [obsText, codeLabel, oCode], kCols, { bgColor: idx % 2 === 0 ? "#ffffff" : "#f5f5f5", fontSize: 9, wrap: true });
+    });
+    y += 2;
+    pdf.setFontSize(7.5);
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor("#555555");
+    pdf.text("Classification Codes:  C1 = Danger present, risk of injury — immediate remedial action required    C2 = Potentially dangerous — urgent remedial action required    C3 = Improvement recommended    FI = Further investigation required", 10, y, { maxWidth: 190 });
+    y += 8;
+
+    // ── PAGES 3-4: Inspection Schedule ──────────────────────────────────────
+    pdf.addPage();
+    y = addPageHeader(pdf, certRef, "EICR — Schedule of Inspection", "BS 7671: 18th Edition — Inspection Checklist");
+    var inspCols = [20, 120, 50];
+    y = sectionHeader(pdf, y, "SCHEDULE OF INSPECTION — Items Inspected", inspCols);
+    y = drawTableRow(pdf, y, ["Item No", "Description", "Outcome"], inspCols, { bold: true, bgColor: "#555555", fontSize: 9, textColor: "#ffffff" });
+    var defaultInspItems = [
+      ["1.0", "DISTRIBUTOR'S SUPPLY", ""],
+      ["1.1", "Service cable adequately supported and protected", ""],
+      ["1.2", "Condition of service cut-out / fuse", ""],
+      ["1.3", "Condition of meter tails and connections", ""],
+      ["1.4", "Condition of metering equipment", ""],
+      ["2.0", "INSTALLATION — INTAKE EQUIPMENT", ""],
+      ["2.1", "Adequacy of earthing and bonding arrangements", ""],
+      ["2.2", "Presence and adequacy of earthing conductor", ""],
+      ["2.3", "Presence and adequacy of main protective bonding conductors", ""],
+      ["2.4", "Accessibility and labelling of main earthing terminal", ""],
+      ["2.5", "Condition of main switch / isolation device", ""],
+      ["3.0", "CONSUMER UNIT / DISTRIBUTION BOARD", ""],
+      ["3.1", "Adequacy of working space / accessibility", ""],
+      ["3.2", "Security of fixing and general condition of enclosure", ""],
+      ["3.3", "Presence of circuit charts, warning notices and non-standard labels", ""],
+      ["3.4", "Presence and operation of RCD(s)", ""],
+      ["3.5", "Presence and adequacy of overcurrent protective devices", ""],
+      ["3.6", "Single-pole switching or protection in line conductors only", ""],
+      ["3.7", "Protection against mechanical damage where cables enter consumer unit", ""],
+      ["4.0", "WIRING SYSTEMS", ""],
+      ["4.1", "Identification of conductors", ""],
+      ["4.2", "Cables correctly supported throughout", ""],
+      ["4.3", "Condition of insulation of live parts", ""],
+      ["4.4", "Adequacy of cables for current-carrying capacity with regards to grouping, thermal insulation etc.", ""],
+      ["4.5", "Cables adequately protected against mechanical damage", ""],
+      ["4.6", "Cables adequately protected against effects of fire", ""],
+      ["4.7", "Presence and adequacy of fire barriers, sealing arrangements and warning notices", ""],
+      ["4.8", "Method of protection against thermal effects", ""],
+      ["5.0", "CURRENT-USING EQUIPMENT (PERMANENTLY CONNECTED)", ""],
+      ["5.1", "Suitability of equipment for external influences", ""],
+      ["5.2", "Equipment not damaged, deteriorated, etc.", ""],
+      ["5.3", "Adequacy of connections", ""],
+      ["6.0", "ISOLATION AND SWITCHING", ""],
+      ["6.1", "Presence and condition of appropriate devices for isolation", ""],
+      ["6.2", "Presence and condition of appropriate devices for switching off for mechanical maintenance", ""],
+      ["6.3", "Presence and condition of appropriate devices for emergency switching", ""],
+      ["7.0", "SPECIAL LOCATIONS / INSTALLATIONS", ""],
+      ["7.1", "Bathroom / shower room — additional protection by RCD, SELV or electrical separation", ""],
+      ["7.2", "Swimming pool / sauna — requirements of BS 7671 Section 702/703", ""],
+      ["7.3", "Solar photovoltaic systems — requirements of BS 7671 Section 712", ""],
+      ["7.4", "EV charging equipment — requirements of BS 7671 Section 722", ""],
+      ["8.0", "ADDITIONAL POINTS CHECKED", ""],
+      ["8.1", "Presence and condition of smoke detectors / alarms where applicable", ""],
+    ];
+    var itemsToRender = Array.isArray(inspectionItems) && inspectionItems.length > 0 ? inspectionItems : defaultInspItems;
+    itemsToRender.forEach(function(item, idx) {
+      y = checkPageBreak(pdf, y, 9, certRef);
+      var isSection = !item[2] && String(item[0]).endsWith(".0");
+      y = drawTableRow(pdf, y, [item[0], item[1], item[2] || ""], inspCols, {
+        bold: isSection,
+        bgColor: isSection ? "#e8e8e8" : (idx % 2 === 0 ? "#ffffff" : "#f5f5f5"),
+        fontSize: isSection ? 9 : 8.5,
+        rowHeight: 7
+      });
+    });
+
+    // ── PAGE 5: Schedule of Circuit Details ─────────────────────────────────
+    pdf.addPage();
+    y = addPageHeader(pdf, certRef, "EICR — Schedule of Circuit Details", "Columns 1–16");
+    var circCols = [8, 28, 10, 12, 10, 10, 8, 8, 8, 10, 10, 10, 10, 10, 10, 18];
+    y = sectionHeader(pdf, y, "SCHEDULE OF CIRCUIT DETAILS — Consumer Unit / Distribution Board", circCols);
+    y = drawTableRow(pdf, y,
+      ["No", "Circuit Description", "Wiring Type", "Ref Method", "No. Points", "Live mm\u00b2", "cpc mm\u00b2", "Max Disc s", "BS No", "Rating A", "I2 A", "Max Zs \u03a9", "Meas Zs \u03a9", "R1+R2 \u03a9", "Ins R M\u03a9", "Comments"],
+      circCols, { bold: true, bgColor: "#444444", fontSize: 7, rowHeight: 10, textColor: "#ffffff" });
+    var circuitsToRender = Array.isArray(circuits) && circuits.length > 0 ? circuits : [];
+    if (circuitsToRender.length === 0) {
+      y = drawTableRow(pdf, y, ["\u2014", "No circuit data entered", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], circCols, { bgColor: "#f5f5f5", fontSize: 8 });
+    } else {
+      circuitsToRender.forEach(function(c, idx) {
+        y = checkPageBreak(pdf, y, 9, certRef);
+        y = drawTableRow(pdf, y, [
+          String(idx + 1), c.description || "", c.wiringType || "", c.refMethod || "",
+          String(c.numPoints || ""), String(c.liveCsa || ""), String(c.cpc || ""),
+          String(c.maxDiscTime || ""), String(c.bsNo || ""), String(c.rating || ""),
+          String(c.i2 || ""), String(c.maxZs || ""), String(c.measuredZs || ""),
+          String(c.r1r2 || ""), String(c.insulR || ""), c.comments || ""
+        ], circCols, { bgColor: idx % 2 === 0 ? "#ffffff" : "#f5f5f5", fontSize: 7.5 });
+      });
+    }
+
+    // ── PAGE 6: Schedule of Test Results ────────────────────────────────────
+    pdf.addPage();
+    y = addPageHeader(pdf, certRef, "EICR — Schedule of Test Results", "Columns 17–31");
+    var testCols6 = [8, 25, 10, 10, 10, 10, 10, 12, 12, 10, 10, 10, 10, 10, 12];
+    y = sectionHeader(pdf, y, "SCHEDULE OF TEST RESULTS", testCols6);
+    y = drawTableRow(pdf, y,
+      ["No", "Circuit Description", "Cont.", "Ins R L-L M\u03a9", "Ins R L-E M\u03a9", "Polarity", "Max Zs \u03a9", "R1+R2 \u03a9", "R2 \u03a9", "Meas Zs \u03a9", "RCD Type", "RCD mA", "\u0394n/2 ms", "\u0394n ms", "Remarks"],
+      testCols6, { bold: true, bgColor: "#444444", fontSize: 7, rowHeight: 10, textColor: "#ffffff" });
+    var testResultsToRender = Array.isArray(testResults) && testResults.length > 0 ? testResults : [];
+    if (testResultsToRender.length === 0) {
+      y = drawTableRow(pdf, y, ["\u2014", "No test data entered", "", "", "", "", "", "", "", "", "", "", "", "", ""], testCols6, { bgColor: "#f5f5f5", fontSize: 8 });
+    } else {
+      testResultsToRender.forEach(function(t, idx) {
+        y = checkPageBreak(pdf, y, 9, certRef);
+        y = drawTableRow(pdf, y, [
+          String(idx + 1), t.description || "", t.continuity || "",
+          String(t.insulLL || ""), String(t.insulLE || ""), t.polarity || "",
+          String(t.maxZs || ""), String(t.r1r2 || ""), String(t.r2 || ""),
+          String(t.zs || ""), t.rcdType || "", String(t.rcdRating || ""),
+          String(t.rcdHalfDelta || ""), String(t.rcdDelta || ""), t.remarks || ""
+        ], testCols6, { bgColor: idx % 2 === 0 ? "#ffffff" : "#f5f5f5", fontSize: 7.5 });
+      });
+    }
+
+    pdf.save("EICR_" + (certData.clientName || "certificate").replace(/[^a-zA-Z0-9]/g, "_") + "_" + certRef.replace(/[^a-zA-Z0-9]/g, "_") + ".pdf");
+    return pdf;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EIC (Electrical Installation Certificate)
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (certType === "eic") {
+    const labelW = 80, valueW = 110;
+    const cw2 = [labelW, valueW];
+
+    let y = addPageHeader(pdf, certRef,
+      "ELECTRICAL INSTALLATION CERTIFICATE",
+      "BS 7671: Requirements for Electrical Installations — 18th Edition"
+    );
+
+    y = sectionHeader(pdf, y, "PART 1 — Details of the Client", cw2);
+    y = twoColRow(pdf, y, "Name", certData.clientName || "", cw2, false);
+    y = twoColRow(pdf, y, "Address", [certData.clientAddress, certData.clientPostcode].filter(Boolean).join(", "), cw2, true);
+    y = twoColRow(pdf, y, "Telephone", certData.clientTel || "", cw2, false);
+    y = twoColRow(pdf, y, "Email", certData.clientEmail || "", cw2, true);
+    y += 2;
+
+    y = sectionHeader(pdf, y, "PART 2 — Installation Details", cw2);
+    y = twoColRow(pdf, y, "Installation Address", [certData.installAddress || certData.clientAddress, certData.clientPostcode].filter(Boolean).join(", "), cw2, false);
+    y = twoColRow(pdf, y, "Description of Installation", certData.installDescription || "", cw2, true);
+    y = twoColRow(pdf, y, "Date of Connection", fmtDate(certData.date), cw2, false);
+    y = twoColRow(pdf, y, "New Installation", certData.newInstallation || "Yes", cw2, true);
+    y += 2;
+
+    y = sectionHeader(pdf, y, "PART 3 — Declaration", cw2);
+    var eicDeclText = "I/We, being the person(s) responsible for the design, construction, inspection and testing of the electrical installation, CERTIFY that the said work complies to the best of my/our knowledge and belief with BS 7671:2018, as amended to date, except for the departures, if any, detailed below.";
+    var eicDeclLines = pdf.splitTextToSize(eicDeclText, 186);
+    var eicDeclH = eicDeclLines.length * 4.5 + 10;
+    pdf.setFillColor("#f9f9f9");
+    pdf.rect(10, y, 190, eicDeclH, "F");
+    pdf.setDrawColor("#cccccc");
+    pdf.rect(10, y, 190, eicDeclH);
+    pdf.setFontSize(8); pdf.setFont("helvetica", "italic"); pdf.setTextColor("#333333");
+    pdf.text(eicDeclLines, 12, y + 5);
+    y += eicDeclH + 2;
+    pdf.setFont("helvetica", "normal"); pdf.setTextColor("#000000");
+
+    y = drawTableRow(pdf, y, ["Design", "Construction", "Inspection & Testing"], [63, 63, 64], { bold: true, bgColor: "#555555", fontSize: 9, textColor: "#ffffff" });
+    var declRoles = [
+      { name: certData.designerName || certData.engineerName || "" },
+      { name: certData.constructorName || certData.engineerName || "" },
+      { name: certData.engineerName || "" },
+    ];
+    var rowLabels = ["Name:", "Qualifications:", "Date:", "Scheme No:"];
+    var rowVals = [
+      [declRoles[0].name, declRoles[1].name, declRoles[2].name],
+      [certData.designerQualifications || certData.qualifications || "", certData.constructorQualifications || certData.qualifications || "", certData.qualifications || ""],
+      [fmtDate(certData.date), fmtDate(certData.date), fmtDate(certData.date)],
+      [certData.schemeNumber || "", certData.schemeNumber || "", certData.schemeNumber || ""],
+    ];
+    rowLabels.forEach(function(lbl, rIdx) {
+      y = drawTableRow(pdf, y, rowVals[rIdx], [63, 63, 64], { bgColor: rIdx % 2 === 0 ? "#ffffff" : "#f5f5f5", fontSize: 8.5 });
+    });
+    if (certData.signatureData) {
+      try { pdf.addImage(certData.signatureData, "PNG", 140, y - 28, 50, 14); } catch(e) { /* ignore */ }
+    }
+    y += 4;
+
+    y = sectionHeader(pdf, y, "PART 4 — Departures from BS 7671", cw2);
+    y = twoColRow(pdf, y, "Departures", certData.departures || "None", cw2, false);
+    y += 4;
+
+    // Page 2
+    pdf.addPage();
+    y = addPageHeader(pdf, certRef, "EIC — Supply Characteristics & Inspection Schedule", "BS 7671: 18th Edition");
+
+    y = sectionHeader(pdf, y, "PART 5 — Supply Characteristics and Earthing Arrangements", cw2);
+    var eicEarthArr = certData.systemType || "";
+    y = drawTableRow(pdf, y, ["Earthing Arrangement",
+      (eicEarthArr === "TN-S" ? "\u2611" : "\u2610") + " TN-S   " +
+      (eicEarthArr === "TN-C-S" ? "\u2611" : "\u2610") + " TN-C-S   " +
+      (eicEarthArr === "TT" ? "\u2611" : "\u2610") + " TT"
+    ], cw2, { bgColor: "#f5f5f5" });
+    y = twoColRow(pdf, y, "Nominal Voltage (V)", fmt(certData.nominalVoltage, " V"), cw2, false);
+    y = twoColRow(pdf, y, "Nominal Frequency (Hz)", fmt(certData.nominalFrequency, " Hz"), cw2, true);
+    y = twoColRow(pdf, y, "Prospective Fault Current", fmt(certData.prospectiveFaultCurrent, " kA"), cw2, false);
+    y = twoColRow(pdf, y, "External Loop Impedance Ze", fmt(certData.ze, " \u03a9"), cw2, true);
+    y = twoColRow(pdf, y, "Supply Protective Device", [certData.supplyProtectiveType, certData.supplyProtectiveRating ? certData.supplyProtectiveRating + "A" : ""].filter(Boolean).join(" — "), cw2, false);
+    y += 3;
+
+    y = sectionHeader(pdf, y, "PART 6 — Particulars of Installation at Origin", cw2);
+    y = twoColRow(pdf, y, "Means of Earthing", certData.meansOfEarthing || eicEarthArr, cw2, false);
+    y = twoColRow(pdf, y, "Main Switch Rating", fmt(certData.supplyProtectiveRating, " A"), cw2, true);
+    y = twoColRow(pdf, y, "RCD at Origin", certData.rcdType || "None", cw2, false);
+    y += 3;
+
+    y = sectionHeader(pdf, y, "PART 7 — Schedule of Inspection (Summary)", [140, 50]);
+    y = drawTableRow(pdf, y, ["Item Inspected", "Outcome"], [140, 50], { bold: true, bgColor: "#555555", fontSize: 9, textColor: "#ffffff" });
+    var eicInspItems = Array.isArray(inspectionItems) && inspectionItems.length > 0 ? inspectionItems : [
+      ["Cables correctly routed and protected", "Satisfactory"],
+      ["Adequate overcurrent protection", "Satisfactory"],
+      ["RCD protection where required", "Satisfactory"],
+      ["Correct polarity throughout", "Satisfactory"],
+      ["Earthing and bonding satisfactory", "Satisfactory"],
+      ["Labelling and notices present", "Satisfactory"],
+    ];
+    eicInspItems.forEach(function(item, idx) {
+      y = checkPageBreak(pdf, y, 9, certRef);
+      y = drawTableRow(pdf, y, [item[0] || "", item[1] || item[2] || ""], [140, 50], { bgColor: idx % 2 === 0 ? "#ffffff" : "#f5f5f5", fontSize: 8.5 });
+    });
+
+    // Page 3: Circuit details + Test results
+    pdf.addPage();
+    y = addPageHeader(pdf, certRef, "EIC — Schedule of Circuit Details & Test Results", "BS 7671: 18th Edition");
+    var eicCircCols = [8, 28, 10, 12, 10, 10, 8, 8, 8, 10, 10, 10, 10, 10, 10, 18];
+    y = sectionHeader(pdf, y, "SCHEDULE OF CIRCUIT DETAILS", eicCircCols);
+    y = drawTableRow(pdf, y, ["No", "Circuit Description", "Wiring Type", "Ref Method", "No. Points", "Live mm\u00b2", "cpc mm\u00b2", "Max Disc s", "BS No", "Rating A", "I2 A", "Max Zs \u03a9", "Meas Zs \u03a9", "R1+R2 \u03a9", "Ins R M\u03a9", "Comments"],
+      eicCircCols, { bold: true, bgColor: "#444444", fontSize: 7, rowHeight: 10, textColor: "#ffffff" });
+    var eicCircuits = Array.isArray(circuits) && circuits.length > 0 ? circuits : [];
+    if (eicCircuits.length === 0) {
+      y = drawTableRow(pdf, y, ["\u2014", "No circuit data", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], eicCircCols, { bgColor: "#f5f5f5", fontSize: 8 });
+    } else {
+      eicCircuits.forEach(function(c, idx) {
+        y = checkPageBreak(pdf, y, 9, certRef);
+        y = drawTableRow(pdf, y, [String(idx + 1), c.description || "", c.wiringType || "", c.refMethod || "", String(c.numPoints || ""), String(c.liveCsa || ""), String(c.cpc || ""), String(c.maxDiscTime || ""), String(c.bsNo || ""), String(c.rating || ""), String(c.i2 || ""), String(c.maxZs || ""), String(c.measuredZs || ""), String(c.r1r2 || ""), String(c.insulR || ""), c.comments || ""], eicCircCols, { bgColor: idx % 2 === 0 ? "#ffffff" : "#f5f5f5", fontSize: 7.5 });
+      });
+    }
+    var eicTestCols = [8, 25, 10, 10, 10, 10, 10, 12, 12, 10, 10, 10, 10, 10, 12];
+    y = checkPageBreak(pdf, y, 20, certRef);
+    y = sectionHeader(pdf, y, "SCHEDULE OF TEST RESULTS", eicTestCols);
+    y = drawTableRow(pdf, y, ["No", "Circuit Description", "Cont.", "Ins R L-L", "Ins R L-E", "Polarity", "Max Zs \u03a9", "R1+R2 \u03a9", "R2 \u03a9", "Meas Zs \u03a9", "RCD Type", "RCD mA", "\u0394n/2 ms", "\u0394n ms", "Remarks"], eicTestCols, { bold: true, bgColor: "#444444", fontSize: 7, rowHeight: 10, textColor: "#ffffff" });
+    var eicTests = Array.isArray(testResults) && testResults.length > 0 ? testResults : [];
+    if (eicTests.length === 0) {
+      y = drawTableRow(pdf, y, ["\u2014", "No test data", "", "", "", "", "", "", "", "", "", "", "", "", ""], eicTestCols, { bgColor: "#f5f5f5", fontSize: 8 });
+    } else {
+      eicTests.forEach(function(t, idx) {
+        y = checkPageBreak(pdf, y, 9, certRef);
+        y = drawTableRow(pdf, y, [String(idx + 1), t.description || "", t.continuity || "", String(t.insulLL || ""), String(t.insulLE || ""), t.polarity || "", String(t.maxZs || ""), String(t.r1r2 || ""), String(t.r2 || ""), String(t.zs || ""), t.rcdType || "", String(t.rcdRating || ""), String(t.rcdHalfDelta || ""), String(t.rcdDelta || ""), t.remarks || ""], eicTestCols, { bgColor: idx % 2 === 0 ? "#ffffff" : "#f5f5f5", fontSize: 7.5 });
+      });
+    }
+
+    pdf.save("EIC_" + (certData.clientName || "certificate").replace(/[^a-zA-Z0-9]/g, "_") + "_" + certRef.replace(/[^a-zA-Z0-9]/g, "_") + ".pdf");
+    return pdf;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MINOR WORKS
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (certType === "minor_works") {
+    const cw2 = [85, 105];
+    let y = addPageHeader(pdf, certRef,
+      "MINOR ELECTRICAL INSTALLATION WORKS CERTIFICATE",
+      "BS 7671: Requirements for Electrical Installations — 18th Edition"
+    );
+
+    y = sectionHeader(pdf, y, "PART 1 — Description of Minor Works", cw2);
+    y = twoColRow(pdf, y, "Certificate Reference", certRef, cw2, false);
+    y = twoColRow(pdf, y, "Date of Work", fmtDate(certData.date), cw2, true);
+    y = twoColRow(pdf, y, "Location of Works", certData.workLocation || "", cw2, false);
+    // Wrap long description
+    var mwDescLines = pdf.splitTextToSize(certData.workDescription || "", 101);
+    var mwDescH = Math.max(7, mwDescLines.length * 4.5 + 4);
+    pdf.setFillColor("#f5f5f5");
+    pdf.rect(10, y, 190, mwDescH, "F");
+    pdf.setDrawColor("#cccccc");
+    pdf.rect(10, y, 85, mwDescH);
+    pdf.rect(95, y, 105, mwDescH);
+    pdf.setFontSize(9); pdf.setFont("helvetica", "normal"); pdf.setTextColor("#000000");
+    pdf.text("Description of Works", 12, y + 5);
+    pdf.text(mwDescLines, 97, y + 5);
+    y += mwDescH;
+    y += 2;
+
+    y = sectionHeader(pdf, y, "PART 2 — Installation Details", cw2);
+    y = twoColRow(pdf, y, "Client / Occupier Name", certData.clientName || "", cw2, false);
+    y = twoColRow(pdf, y, "Address", [certData.clientAddress, certData.clientPostcode].filter(Boolean).join(", "), cw2, true);
+    y = twoColRow(pdf, y, "Telephone", certData.clientTel || "", cw2, false);
+    y += 2;
+
+    y = sectionHeader(pdf, y, "PART 3 — Circuit Details", cw2);
+    y = twoColRow(pdf, y, "Circuit Reference", certData.circuitRef || "", cw2, false);
+    y = twoColRow(pdf, y, "Circuit Type", certData.circuitType || "", cw2, true);
+    y = twoColRow(pdf, y, "Protective Device Type", certData.protectiveDeviceType || "", cw2, false);
+    y = twoColRow(pdf, y, "Protective Device Rating (A)", fmt(certData.protectiveDeviceRating, " A"), cw2, true);
+    y = twoColRow(pdf, y, "Earthing Arrangement", certData.earthingArrangement || "", cw2, false);
+    y = twoColRow(pdf, y, "Means of Earthing", certData.meansOfEarthing || "", cw2, true);
+    y += 2;
+
+    y = sectionHeader(pdf, y, "PART 4 — Test Results", cw2);
+    y = twoColRow(pdf, y, "R1 + R2 (\u03a9)", fmt(certData.r1r2, " \u03a9"), cw2, false);
+    y = twoColRow(pdf, y, "R2 (\u03a9)", fmt(certData.r2, " \u03a9"), cw2, true);
+    y = twoColRow(pdf, y, "Insulation Resistance (M\u03a9)", fmt(certData.insulationResistance, " M\u03a9"), cw2, false);
+    y = twoColRow(pdf, y, "Polarity", certData.polarity || "", cw2, true);
+    y = twoColRow(pdf, y, "Earth Fault Loop Impedance Zs (\u03a9)", fmt(certData.zs, " \u03a9"), cw2, false);
+    y = twoColRow(pdf, y, "RCD Operating Time (ms)", certData.rcdTime ? fmt(certData.rcdTime, " ms") : "N/A", cw2, true);
+    y = twoColRow(pdf, y, "RCD Type / Rating", certData.rcdType || "N/A", cw2, false);
+    y += 2;
+
+    y = sectionHeader(pdf, y, "PART 5 — Declaration", cw2);
+    var mwDeclText = "I/We, being the person(s) responsible for the design, construction, inspection and testing of the minor electrical installation works (as indicated by my/our signatures below) CERTIFY that the said work for which I/We have been responsible is to the best of my/our knowledge and belief in accordance with BS 7671:2018 as amended to date, except for the departures, if any, stated below.";
+    var mwDeclLines = pdf.splitTextToSize(mwDeclText, 186);
+    var mwDeclH = mwDeclLines.length * 4.5 + 8;
+    pdf.setFillColor("#f9f9f9");
+    pdf.rect(10, y, 190, mwDeclH, "F");
+    pdf.setDrawColor("#cccccc");
+    pdf.rect(10, y, 190, mwDeclH);
+    pdf.setFontSize(8); pdf.setFont("helvetica", "italic"); pdf.setTextColor("#333333");
+    pdf.text(mwDeclLines, 12, y + 5);
+    y += mwDeclH + 3;
+    pdf.setFont("helvetica", "normal"); pdf.setTextColor("#000000");
+
+    var mwInstH = 32;
+    pdf.setFillColor("#f5f5f5");
+    pdf.rect(10, y, 190, mwInstH, "F");
+    pdf.setDrawColor("#cccccc");
+    pdf.rect(10, y, 190, mwInstH);
+    pdf.setFontSize(8.5); pdf.setFont("helvetica", "bold"); pdf.setTextColor("#000000");
+    pdf.text("Installer / Inspector", 12, y + 6);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Name: " + (certData.installerName || certData.engineerName || ""), 12, y + 13);
+    pdf.text("Company: " + (certData.companyName || ""), 12, y + 19);
+    pdf.text("Scheme: " + (certData.scheme || "") + (certData.schemeNumber ? " / Reg. No: " + certData.schemeNumber : ""), 12, y + 25);
+    pdf.text("Date: " + fmtDate(certData.date), 12, y + 31);
+    if (certData.signatureData) {
+      try { pdf.addImage(certData.signatureData, "PNG", 120, y + 6, 70, 20); } catch(e) { /* ignore */ }
+    } else {
+      pdf.setDrawColor("#aaaaaa");
+      pdf.line(120, y + 28, 197, y + 28);
+      pdf.setFontSize(7); pdf.setTextColor("#aaaaaa");
+      pdf.text("Signature", 120, y + 31);
+    }
+    y += mwInstH + 4;
+    pdf.setTextColor("#000000");
+
+    if (certData.notes) {
+      y = checkPageBreak(pdf, y, 20, certRef);
+      y = sectionHeader(pdf, y, "Notes", cw2);
+      var mwNoteLines = pdf.splitTextToSize(certData.notes, 186);
+      var mwNoteH = Math.max(7, mwNoteLines.length * 4.5 + 6);
+      pdf.setFillColor("#f9f9f9");
+      pdf.rect(10, y, 190, mwNoteH, "F");
+      pdf.setDrawColor("#cccccc");
+      pdf.rect(10, y, 190, mwNoteH);
+      pdf.setFontSize(8.5); pdf.setFont("helvetica", "normal"); pdf.setTextColor("#333333");
+      pdf.text(mwNoteLines, 12, y + 5);
+    }
+
+    pdf.save("MinorWorks_" + (certData.clientName || "certificate").replace(/[^a-zA-Z0-9]/g, "_") + "_" + certRef.replace(/[^a-zA-Z0-9]/g, "_") + ".pdf");
+    return pdf;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EV CHARGER
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (certType === "ev_charger") {
+    const cw2 = [85, 105];
+    let y = addPageHeader(pdf, certRef,
+      "EV CHARGER INSTALLATION CERTIFICATE",
+      "BS 7671 Section 722 — Electric Vehicle Charging Installations"
+    );
+
+    y = sectionHeader(pdf, y, "PART 1 — Client Details", cw2);
+    y = twoColRow(pdf, y, "Certificate Reference", certRef, cw2, false);
+    y = twoColRow(pdf, y, "Date", fmtDate(certData.date), cw2, true);
+    y = twoColRow(pdf, y, "Client Name", certData.clientName || "", cw2, false);
+    y = twoColRow(pdf, y, "Address", [certData.clientAddress, certData.clientPostcode].filter(Boolean).join(", "), cw2, true);
+    y = twoColRow(pdf, y, "Telephone", certData.clientTel || "", cw2, false);
+    y = twoColRow(pdf, y, "Email", certData.clientEmail || "", cw2, true);
+    y += 2;
+
+    y = sectionHeader(pdf, y, "PART 2 — EV Charging Equipment Details", cw2);
+    y = twoColRow(pdf, y, "Make", certData.chargerMake || "", cw2, false);
+    y = twoColRow(pdf, y, "Model", certData.chargerModel || "", cw2, true);
+    y = twoColRow(pdf, y, "Serial Number", certData.chargerSerial || "", cw2, false);
+    y = twoColRow(pdf, y, "Maximum Charging Current (A)", fmt(certData.maxChargingCurrent, " A"), cw2, true);
+    y = twoColRow(pdf, y, "Charging Mode (IEC 61851)", certData.chargingMode || "", cw2, false);
+    y = twoColRow(pdf, y, "OZEV Grant Reference", certData.ozevRef || "N/A", cw2, true);
+    y += 2;
+
+    y = sectionHeader(pdf, y, "PART 3 — Installation Details", cw2);
+    y = twoColRow(pdf, y, "Earthing Arrangement", certData.earthingArrangement || "", cw2, false);
+    y = twoColRow(pdf, y, "Supply Type", certData.supplyType || "", cw2, true);
+    y = twoColRow(pdf, y, "Supply Protective Device", certData.supplyProtectiveDevice || "", cw2, false);
+    y = twoColRow(pdf, y, "Cable Type", certData.cableType || "", cw2, true);
+    y = twoColRow(pdf, y, "Cable Cross-Sectional Area (mm\u00b2)", fmt(certData.cableSize, " mm\u00b2"), cw2, false);
+    y = twoColRow(pdf, y, "Cable Length (m)", fmt(certData.cableLength, " m"), cw2, true);
+    y = twoColRow(pdf, y, "Cable Route", certData.cableRoute || "", cw2, false);
+    y = twoColRow(pdf, y, "Method of Protection", certData.protectionMethod || "", cw2, true);
+    y += 2;
+
+    y = sectionHeader(pdf, y, "PART 4 — RCD / Protective Device Details", cw2);
+    y = twoColRow(pdf, y, "RCD Type", certData.rcdType || "", cw2, false);
+    y = twoColRow(pdf, y, "RCD Rating (mA)", fmt(certData.rcdRating, " mA"), cw2, true);
+    y = twoColRow(pdf, y, "RCD Test Time (ms)", fmt(certData.rcdTestTime, " ms"), cw2, false);
+    y += 2;
+
+    y = sectionHeader(pdf, y, "PART 5 — PME Assessment (BS 7671 / ESQCR)", cw2);
+    y = twoColRow(pdf, y, "PME Supply Present", certData.pmeSupply || "", cw2, false);
+    y = twoColRow(pdf, y, "Earth Electrode Installed", certData.earthElectrode || "No", cw2, true);
+    y = twoColRow(pdf, y, "Earth Electrode Resistance (\u03a9)", certData.earthElectrodeResistance ? fmt(certData.earthElectrodeResistance, " \u03a9") : "N/A", cw2, false);
+    y += 2;
+
+    y = sectionHeader(pdf, y, "PART 6 — Test Results", cw2);
+    y = twoColRow(pdf, y, "External Loop Impedance Ze (\u03a9)", fmt(certData.ze, " \u03a9"), cw2, false);
+    y = twoColRow(pdf, y, "Earth Fault Loop Impedance Zs (\u03a9)", fmt(certData.zs, " \u03a9"), cw2, true);
+    y = twoColRow(pdf, y, "R1 + R2 (\u03a9)", fmt(certData.r1r2, " \u03a9"), cw2, false);
+    y = twoColRow(pdf, y, "Insulation Resistance (M\u03a9)", fmt(certData.insulationResistance, " M\u03a9"), cw2, true);
+    y = twoColRow(pdf, y, "Polarity", certData.polarity || "", cw2, false);
+    y = twoColRow(pdf, y, "RCD Operation Time (ms)", certData.rcdOperation ? fmt(certData.rcdOperation, " ms") : "N/A", cw2, true);
+    y += 2;
+
+    y = sectionHeader(pdf, y, "PART 7 — Overall Assessment", cw2);
+    var evIsSat = certData.result === "Satisfactory";
+    pdf.setFillColor(evIsSat ? "#d4edda" : "#f8d7da");
+    pdf.rect(10, y, 190, 12, "F");
+    pdf.setDrawColor("#cccccc");
+    pdf.rect(10, y, 190, 12);
+    pdf.setFontSize(13); pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(evIsSat ? "#155724" : "#721c24");
+    pdf.text("Overall Assessment: " + (certData.result || "SATISFACTORY").toUpperCase(), 105, y + 8, { align: "center" });
+    y += 14;
+    pdf.setTextColor("#000000");
+
+    y = sectionHeader(pdf, y, "PART 8 — Declaration", cw2);
+    var evDeclText = "I/We hereby certify that the EV charging equipment identified above has been designed, constructed, inspected and tested in accordance with BS 7671:2018 as amended, and where applicable BS EN 61851 and OZEV requirements, and that to the best of my/our knowledge and belief the installation complies with the above standards.";
+    var evDeclLines = pdf.splitTextToSize(evDeclText, 186);
+    var evDeclH = evDeclLines.length * 4.5 + 8;
+    pdf.setFillColor("#f9f9f9");
+    pdf.rect(10, y, 190, evDeclH, "F");
+    pdf.setDrawColor("#cccccc");
+    pdf.rect(10, y, 190, evDeclH);
+    pdf.setFontSize(8); pdf.setFont("helvetica", "italic"); pdf.setTextColor("#333333");
+    pdf.text(evDeclLines, 12, y + 5);
+    y += evDeclH + 3;
+    pdf.setFont("helvetica", "normal"); pdf.setTextColor("#000000");
+
+    var evInstH = 32;
+    pdf.setFillColor("#f5f5f5");
+    pdf.rect(10, y, 190, evInstH, "F");
+    pdf.setDrawColor("#cccccc");
+    pdf.rect(10, y, 190, evInstH);
+    pdf.setFontSize(8.5); pdf.setFont("helvetica", "bold"); pdf.setTextColor("#000000");
+    pdf.text("Installer / Inspector", 12, y + 6);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Name: " + (certData.engineerName || ""), 12, y + 13);
+    pdf.text("Company: " + (certData.companyName || ""), 12, y + 19);
+    pdf.text("Scheme: " + (certData.scheme || "") + (certData.schemeNumber ? " / " + certData.schemeNumber : ""), 12, y + 25);
+    pdf.text("Date: " + fmtDate(certData.date), 12, y + 31);
+    if (certData.signatureData) {
+      try { pdf.addImage(certData.signatureData, "PNG", 120, y + 6, 70, 20); } catch(e) { /* ignore */ }
+    } else {
+      pdf.setDrawColor("#aaaaaa");
+      pdf.line(120, y + 28, 197, y + 28);
+      pdf.setFontSize(7); pdf.setTextColor("#aaaaaa");
+      pdf.text("Signature", 120, y + 31);
+    }
+    y += evInstH + 4;
+    pdf.setTextColor("#000000");
+
+    if (certData.notes) {
+      y = checkPageBreak(pdf, y, 20, certRef);
+      y = sectionHeader(pdf, y, "Notes", cw2);
+      var evNoteLines = pdf.splitTextToSize(certData.notes, 186);
+      var evNoteH = Math.max(7, evNoteLines.length * 4.5 + 6);
+      pdf.setFillColor("#f9f9f9");
+      pdf.rect(10, y, 190, evNoteH, "F");
+      pdf.setDrawColor("#cccccc");
+      pdf.rect(10, y, 190, evNoteH);
+      pdf.setFontSize(8.5); pdf.setFont("helvetica", "normal"); pdf.setTextColor("#333333");
+      pdf.text(evNoteLines, 12, y + 5);
+    }
+
+    pdf.save("EVCharger_" + (certData.clientName || "certificate").replace(/[^a-zA-Z0-9]/g, "_") + "_" + certRef.replace(/[^a-zA-Z0-9]/g, "_") + ".pdf");
+    return pdf;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PAT TESTING
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (certType === "pat_testing") {
+    const cw2 = [85, 105];
+    let y = addPageHeader(pdf, certRef,
+      "PORTABLE APPLIANCE TESTING CERTIFICATE",
+      "IET Code of Practice for In-Service Inspection & Testing of Electrical Equipment (5th Ed.)"
+    );
+
+    y = sectionHeader(pdf, y, "TESTER & SITE DETAILS", cw2);
+    y = twoColRow(pdf, y, "Certificate Reference", certRef, cw2, false);
+    y = twoColRow(pdf, y, "Date of Testing", fmtDate(certData.date), cw2, true);
+    y = twoColRow(pdf, y, "Client / Site Name", certData.clientName || "", cw2, false);
+    y = twoColRow(pdf, y, "Site Address", [certData.clientAddress, certData.clientPostcode].filter(Boolean).join(", "), cw2, true);
+    y = twoColRow(pdf, y, "Telephone", certData.clientTel || "", cw2, false);
+    y = twoColRow(pdf, y, "Email", certData.clientEmail || "", cw2, true);
+    y = twoColRow(pdf, y, "Tester Name", certData.engineerName || "", cw2, false);
+    y = twoColRow(pdf, y, "Company", certData.companyName || "", cw2, true);
+    y = twoColRow(pdf, y, "Scheme / Qualification", certData.scheme ? certData.scheme + (certData.schemeNumber ? " / " + certData.schemeNumber : "") : (certData.schemeNumber || ""), cw2, false);
+    y += 4;
+
+    var patCols = [14, 40, 22, 18, 15, 22, 20, 18, 21];
+    y = sectionHeader(pdf, y, "EQUIPMENT REGISTER / TEST RESULTS", patCols);
+    y = drawTableRow(pdf, y,
+      ["Test No", "Description", "Make / Model", "Serial No", "Location", "Visual Inspection", "Earth Cont. (\u03a9)", "Ins R (M\u03a9)", "Result"],
+      patCols, { bold: true, bgColor: "#444444", fontSize: 7.5, rowHeight: 11, textColor: "#ffffff" }
+    );
+
+    var patItems = Array.isArray(observations) && observations.length > 0
+      ? observations
+      : [{
+          testNumber: certData.testNumber || "1",
+          description: certData.equipDescription || "",
+          makeModel: [certData.equipMake, certData.equipModel].filter(Boolean).join(" / "),
+          serial: certData.equipSerial || "",
+          location: certData.equipLocation || "",
+          visualInspection: certData.visualInspection || "",
+          earthContinuity: certData.earthContinuity || "",
+          insulationResistance: certData.insulationResistance || "",
+          result: certData.result || "PASS",
+        }];
+
+    patItems.forEach(function(item, idx) {
+      y = checkPageBreak(pdf, y, 10, certRef);
+      var patResult = item.result || item.outcome || "PASS";
+      var isPass = patResult === "PASS" || patResult === "Pass";
+      var bg = idx % 2 === 0 ? "#ffffff" : "#f5f5f5";
+      var cells = [
+        String(item.testNumber || item.testNo || idx + 1),
+        item.description || item.equipDescription || "",
+        item.makeModel || [item.equipMake, item.equipModel].filter(Boolean).join(" / ") || item.make || "",
+        item.serial || item.serialNumber || item.equipSerial || "",
+        item.location || item.equipLocation || "",
+        item.visualInspection || item.visual || "",
+        String(item.earthContinuity || item.earth || ""),
+        String(item.insulationResistance || item.insulation || ""),
+        patResult,
+      ];
+      var xPos = 10;
+      pdf.setFillColor(bg);
+      pdf.rect(xPos, y, patCols.reduce(function(a, b) { return a + b; }, 0), 8, "F");
+      cells.forEach(function(cell, ci) {
+        pdf.setDrawColor("#cccccc");
+        pdf.rect(xPos, y, patCols[ci], 8);
+        pdf.setFontSize(ci === 8 ? 8.5 : 8);
+        if (ci === 8) {
+          pdf.setFont("helvetica", "bold");
+          pdf.setTextColor(isPass ? "#155724" : "#721c24");
+        } else {
+          pdf.setFont("helvetica", "normal");
+          pdf.setTextColor("#000000");
+        }
+        pdf.text(String(cell), xPos + 1.5, y + 5.5, { maxWidth: patCols[ci] - 3 });
+        xPos += patCols[ci];
+      });
+      pdf.setTextColor("#000000");
+      y += 8;
+    });
+
+    y += 4;
+    var totalItems = patItems.length;
+    var passCount = patItems.filter(function(i) { var r = i.result || i.outcome || "PASS"; return r === "PASS" || r === "Pass"; }).length;
+    var failCount = totalItems - passCount;
+
+    y = checkPageBreak(pdf, y, 20, certRef);
+    y = sectionHeader(pdf, y, "SUMMARY", cw2);
+    y = twoColRow(pdf, y, "Total Items Tested", String(totalItems), cw2, false);
+    y = twoColRow(pdf, y, "Passed", String(passCount), cw2, true);
+    y = twoColRow(pdf, y, "Failed", String(failCount), cw2, false);
+    y = twoColRow(pdf, y, "Next Test Due", fmtDate(certData.nextTestDate), cw2, true);
+    y += 4;
+
+    y = sectionHeader(pdf, y, "DECLARATION", cw2);
+    var patDeclText = "I/We certify that the above electrical equipment has been inspected and tested in accordance with the requirements of the IET Code of Practice for In-service Inspection and Testing of Electrical Equipment (5th Edition) and that the results are a true record of the condition of the equipment at the time of test.";
+    var patDeclLines = pdf.splitTextToSize(patDeclText, 186);
+    var patDeclH = patDeclLines.length * 4.5 + 8;
+    pdf.setFillColor("#f9f9f9");
+    pdf.rect(10, y, 190, patDeclH, "F");
+    pdf.setDrawColor("#cccccc");
+    pdf.rect(10, y, 190, patDeclH);
+    pdf.setFontSize(8); pdf.setFont("helvetica", "italic"); pdf.setTextColor("#333333");
+    pdf.text(patDeclLines, 12, y + 5);
+    y += patDeclH + 3;
+    pdf.setFont("helvetica", "normal"); pdf.setTextColor("#000000");
+
+    var patSigH = 30;
+    pdf.setFillColor("#f5f5f5");
+    pdf.rect(10, y, 190, patSigH, "F");
+    pdf.setDrawColor("#cccccc");
+    pdf.rect(10, y, 190, patSigH);
+    pdf.setFontSize(8.5); pdf.setFont("helvetica", "bold"); pdf.setTextColor("#000000");
+    pdf.text("Authorised Tester", 12, y + 6);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Name: " + (certData.engineerName || ""), 12, y + 13);
+    pdf.text("Company: " + (certData.companyName || ""), 12, y + 19);
+    pdf.text("Date: " + fmtDate(certData.date), 12, y + 25);
+    if (certData.signatureData) {
+      try { pdf.addImage(certData.signatureData, "PNG", 120, y + 6, 70, 18); } catch(e) { /* ignore */ }
+    } else {
+      pdf.setDrawColor("#aaaaaa");
+      pdf.line(120, y + 26, 197, y + 26);
+      pdf.setFontSize(7); pdf.setTextColor("#aaaaaa");
+      pdf.text("Signature", 120, y + 29);
+    }
+    y += patSigH + 4;
+    pdf.setTextColor("#000000");
+
+    if (certData.notes) {
+      y = checkPageBreak(pdf, y, 20, certRef);
+      y = sectionHeader(pdf, y, "Notes", cw2);
+      var patNoteLines = pdf.splitTextToSize(certData.notes, 186);
+      var patNoteH = Math.max(7, patNoteLines.length * 4.5 + 6);
+      pdf.setFillColor("#f9f9f9");
+      pdf.rect(10, y, 190, patNoteH, "F");
+      pdf.setDrawColor("#cccccc");
+      pdf.rect(10, y, 190, patNoteH);
+      pdf.setFontSize(8.5); pdf.setFont("helvetica", "normal"); pdf.setTextColor("#333333");
+      pdf.text(patNoteLines, 12, y + 5);
+    }
+
+    pdf.save("PAT_" + (certData.clientName || "certificate").replace(/[^a-zA-Z0-9]/g, "_") + "_" + certRef.replace(/[^a-zA-Z0-9]/g, "_") + ".pdf");
+    return pdf;
+  }
+
+  // Fallback
+  pdf.setFontSize(14);
+  pdf.text("Unknown certificate type: " + certType, 20, 50);
+  pdf.save("electrical_certificate.pdf");
+  return pdf;
+}
+
 // ─── ELECTRICAL PDF PREVIEW ─────────────────────────────────────────────────
 function ElectricalPDFPreview({ certData, certType, certTitle, onClose }) {
   const [downloading, setDownloading] = useState(false);
@@ -21881,26 +22838,11 @@ function ElectricalPDFPreview({ certData, certType, certTitle, onClose }) {
   const downloadPDF = async () => {
     setDownloading(true);
     try {
-      await Promise.all([
-        new Promise((res, rej) => { if (window.html2canvas) return res(); const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; s.onload = res; s.onerror = rej; document.head.appendChild(s); }),
-        new Promise((res, rej) => { if (window.jspdf) return res(); const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload = res; s.onerror = rej; document.head.appendChild(s); })
-      ]);
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
-      const el = certRef.current;
-      const prevW = el.style.width; el.style.width = "800px"; el.style.maxWidth = "800px";
-      await new Promise(r => setTimeout(r, 150));
-      const canvas = await window.html2canvas(el, { scale:2, useCORS:true, logging:false, width:800, height:el.scrollHeight, windowWidth:800 });
-      el.style.width = prevW; el.style.maxWidth = prevW;
-      const pdfW = 210, pdfH = 297;
-      const imgR = canvas.width / canvas.height;
-      const pgR = pdfW / pdfH;
-      let dW, dH, dX, dY;
-      if (imgR > pgR) { dW = pdfW - 10; dH = dW / imgR; dX = 5; dY = 5; }
-      else { dH = pdfH - 10; dW = dH * imgR; dX = (pdfW - dW) / 2; dY = 5; }
-      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", dX, dY, dW, dH);
-      const fn = (certData.clientName || certType).replace(/[^a-zA-Z0-9 ]/g,"").trim().replace(/\s+/g,"_") + ".pdf";
-      pdf.save(fn);
+      const c = certData.circuits || [];
+      const t = certData.testResults || [];
+      const o = certData.observations || [];
+      const ins = certData.inspectionItems || [];
+      await generateElectricalPDF(certType, certData, c, t, o, ins);
     } catch(e) { console.error(e); alert("Could not generate PDF: " + e.message); }
     setDownloading(false);
   };
@@ -22075,57 +23017,941 @@ function ElectricalPDFPreview({ certData, certType, certTitle, onClose }) {
   );
 }
 
-// ─── EICR FORM ──────────────────────────────────────────────────────────────
+// ─── EICR FORM (BS 7671:2018+A2:2022 — 13-step wizard) ─────────────────────
 function EICRForm({ onBack, onSave, currentUser }) {
+  const OUTCOME_CODES = ["","✓","C1","C2","C3","FI","N","V","LIM","N/A"];
+
+  // ── Inspection schedule items (BS 7671 Appendix 6) ──────────────────────
+  const INSPECTION_ITEMS_INIT = [
+    // 1.x Intake Equipment
+    { id:"1.1", section:"1.0 Intake Equipment", label:"Service cable: adequate?" },
+    { id:"1.2", section:"1.0 Intake Equipment", label:"Service head: condition" },
+    { id:"1.3", section:"1.0 Intake Equipment", label:"Meter tails: adequate condition/size?" },
+    // 2.x Other sources
+    { id:"2.1", section:"2.0 Other Sources / Microgenerators", label:"Presence of adequate arrangements for other sources / microgenerators" },
+    // 3.x Earthing/Bonding
+    { id:"3.1", section:"3.0 Earthing & Bonding", label:"Earthing conductor: condition, size and connection" },
+    { id:"3.2", section:"3.0 Earthing & Bonding", label:"Main protective bonding conductors: condition, size and connections" },
+    { id:"3.3", section:"3.0 Earthing & Bonding", label:"Supplementary bonding conductors: condition and connections" },
+    { id:"3.4", section:"3.0 Earthing & Bonding", label:"Earthing and bonding labels at MET and distribution boards" },
+    { id:"3.5", section:"3.0 Earthing & Bonding", label:"Condition of distributor's earth terminal (PME systems)" },
+    { id:"3.6", section:"3.0 Earthing & Bonding", label:"Accessibility of earthing conductor at MET" },
+    { id:"3.7", section:"3.0 Earthing & Bonding", label:"Accessibility of main and supplementary bonding connections" },
+    { id:"3.8", section:"3.0 Earthing & Bonding", label:"Adequacy of earthing conductor CSA" },
+    // 4.x Consumer units
+    { id:"4.1", section:"4.0 Consumer Units / Distribution Boards", label:"Adequacy of working space/accessibility to consumer unit" },
+    { id:"4.2", section:"4.0 Consumer Units / Distribution Boards", label:"Security of fixing" },
+    { id:"4.3", section:"4.0 Consumer Units / Distribution Boards", label:"Consumer unit/enclosure: non-combustible material (Reg 421.1.201)" },
+    { id:"4.4", section:"4.0 Consumer Units / Distribution Boards", label:"Condition of enclosure(s)" },
+    { id:"4.5", section:"4.0 Consumer Units / Distribution Boards", label:"Enclosure not damaged/live parts exposed" },
+    { id:"4.6", section:"4.0 Consumer Units / Distribution Boards", label:"Presence of main linked switch" },
+    { id:"4.7", section:"4.0 Consumer Units / Distribution Boards", label:"Operation of main switch (functional check)" },
+    { id:"4.8", section:"4.0 Consumer Units / Distribution Boards", label:"Switchgear: adequate condition and rating" },
+    { id:"4.9", section:"4.0 Consumer Units / Distribution Boards", label:"Circuit-identification labels at consumer unit" },
+    { id:"4.10", section:"4.0 Consumer Units / Distribution Boards", label:"Presence of danger notices" },
+    { id:"4.11", section:"4.0 Consumer Units / Distribution Boards", label:"Presence of other required notices/labels/diagrams" },
+    { id:"4.12", section:"4.0 Consumer Units / Distribution Boards", label:"Suitability of protective devices for fault protection and overload" },
+    { id:"4.13", section:"4.0 Consumer Units / Distribution Boards", label:"Presence and adequacy of RCD(s) for fault protection (Reg 411.3.4)" },
+    { id:"4.14", section:"4.0 Consumer Units / Distribution Boards", label:"Presence and adequacy of RCD(s) for additional protection (Reg 415.1)" },
+    { id:"4.15", section:"4.0 Consumer Units / Distribution Boards", label:"Operation of RCDs via test button (Reg 514.12.2)" },
+    { id:"4.16", section:"4.0 Consumer Units / Distribution Boards", label:"Operation of AFDD test button(s) where present" },
+    { id:"4.17", section:"4.0 Consumer Units / Distribution Boards", label:"SPD present and functional indication (Reg 534)" },
+    { id:"4.18", section:"4.0 Consumer Units / Distribution Boards", label:"Single-pole switching/protection in live conductors only" },
+    { id:"4.19", section:"4.0 Consumer Units / Distribution Boards", label:"Correct selection and co-ordination of overcurrent protective devices" },
+    { id:"4.20", section:"4.0 Consumer Units / Distribution Boards", label:"Protective devices correctly installed (not physically damaged)" },
+    { id:"4.21", section:"4.0 Consumer Units / Distribution Boards", label:"Adequate connection of conductors at terminals" },
+    { id:"4.22", section:"4.0 Consumer Units / Distribution Boards", label:"Condition of conductors and insulation at consumer unit" },
+    // 5.x Final circuits
+    { id:"5.1",  section:"5.0 Final Circuits", label:"Identification of cables (conductors coloured/marked)" },
+    { id:"5.2",  section:"5.0 Final Circuits", label:"Cables correctly supported throughout" },
+    { id:"5.3",  section:"5.0 Final Circuits", label:"Condition of insulation of live parts" },
+    { id:"5.4",  section:"5.0 Final Circuits", label:"Non-sheathed cables protected by conduit/trunking" },
+    { id:"5.5",  section:"5.0 Final Circuits", label:"Cables correctly installed within walls/partitions (Reg 522.6)" },
+    { id:"5.6",  section:"5.0 Final Circuits", label:"Cables buried: RCD protection or safe zone installation (Reg 522.6.202)" },
+    { id:"5.7",  section:"5.0 Final Circuits", label:"Provision of fire barriers/seals where cables pass through fire compartments" },
+    { id:"5.8",  section:"5.0 Final Circuits", label:"Termination of cables at enclosures: correct sealing, glands" },
+    { id:"5.9",  section:"5.0 Final Circuits", label:"No unsupported joints/connections outside enclosures" },
+    { id:"5.10", section:"5.0 Final Circuits", label:"Correct connection of conductors at accessories" },
+    { id:"5.11", section:"5.0 Final Circuits", label:"Presence of CPCs throughout circuits" },
+    { id:"5.12", section:"5.0 Final Circuits", label:"Cables adequately protected from mechanical damage" },
+    { id:"5.13", section:"5.0 Final Circuits", label:"Cables adequately protected from thermal effects" },
+    { id:"5.14", section:"5.0 Final Circuits", label:"Wiring accessories: correct use and condition" },
+    { id:"5.15", section:"5.0 Final Circuits", label:"Provision of additional protection by 30 mA RCDs for socket outlets (Reg 411.3.4)" },
+    { id:"5.16", section:"5.0 Final Circuits", label:"Provision of additional protection by 30 mA RCDs for mobile equipment outdoors (Reg 411.3.3)" },
+    { id:"5.17", section:"5.0 Final Circuits", label:"Suitability of accessories for external/damp environments" },
+    { id:"5.18", section:"5.0 Final Circuits", label:"Socket outlets: correct polarity confirmed" },
+    { id:"5.19", section:"5.0 Final Circuits", label:"Adequacy of lighting circuits' protection" },
+    { id:"5.20", section:"5.0 Final Circuits", label:"Lighting: adequacy of spacing/type for lampholders" },
+    { id:"5.21", section:"5.0 Final Circuits", label:"Smoke/heat detectors: presence and operation" },
+    // 6.x Bath/shower
+    { id:"6.1", section:"6.0 Locations Containing a Bath or Shower", label:"Zoning of equipment (Reg 701)" },
+    { id:"6.2", section:"6.0 Locations Containing a Bath or Shower", label:"Adequacy of supplementary bonding" },
+    { id:"6.3", section:"6.0 Locations Containing a Bath or Shower", label:"Provision of 30 mA RCD protection" },
+    { id:"6.4", section:"6.0 Locations Containing a Bath or Shower", label:"Shaver supply unit to BS EN 61558-2-5 if present" },
+    { id:"6.5", section:"6.0 Locations Containing a Bath or Shower", label:"IP rating of equipment appropriate for zone" },
+    { id:"6.6", section:"6.0 Locations Containing a Bath or Shower", label:"No unsuitable luminaires in zone 1 or 2" },
+    { id:"6.7", section:"6.0 Locations Containing a Bath or Shower", label:"Presence and operation of SELV or PELV for lighting (zone 0/1)" },
+    { id:"6.8", section:"6.0 Locations Containing a Bath or Shower", label:"Heating: protection adequate for zone" },
+    // 7.x Other special
+    { id:"7.1", section:"7.0 Other Special Installations / Locations", label:"Swimming pools / fountains / hot tubs (Reg 702) — if applicable" },
+    { id:"7.2", section:"7.0 Other Special Installations / Locations", label:"Agricultural / horticultural premises (Reg 705) — if applicable" },
+    { id:"7.3", section:"7.0 Other Special Installations / Locations", label:"Conducting locations with restricted movement (Reg 706) — if applicable" },
+    { id:"7.4", section:"7.0 Other Special Installations / Locations", label:"EV charging installations (Reg 722) — if applicable" },
+    { id:"7.5", section:"7.0 Other Special Installations / Locations", label:"Solar PV power supply systems (Reg 712) — if applicable" },
+    // 8.x Prosumer
+    { id:"8.1", section:"8.0 Prosumer's LV Installation", label:"Prosumer's LV installation arrangements adequate (Reg 551 & 712/722)" },
+  ];
+
+  // ── Default circuit/test row factories ──────────────────────────────────
+  const newCircuit = (n) => ({ id: Date.now()+n, circuitNumber:"", circuitDescription:"", wiringType:"", referenceMethod:"", pointsServed:"", liveConductorCSA:"", cpcCSA:"", ocpdBSEN:"", ocpdType:"", ocpdRating:"", ocpdBreakingCapacity:"", maxPermittedZs:"", rcdBSEN:"", rcdType:"", rcdIdn:"", rcdRating:"" });
+  const newTestRow = (n) => ({ id: Date.now()+n, circuitNumber:"", r1Line:"", rnNeutral:"", r2CPC:"", ringR1R2:"", insulationTestVoltage:"500", insulationLiveLive:"", insulationLiveEarth:"", polarity:"", zsMax:"", rcdDisconnectionTime:"", rcdTestButton:"", afddTestButton:"", remarks:"" });
+  const newObservation = () => ({ id: Date.now(), observationText:"", classification:"C3" });
+
+  // ── State ────────────────────────────────────────────────────────────────
   const [certData, setCertData] = useState({
     certRef: "EICR-" + Date.now().toString(36).toUpperCase(),
     date: new Date().toISOString().split("T")[0],
-    clientName: "", clientAddress: "", clientPostcode: "", clientEmail: "", clientTel: "",
-    installDescription: "", wiringAge: "", lastInspection: "", additionsAlterations: "",
-    systemType: "", numPhases: "1", supplyProtectiveType: "", supplyProtectiveRating: "",
-    nominalVoltage: "230", nominalFrequency: "50", prospectiveFaultCurrent: "", ze: "",
-    extentOfInspection: "", agreedLimitations: "", operationalLimitations: "",
-    observations: "", observationCode: "",
-    result: "Satisfactory", nextInspectionDate: "",
-    engineerName: "", qualifications: "", scheme: "", schemeNumber: "",
-    notes: "", signatureData: null,
+    // Section A-C — Client & Site
+    clientName:"", clientAddress:"", clientPostcode:"", clientEmail:"", clientTel:"",
+    occupierName:"", occupierAddress:"",
+    premisesDescription:"Residential",
+    estimatedWiringAge:"", additionsAlterations:"No", additionsAlterationsAge:"",
+    installationRecordsAvailable:"No",
+    dateOfLastInspection:"", reasonForReport:"",
+    // Section D — Extent & Limitations
+    extentCovered:"", agreedLimitations:"", agreedLimitationsReasons:"", agreedWith:"", operationalLimitations:"",
+    // Section I — Supply Characteristics
+    earthingArrangementTNS:false, earthingArrangementTNCS:false, earthingArrangementTNC:false, earthingArrangementTT:false, earthingArrangementIT:false,
+    supplyTypeAC:true, supplyTypeDC:false,
+    liveConductors:"1-phase 2-wire",
+    nominalVoltage:"230", nominalFrequency:"50",
+    prospectiveFaultCurrent:"", externalZe:"",
+    supplyProtectiveBSEN:"", supplyProtectiveType:"", supplyProtectiveRating:"",
+    supplyPolarityConfirmed:false, otherSourcesOfSupply:false,
+    // Section J — Installation Particulars
+    meansOfEarthing:"Distributor's facility",
+    earthElectrodeType:"", earthElectrodeLocation:"", earthElectrodeResistance:"",
+    earthingConductorMaterial:"Copper", earthingConductorCSA:"", earthingConductorVerified:false,
+    mainBondingMaterial:"Copper", mainBondingCSA:"", mainBondingVerified:false,
+    bondingWater:false, bondingGas:false, bondingOil:false, bondingSteel:false, bondingLightning:false, bondingOther:false,
+    mainSwitchLocation:"", mainSwitchBSEN:"", mainSwitchPoles:"", mainSwitchCurrentRating:"", mainSwitchFuseRating:"", mainSwitchVoltageRating:"",
+    rcdType:"", rcdIdn:"", rcdTimeDelay:"", rcdMeasuredTime:"",
+    // Sections E-F — Condition Summary
+    generalConditionText:"", overallAssessment:"SATISFACTORY", nextInspectionDate:"", nextInspectionReasons:"",
+    // Section G — Declaration
+    inspectorName:"", inspectorSignature:"", inspectorCompany:"", inspectorPosition:"", inspectorAddress:"", inspectorDate: new Date().toISOString().split("T")[0],
+    authorisingName:"", authorisingSignature:"", authorisingCompany:"", authorisingPosition:"", authorisingAddress:"", authorisingDate: new Date().toISOString().split("T")[0],
   });
+  const [inspectionItems, setInspectionItems] = useState(
+    INSPECTION_ITEMS_INIT.map(item => ({ ...item, outcome:"" }))
+  );
+  const [circuits, setCircuits] = useState([newCircuit(0)]);
+  const [testResults, setTestResults] = useState([newTestRow(0)]);
+  const [observations, setObservations] = useState([newObservation()]);
+  const [step, setStep] = useState(0);
   const [showPDF, setShowPDF] = useState(false);
-  const sigCanvasRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState(false);
+
+  const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
 
   useEffect(() => {
     try {
       const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
-      setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", schemeNumber: p.schemeNumber || "" }));
+      setCertData(prev => ({
+        ...prev,
+        inspectorName: p.fullName || currentUser?.displayName || "",
+        inspectorCompany: p.companyName || "",
+        inspectorAddress: p.companyAddr || "",
+        authorisingName: p.fullName || currentUser?.displayName || "",
+        authorisingCompany: p.companyName || "",
+      }));
     } catch {}
   }, [currentUser]);
 
-  const update = (k, v) => setCertData(prev => {
-    const next = { ...prev, [k]: v };
-    if (k === "observationCode" && (v === "C1" || v === "C2")) next.result = "Unsatisfactory";
-    return next;
-  });
-
-  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
-  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
-  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
-  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
-  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
-
   const handleSave = () => {
-    const record = { ...certData, trade:"electrical", type:"eicr", savedAt: new Date().toISOString() };
+    const record = { ...certData, circuits, testResults, observations, inspectionItems, trade:"electrical", type:"eicr", savedAt: new Date().toISOString() };
     if (onSave) onSave(record);
     alert("EICR saved!");
     onBack();
   };
 
-  if (showPDF) return <ElectricalPDFPreview certData={certData} certType="eicr" certTitle="Electrical Installation Condition Report — BS 7671" onClose={() => setShowPDF(false)} />;
+  if (showPDF) return <ElectricalPDFPreview certData={{ ...certData, circuits, testResults, observations, inspectionItems }} certType="eicr" certTitle="Electrical Installation Condition Report — BS 7671:2018+A2:2022" onClose={() => setShowPDF(false)} />;
+
+  // ── Style constants ──────────────────────────────────────────────────────
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4, display:"block" };
+  const secTitle = { color:"#3b82f6", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(59,130,246,0.3)", paddingBottom:6 };
+  const field = (children) => <div style={{ marginBottom:12 }}>{children}</div>;
+  const row2 = (a, b) => <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>{a}{b}</div>;
+  const checkRow = (label, key) => (
+    <label style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, cursor:"pointer" }}>
+      <input type="checkbox" checked={!!certData[key]} onChange={e => update(key, e.target.checked)} style={{ width:16, height:16, accentColor:"#3b82f6" }}/>
+      <span style={{ color:"rgba(255,255,255,0.75)", fontSize:13 }}>{label}</span>
+    </label>
+  );
+
+  // ── Step definitions ─────────────────────────────────────────────────────
+  const STEPS = [
+    "Client & Site","Extent & Limits","Supply","Installation","Intake & Earthing","Consumer Units","Circuits & Special","Circuit Details","Test Results","Observations","Condition","Declaration","Review"
+  ];
+
+  // ── Step renderers ───────────────────────────────────────────────────────
+
+  const renderStep0 = () => (
+    <>
+      <div style={secTitle}>A — Client Details</div>
+      {field(<><span style={labelSt}>Certificate Reference</span><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef",e.target.value)}/></>)}
+      {field(<><span style={labelSt}>Date</span><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date",e.target.value)}/></>)}
+      {field(<><span style={labelSt}>Client Name</span><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName",e.target.value)}/></>)}
+      {field(<><span style={labelSt}>Client Address</span><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.clientAddress} onChange={e => update("clientAddress",e.target.value)}/></>)}
+      {row2(
+        <div><span style={labelSt}>Postcode</span><input style={inputStyle} value={certData.clientPostcode} onChange={e => update("clientPostcode",e.target.value)}/></div>,
+        <div><span style={labelSt}>Telephone</span><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel",e.target.value)}/></div>
+      )}
+      {field(<><span style={labelSt}>Email</span><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail",e.target.value)}/></>)}
+
+      <div style={secTitle}>B — Occupier Details</div>
+      {field(<><span style={labelSt}>Occupier Name (if different)</span><input style={inputStyle} value={certData.occupierName} onChange={e => update("occupierName",e.target.value)}/></>)}
+      {field(<><span style={labelSt}>Occupier Address (if different)</span><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.occupierAddress} onChange={e => update("occupierAddress",e.target.value)}/></>)}
+
+      <div style={secTitle}>C — Premises & Installation</div>
+      {field(<>
+        <span style={labelSt}>Premises Description</span>
+        <select style={selectStyle} value={certData.premisesDescription} onChange={e => update("premisesDescription",e.target.value)}>
+          {["Residential","Commercial","Industrial","Other"].map(v => <option key={v}>{v}</option>)}
+        </select>
+      </>)}
+      {field(<><span style={labelSt}>Estimated Wiring Age</span><input style={inputStyle} value={certData.estimatedWiringAge} onChange={e => update("estimatedWiringAge",e.target.value)} placeholder="e.g. 1990s, pre-2000"/></>)}
+      {field(<>
+        <span style={labelSt}>Evidence of Additions or Alterations</span>
+        <select style={selectStyle} value={certData.additionsAlterations} onChange={e => update("additionsAlterations",e.target.value)}>
+          {["Yes","No","Not apparent"].map(v => <option key={v}>{v}</option>)}
+        </select>
+      </>)}
+      {certData.additionsAlterations === "Yes" && field(<><span style={labelSt}>Estimated Age of Additions/Alterations</span><input style={inputStyle} value={certData.additionsAlterationsAge} onChange={e => update("additionsAlterationsAge",e.target.value)}/></>)}
+      {field(<>
+        <span style={labelSt}>Installation Records Available</span>
+        <select style={selectStyle} value={certData.installationRecordsAvailable} onChange={e => update("installationRecordsAvailable",e.target.value)}>
+          {["Yes","No"].map(v => <option key={v}>{v}</option>)}
+        </select>
+      </>)}
+      {field(<><span style={labelSt}>Date of Last Inspection</span><input type="date" style={inputStyle} value={certData.dateOfLastInspection} onChange={e => update("dateOfLastInspection",e.target.value)}/></>)}
+      {field(<><span style={labelSt}>Reason for Producing this Report</span><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.reasonForReport} onChange={e => update("reasonForReport",e.target.value)} placeholder="e.g. Change of occupancy, routine periodic inspection"/></>)}
+    </>
+  );
+
+  const renderStep1 = () => (
+    <>
+      <div style={secTitle}>D — Extent & Limitations</div>
+      {field(<><span style={labelSt}>Extent of the Installation Covered by this Report</span><textarea style={{ ...inputStyle, minHeight:70 }} value={certData.extentCovered} onChange={e => update("extentCovered",e.target.value)} placeholder="Areas/circuits included in inspection..."/></>)}
+      {field(<><span style={labelSt}>Agreed Limitations (Reg 634.1)</span><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.agreedLimitations} onChange={e => update("agreedLimitations",e.target.value)}/></>)}
+      {field(<><span style={labelSt}>Reasons for Agreed Limitations</span><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.agreedLimitationsReasons} onChange={e => update("agreedLimitationsReasons",e.target.value)}/></>)}
+      {field(<><span style={labelSt}>Agreed With (name/organisation)</span><input style={inputStyle} value={certData.agreedWith} onChange={e => update("agreedWith",e.target.value)}/></>)}
+      {field(<><span style={labelSt}>Operational Limitations</span><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.operationalLimitations} onChange={e => update("operationalLimitations",e.target.value)} placeholder="Live parts inaccessible, cannot isolate, etc."/></>)}
+    </>
+  );
+
+  const renderStep2 = () => (
+    <>
+      <div style={secTitle}>I — Supply Characteristics & Earthing Arrangements</div>
+      <div style={{ marginBottom:12 }}>
+        <span style={labelSt}>Earthing Arrangement (tick all that apply)</span>
+        {[["TN-C","earthingArrangementTNC"],["TN-S","earthingArrangementTNS"],["TN-C-S (PME)","earthingArrangementTNCS"],["TT","earthingArrangementTT"],["IT","earthingArrangementIT"]].map(([label,key]) => checkRow(label,key))}
+      </div>
+      <div style={{ marginBottom:12 }}>
+        <span style={labelSt}>Supply Type</span>
+        {[["AC","supplyTypeAC"],["DC","supplyTypeDC"]].map(([label,key]) => checkRow(label,key))}
+      </div>
+      {field(<>
+        <span style={labelSt}>Live Conductors</span>
+        <select style={selectStyle} value={certData.liveConductors} onChange={e => update("liveConductors",e.target.value)}>
+          {["1-phase 2-wire","2-phase 3-wire","3-phase 3-wire","3-phase 4-wire","Other"].map(v => <option key={v}>{v}</option>)}
+        </select>
+      </>)}
+      {row2(
+        <div><span style={labelSt}>Nominal Voltage (V)</span><input type="number" style={inputStyle} value={certData.nominalVoltage} onChange={e => update("nominalVoltage",e.target.value)}/></div>,
+        <div><span style={labelSt}>Nominal Frequency (Hz)</span><input type="number" style={inputStyle} value={certData.nominalFrequency} onChange={e => update("nominalFrequency",e.target.value)}/></div>
+      )}
+      {row2(
+        <div><span style={labelSt}>Prospective Fault Current Ipf (kA)</span><input type="number" step="0.01" style={inputStyle} value={certData.prospectiveFaultCurrent} onChange={e => update("prospectiveFaultCurrent",e.target.value)}/></div>,
+        <div><span style={labelSt}>External Loop Impedance Ze (Ω)</span><input type="number" step="0.001" style={inputStyle} value={certData.externalZe} onChange={e => update("externalZe",e.target.value)}/></div>
+      )}
+      <div style={secTitle}>Supply Protective Device</div>
+      {row2(
+        <div><span style={labelSt}>BS/EN</span><input style={inputStyle} value={certData.supplyProtectiveBSEN} onChange={e => update("supplyProtectiveBSEN",e.target.value)} placeholder="e.g. BS 1361"/></div>,
+        <div><span style={labelSt}>Type</span><input style={inputStyle} value={certData.supplyProtectiveType} onChange={e => update("supplyProtectiveType",e.target.value)} placeholder="e.g. Fuse"/></div>
+      )}
+      {field(<><span style={labelSt}>Rating (A)</span><input type="number" style={inputStyle} value={certData.supplyProtectiveRating} onChange={e => update("supplyProtectiveRating",e.target.value)}/></>)}
+      {checkRow("Supply polarity confirmed","supplyPolarityConfirmed")}
+      {checkRow("Other sources of supply present (e.g. generation)","otherSourcesOfSupply")}
+    </>
+  );
+
+  const renderStep3 = () => (
+    <>
+      <div style={secTitle}>J — Installation Particulars</div>
+      {field(<>
+        <span style={labelSt}>Means of Earthing</span>
+        <select style={selectStyle} value={certData.meansOfEarthing} onChange={e => update("meansOfEarthing",e.target.value)}>
+          {["Distributor's facility","Installation earth electrode"].map(v => <option key={v}>{v}</option>)}
+        </select>
+      </>)}
+      {certData.meansOfEarthing === "Installation earth electrode" && <>
+        {row2(
+          <div><span style={labelSt}>Earth Electrode Type</span><input style={inputStyle} value={certData.earthElectrodeType} onChange={e => update("earthElectrodeType",e.target.value)} placeholder="Rod/plate/tape"/></div>,
+          <div><span style={labelSt}>Location</span><input style={inputStyle} value={certData.earthElectrodeLocation} onChange={e => update("earthElectrodeLocation",e.target.value)}/></div>
+        )}
+        {field(<><span style={labelSt}>Electrode Resistance to Earth (Ω)</span><input type="number" step="0.01" style={inputStyle} value={certData.earthElectrodeResistance} onChange={e => update("earthElectrodeResistance",e.target.value)}/></>)}
+      </>}
+      <div style={secTitle}>Earthing Conductor</div>
+      {row2(
+        <div><span style={labelSt}>Material</span><input style={inputStyle} value={certData.earthingConductorMaterial} onChange={e => update("earthingConductorMaterial",e.target.value)}/></div>,
+        <div><span style={labelSt}>CSA (mm²)</span><input type="number" step="0.5" style={inputStyle} value={certData.earthingConductorCSA} onChange={e => update("earthingConductorCSA",e.target.value)}/></div>
+      )}
+      {checkRow("Earthing conductor verified","earthingConductorVerified")}
+      <div style={secTitle}>Main Protective Bonding</div>
+      {row2(
+        <div><span style={labelSt}>Material</span><input style={inputStyle} value={certData.mainBondingMaterial} onChange={e => update("mainBondingMaterial",e.target.value)}/></div>,
+        <div><span style={labelSt}>CSA (mm²)</span><input type="number" step="0.5" style={inputStyle} value={certData.mainBondingCSA} onChange={e => update("mainBondingCSA",e.target.value)}/></div>
+      )}
+      {checkRow("Main bonding connections verified","mainBondingVerified")}
+      <div style={{ marginBottom:12 }}>
+        <span style={labelSt}>Bonding Applied To</span>
+        {[["Water installation","bondingWater"],["Gas installation","bondingGas"],["Oil installation","bondingOil"],["Structural steelwork","bondingSteel"],["Lightning protection","bondingLightning"],["Other","bondingOther"]].map(([label,key]) => checkRow(label,key))}
+      </div>
+      <div style={secTitle}>Main Switch / Isolator</div>
+      {field(<><span style={labelSt}>Location</span><input style={inputStyle} value={certData.mainSwitchLocation} onChange={e => update("mainSwitchLocation",e.target.value)}/></>)}
+      {row2(
+        <div><span style={labelSt}>BS/EN</span><input style={inputStyle} value={certData.mainSwitchBSEN} onChange={e => update("mainSwitchBSEN",e.target.value)}/></div>,
+        <div><span style={labelSt}>No. of Poles</span><input type="number" style={inputStyle} value={certData.mainSwitchPoles} onChange={e => update("mainSwitchPoles",e.target.value)}/></div>
+      )}
+      {row2(
+        <div><span style={labelSt}>Current Rating (A)</span><input type="number" style={inputStyle} value={certData.mainSwitchCurrentRating} onChange={e => update("mainSwitchCurrentRating",e.target.value)}/></div>,
+        <div><span style={labelSt}>Fuse Rating (A)</span><input type="number" style={inputStyle} value={certData.mainSwitchFuseRating} onChange={e => update("mainSwitchFuseRating",e.target.value)}/></div>
+      )}
+      {field(<><span style={labelSt}>Voltage Rating (V)</span><input type="number" style={inputStyle} value={certData.mainSwitchVoltageRating} onChange={e => update("mainSwitchVoltageRating",e.target.value)}/></>)}
+      <div style={secTitle}>RCD (if applicable)</div>
+      {row2(
+        <div><span style={labelSt}>Type</span><input style={inputStyle} value={certData.rcdType} onChange={e => update("rcdType",e.target.value)} placeholder="Type AC/A/F/B"/></div>,
+        <div><span style={labelSt}>I∆n (mA)</span><input type="number" style={inputStyle} value={certData.rcdIdn} onChange={e => update("rcdIdn",e.target.value)}/></div>
+      )}
+      {row2(
+        <div><span style={labelSt}>Time Delay (ms)</span><input type="number" style={inputStyle} value={certData.rcdTimeDelay} onChange={e => update("rcdTimeDelay",e.target.value)}/></div>,
+        <div><span style={labelSt}>Measured Operating Time (ms)</span><input type="number" style={inputStyle} value={certData.rcdMeasuredTime} onChange={e => update("rcdMeasuredTime",e.target.value)}/></div>
+      )}
+    </>
+  );
+
+  const renderInspectionSection = (sectionFilter, sectionLabel) => {
+    const sectionItems = inspectionItems.filter(item => item.section.startsWith(sectionFilter));
+    const grouped = {};
+    sectionItems.forEach(item => {
+      if (!grouped[item.section]) grouped[item.section] = [];
+      grouped[item.section].push(item);
+    });
+    const updateOutcome = (id, val) => setInspectionItems(prev => prev.map(item => item.id === id ? { ...item, outcome: val } : item));
+    return (
+      <>
+        <div style={secTitle}>{sectionLabel}</div>
+        {Object.entries(grouped).map(([sec, items]) => (
+          <div key={sec} style={{ marginBottom:16 }}>
+            <div style={{ color:"rgba(255,255,255,0.5)", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6, marginBottom:6, marginTop:12 }}>{sec}</div>
+            {items.map(item => (
+              <div key={item.id} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6, padding:"8px 10px", background:"rgba(255,255,255,0.04)", borderRadius:8, border:"1px solid rgba(255,255,255,0.07)" }}>
+                <span style={{ color:"#3b82f6", fontWeight:700, fontSize:12, minWidth:32 }}>{item.id}</span>
+                <span style={{ color:"rgba(255,255,255,0.8)", fontSize:12, flex:1, lineHeight:1.4 }}>{item.label}</span>
+                <select value={item.outcome} onChange={e => updateOutcome(item.id, e.target.value)}
+                  style={{ width:64, padding:"5px 4px", borderRadius:8, border:"1px solid #2a4058", background:"#1e3044", color: item.outcome==="C1"?"#ef4444":item.outcome==="C2"?"#f97316":item.outcome==="C3"?"#eab308":item.outcome==="✓"?"#22c55e":"#e8edf2", fontSize:12, outline:"none", cursor:"pointer", textAlign:"center" }}>
+                  {OUTCOME_CODES.map(c => <option key={c} value={c}>{c||"—"}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+        ))}
+        <div style={{ padding:"8px 12px", borderRadius:8, background:"rgba(59,130,246,0.07)", border:"1px solid rgba(59,130,246,0.2)", marginTop:8 }}>
+          <span style={{ fontSize:11, color:"rgba(255,255,255,0.5)" }}>Codes: </span>
+          <span style={{ fontSize:11, color:"rgba(255,255,255,0.65)" }}>✓=Satisfactory  C1=Danger  C2=Potentially dangerous  C3=Improve  FI=Further investigation  N=Not inspected  V=Not visible  LIM=Limitation  N/A=Not applicable</span>
+        </div>
+      </>
+    );
+  };
+
+  const renderStep5 = () => renderInspectionSection("4.", "Inspection Schedule — Consumer Units (Items 4.x)");
+
+  const renderStep6 = () => (
+    <>
+      {renderInspectionSection("5.", "Final Circuits (5.x)")}
+      {renderInspectionSection("6.", "Bath / Shower Locations (6.x)")}
+      {renderInspectionSection("7.", "Other Special Installations (7.x)")}
+      {renderInspectionSection("8.", "Prosumer's LV Installation (8.x)")}
+    </>
+  );
+
+  const renderStep7 = () => {
+    const updateCircuit = (idx, k, v) => setCircuits(prev => prev.map((c,i) => i===idx ? { ...c, [k]:v } : c));
+    const addCircuit = () => setCircuits(prev => [...prev, newCircuit(prev.length)]);
+    const removeCircuit = (idx) => setCircuits(prev => prev.filter((_,i) => i!==idx));
+    return (
+      <>
+        <div style={secTitle}>Circuit Details Schedule (Section K)</div>
+        <p style={{ color:"rgba(255,255,255,0.5)", fontSize:12, marginBottom:12 }}>Add one row per circuit. Scroll horizontally on smaller screens.</p>
+        {circuits.map((c,idx) => (
+          <div key={c.id} style={{ background:"rgba(255,255,255,0.04)", borderRadius:10, border:"1px solid rgba(255,255,255,0.08)", padding:12, marginBottom:14 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <span style={{ color:"#3b82f6", fontWeight:700, fontSize:13 }}>Circuit {idx+1}</span>
+              {circuits.length > 1 && <button onClick={() => removeCircuit(idx)} style={{ background:"rgba(239,68,68,0.2)", border:"1px solid rgba(239,68,68,0.4)", color:"#ef4444", borderRadius:8, padding:"3px 10px", fontSize:12, cursor:"pointer" }}>Remove</button>}
+            </div>
+            {row2(
+              <div><span style={labelSt}>Circuit No.</span><input style={inputStyle} value={c.circuitNumber} onChange={e => updateCircuit(idx,"circuitNumber",e.target.value)}/></div>,
+              <div><span style={labelSt}>Description</span><input style={inputStyle} value={c.circuitDescription} onChange={e => updateCircuit(idx,"circuitDescription",e.target.value)}/></div>
+            )}
+            {row2(
+              <div><span style={labelSt}>Wiring Type</span><input style={inputStyle} value={c.wiringType} onChange={e => updateCircuit(idx,"wiringType",e.target.value)} placeholder="e.g. T&E, SWA"/></div>,
+              <div><span style={labelSt}>Ref. Method</span><input style={inputStyle} value={c.referenceMethod} onChange={e => updateCircuit(idx,"referenceMethod",e.target.value)} placeholder="A/B/C/D/E/F/G"/></div>
+            )}
+            {row2(
+              <div><span style={labelSt}>Points Served</span><input type="number" style={inputStyle} value={c.pointsServed} onChange={e => updateCircuit(idx,"pointsServed",e.target.value)}/></div>,
+              <div><span style={labelSt}>Live CSA (mm²)</span><input type="number" step="0.5" style={inputStyle} value={c.liveConductorCSA} onChange={e => updateCircuit(idx,"liveConductorCSA",e.target.value)}/></div>
+            )}
+            {row2(
+              <div><span style={labelSt}>CPC CSA (mm²)</span><input type="number" step="0.5" style={inputStyle} value={c.cpcCSA} onChange={e => updateCircuit(idx,"cpcCSA",e.target.value)}/></div>,
+              <div><span style={labelSt}>OCPD BS/EN</span><input style={inputStyle} value={c.ocpdBSEN} onChange={e => updateCircuit(idx,"ocpdBSEN",e.target.value)}/></div>
+            )}
+            {row2(
+              <div><span style={labelSt}>OCPD Type</span><input style={inputStyle} value={c.ocpdType} onChange={e => updateCircuit(idx,"ocpdType",e.target.value)} placeholder="MCB Type B/C/D, Fuse"/></div>,
+              <div><span style={labelSt}>OCPD Rating (A)</span><input type="number" style={inputStyle} value={c.ocpdRating} onChange={e => updateCircuit(idx,"ocpdRating",e.target.value)}/></div>
+            )}
+            {row2(
+              <div><span style={labelSt}>Breaking Capacity (kA)</span><input type="number" step="0.1" style={inputStyle} value={c.ocpdBreakingCapacity} onChange={e => updateCircuit(idx,"ocpdBreakingCapacity",e.target.value)}/></div>,
+              <div><span style={labelSt}>Max Permitted Zs (Ω)</span><input type="number" step="0.001" style={inputStyle} value={c.maxPermittedZs} onChange={e => updateCircuit(idx,"maxPermittedZs",e.target.value)}/></div>
+            )}
+            {row2(
+              <div><span style={labelSt}>RCD BS/EN</span><input style={inputStyle} value={c.rcdBSEN} onChange={e => updateCircuit(idx,"rcdBSEN",e.target.value)}/></div>,
+              <div><span style={labelSt}>RCD Type</span><input style={inputStyle} value={c.rcdType} onChange={e => updateCircuit(idx,"rcdType",e.target.value)} placeholder="AC/A/F/B"/></div>
+            )}
+            {row2(
+              <div><span style={labelSt}>RCD I∆n (mA)</span><input type="number" style={inputStyle} value={c.rcdIdn} onChange={e => updateCircuit(idx,"rcdIdn",e.target.value)}/></div>,
+              <div><span style={labelSt}>RCD Rating (A)</span><input type="number" style={inputStyle} value={c.rcdRating} onChange={e => updateCircuit(idx,"rcdRating",e.target.value)}/></div>
+            )}
+          </div>
+        ))}
+        <button onClick={addCircuit} style={{ width:"100%", padding:"12px", borderRadius:10, background:"rgba(59,130,246,0.15)", border:"1px dashed rgba(59,130,246,0.5)", color:"#3b82f6", fontWeight:700, fontSize:14, cursor:"pointer" }}>+ Add Circuit</button>
+      </>
+    );
+  };
+
+  const renderStep8 = () => {
+    const updateTest = (idx, k, v) => setTestResults(prev => prev.map((r,i) => i===idx ? { ...r, [k]:v } : r));
+    const addTest = () => setTestResults(prev => [...prev, newTestRow(prev.length)]);
+    const removeTest = (idx) => setTestResults(prev => prev.filter((_,i) => i!==idx));
+    return (
+      <>
+        <div style={secTitle}>Test Results Schedule (Section M)</div>
+        <p style={{ color:"rgba(255,255,255,0.5)", fontSize:12, marginBottom:12 }}>Enter test results per circuit.</p>
+        {testResults.map((r,idx) => (
+          <div key={r.id} style={{ background:"rgba(255,255,255,0.04)", borderRadius:10, border:"1px solid rgba(255,255,255,0.08)", padding:12, marginBottom:14 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <span style={{ color:"#3b82f6", fontWeight:700, fontSize:13 }}>Circuit {idx+1}</span>
+              {testResults.length > 1 && <button onClick={() => removeTest(idx)} style={{ background:"rgba(239,68,68,0.2)", border:"1px solid rgba(239,68,68,0.4)", color:"#ef4444", borderRadius:8, padding:"3px 10px", fontSize:12, cursor:"pointer" }}>Remove</button>}
+            </div>
+            {row2(
+              <div><span style={labelSt}>Circuit No.</span><input style={inputStyle} value={r.circuitNumber} onChange={e => updateTest(idx,"circuitNumber",e.target.value)}/></div>,
+              <div><span style={labelSt}>Insulation Test Voltage (V)</span><select style={selectStyle} value={r.insulationTestVoltage} onChange={e => updateTest(idx,"insulationTestVoltage",e.target.value)}><option>250</option><option>500</option><option>1000</option></select></div>
+            )}
+            <div style={{ color:"rgba(255,255,255,0.5)", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:0.5, marginBottom:6, marginTop:8 }}>Continuity (Ω)</div>
+            {row2(
+              <div><span style={labelSt}>R1 (Line)</span><input type="number" step="0.001" style={inputStyle} value={r.r1Line} onChange={e => updateTest(idx,"r1Line",e.target.value)}/></div>,
+              <div><span style={labelSt}>Rn (Neutral)</span><input type="number" step="0.001" style={inputStyle} value={r.rnNeutral} onChange={e => updateTest(idx,"rnNeutral",e.target.value)}/></div>
+            )}
+            {row2(
+              <div><span style={labelSt}>R2 (CPC)</span><input type="number" step="0.001" style={inputStyle} value={r.r2CPC} onChange={e => updateTest(idx,"r2CPC",e.target.value)}/></div>,
+              <div><span style={labelSt}>Ring R1+R2 (Ω)</span><input type="number" step="0.001" style={inputStyle} value={r.ringR1R2} onChange={e => updateTest(idx,"ringR1R2",e.target.value)}/></div>
+            )}
+            <div style={{ color:"rgba(255,255,255,0.5)", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:0.5, marginBottom:6, marginTop:8 }}>Insulation Resistance (MΩ)</div>
+            {row2(
+              <div><span style={labelSt}>Live-Live</span><input type="number" step="0.01" style={inputStyle} value={r.insulationLiveLive} onChange={e => updateTest(idx,"insulationLiveLive",e.target.value)}/></div>,
+              <div><span style={labelSt}>Live-Earth</span><input type="number" step="0.01" style={inputStyle} value={r.insulationLiveEarth} onChange={e => updateTest(idx,"insulationLiveEarth",e.target.value)}/></div>
+            )}
+            {row2(
+              <div><span style={labelSt}>Polarity</span><select style={selectStyle} value={r.polarity} onChange={e => updateTest(idx,"polarity",e.target.value)}><option value="">—</option><option>Verified</option><option>Not verified</option></select></div>,
+              <div><span style={labelSt}>Max Zs (Ω)</span><input type="number" step="0.001" style={inputStyle} value={r.zsMax} onChange={e => updateTest(idx,"zsMax",e.target.value)}/></div>
+            )}
+            {row2(
+              <div><span style={labelSt}>RCD Disconnection Time (ms)</span><input type="number" style={inputStyle} value={r.rcdDisconnectionTime} onChange={e => updateTest(idx,"rcdDisconnectionTime",e.target.value)}/></div>,
+              <div><span style={labelSt}>RCD Test Button</span><select style={selectStyle} value={r.rcdTestButton} onChange={e => updateTest(idx,"rcdTestButton",e.target.value)}><option value="">—</option><option>Pass</option><option>Fail</option><option>N/A</option></select></div>
+            )}
+            {row2(
+              <div><span style={labelSt}>AFDD Test Button</span><select style={selectStyle} value={r.afddTestButton} onChange={e => updateTest(idx,"afddTestButton",e.target.value)}><option value="">—</option><option>Pass</option><option>Fail</option><option>N/A</option></select></div>,
+              <div><span style={labelSt}>Remarks</span><input style={inputStyle} value={r.remarks} onChange={e => updateTest(idx,"remarks",e.target.value)}/></div>
+            )}
+          </div>
+        ))}
+        <button onClick={addTest} style={{ width:"100%", padding:"12px", borderRadius:10, background:"rgba(59,130,246,0.15)", border:"1px dashed rgba(59,130,246,0.5)", color:"#3b82f6", fontWeight:700, fontSize:14, cursor:"pointer" }}>+ Add Circuit Test Row</button>
+      </>
+    );
+  };
+
+  const renderStep9 = () => {
+    const updateObs = (idx, k, v) => setObservations(prev => prev.map((o,i) => i===idx ? { ...o, [k]:v } : o));
+    const addObs = () => setObservations(prev => [...prev, newObservation()]);
+    const removeObs = (idx) => setObservations(prev => prev.filter((_,i) => i!==idx));
+    return (
+      <>
+        <div style={secTitle}>Observations & Recommendations</div>
+        <p style={{ color:"rgba(255,255,255,0.5)", fontSize:12, marginBottom:12 }}>List all defects, non-compliances, and recommended improvements. Each observation must be classified.</p>
+        {observations.map((obs,idx) => (
+          <div key={obs.id} style={{ background:"rgba(255,255,255,0.04)", borderRadius:10, border:"1px solid rgba(255,255,255,0.08)", padding:12, marginBottom:10 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <span style={{ color:"rgba(255,255,255,0.6)", fontSize:12, fontWeight:700 }}>Observation {idx+1}</span>
+              {observations.length > 1 && <button onClick={() => removeObs(idx)} style={{ background:"rgba(239,68,68,0.2)", border:"1px solid rgba(239,68,68,0.4)", color:"#ef4444", borderRadius:8, padding:"3px 10px", fontSize:12, cursor:"pointer" }}>Remove</button>}
+            </div>
+            <div style={{ marginBottom:8 }}>
+              <span style={labelSt}>Observation / Defect Description</span>
+              <textarea style={{ ...inputStyle, minHeight:70 }} value={obs.observationText} onChange={e => updateObs(idx,"observationText",e.target.value)} placeholder="Describe the observation, location, regulation reference..."/>
+            </div>
+            <div>
+              <span style={labelSt}>Classification</span>
+              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                {[["C1","#ef4444","Danger present"],["C2","#f97316","Potentially dangerous"],["C3","#eab308","Improvement recommended"],["FI","#8b5cf6","Further investigation"]].map(([code,colour,desc]) => (
+                  <button key={code} onClick={() => updateObs(idx,"classification",code)}
+                    style={{ padding:"6px 12px", borderRadius:8, fontSize:12, fontWeight:700, cursor:"pointer", border:`2px solid`, borderColor: obs.classification===code ? colour : "rgba(255,255,255,0.15)", background: obs.classification===code ? `rgba(${colour==="#ef4444"?"239,68,68":colour==="#f97316"?"249,115,22":colour==="#eab308"?"234,179,8":"139,92,246"},0.2)` : "transparent", color: obs.classification===code ? colour : "rgba(255,255,255,0.5)" }}>
+                    {code} — {desc}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+        <button onClick={addObs} style={{ width:"100%", padding:"12px", borderRadius:10, background:"rgba(59,130,246,0.15)", border:"1px dashed rgba(59,130,246,0.5)", color:"#3b82f6", fontWeight:700, fontSize:14, cursor:"pointer" }}>+ Add Observation</button>
+      </>
+    );
+  };
+
+  const renderStep10 = () => {
+    const hasC1orC2 = observations.some(o => o.classification === "C1" || o.classification === "C2");
+    return (
+      <>
+        <div style={secTitle}>E — Condition Summary</div>
+        {field(<><span style={labelSt}>General Condition of Installation</span><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.generalConditionText} onChange={e => update("generalConditionText",e.target.value)} placeholder="Summarise the overall condition of the electrical installation..."/></>)}
+
+        <div style={secTitle}>F — Overall Assessment</div>
+        {hasC1orC2 && (
+          <div style={{ padding:"10px 14px", borderRadius:8, background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)", marginBottom:12 }}>
+            <span style={{ color:"#ef4444", fontSize:12, fontWeight:700 }}>C1 or C2 observations present — Overall Assessment must be UNSATISFACTORY</span>
+          </div>
+        )}
+        <div style={{ display:"flex", gap:10, marginBottom:12 }}>
+          {["SATISFACTORY","UNSATISFACTORY"].map(v => (
+            <button key={v} onClick={() => update("overallAssessment",v)}
+              style={{ flex:1, padding:"14px", borderRadius:12, fontWeight:700, fontSize:14, cursor:"pointer", border:"2px solid", borderColor: certData.overallAssessment===v ? (v==="SATISFACTORY"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.overallAssessment===v ? (v==="SATISFACTORY"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.overallAssessment===v ? (v==="SATISFACTORY"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>
+              {v}
+            </button>
+          ))}
+        </div>
+        {field(<><span style={labelSt}>Recommended Date for Next Inspection</span><input type="date" style={inputStyle} value={certData.nextInspectionDate} onChange={e => update("nextInspectionDate",e.target.value)}/></>)}
+        {field(<><span style={labelSt}>Reasons for Next Inspection Recommendation</span><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.nextInspectionReasons} onChange={e => update("nextInspectionReasons",e.target.value)}/></>)}
+      </>
+    );
+  };
+
+  const renderStep11 = () => (
+    <>
+      <div style={secTitle}>G — Inspector Declaration</div>
+      <p style={{ color:"rgba(255,255,255,0.5)", fontSize:12, lineHeight:1.5, marginBottom:12 }}>I/We, being the person(s) responsible for the inspection and testing of the electrical installation, particulars of which are described above, having exercised reasonable skill and care when carrying out the inspection and testing, hereby declare that the information in this report, as far as I/we are aware, accurately reflects the condition of the installation at the time of inspection and testing.</p>
+      {row2(
+        <div><span style={labelSt}>Inspector Name</span><input style={inputStyle} value={certData.inspectorName} onChange={e => update("inspectorName",e.target.value)}/></div>,
+        <div><span style={labelSt}>Position</span><input style={inputStyle} value={certData.inspectorPosition} onChange={e => update("inspectorPosition",e.target.value)} placeholder="e.g. Approved Inspector"/></div>
+      )}
+      {field(<><span style={labelSt}>Company Name</span><input style={inputStyle} value={certData.inspectorCompany} onChange={e => update("inspectorCompany",e.target.value)}/></>)}
+      {field(<><span style={labelSt}>Company Address</span><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.inspectorAddress} onChange={e => update("inspectorAddress",e.target.value)}/></>)}
+      {field(<><span style={labelSt}>Date of Inspection</span><input type="date" style={inputStyle} value={certData.inspectorDate} onChange={e => update("inspectorDate",e.target.value)}/></>)}
+
+      <div style={secTitle}>Authorising Signatory (if different)</div>
+      {row2(
+        <div><span style={labelSt}>Name</span><input style={inputStyle} value={certData.authorisingName} onChange={e => update("authorisingName",e.target.value)}/></div>,
+        <div><span style={labelSt}>Position</span><input style={inputStyle} value={certData.authorisingPosition} onChange={e => update("authorisingPosition",e.target.value)}/></div>
+      )}
+      {field(<><span style={labelSt}>Company</span><input style={inputStyle} value={certData.authorisingCompany} onChange={e => update("authorisingCompany",e.target.value)}/></>)}
+      {field(<><span style={labelSt}>Address</span><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.authorisingAddress} onChange={e => update("authorisingAddress",e.target.value)}/></>)}
+      {field(<><span style={labelSt}>Date</span><input type="date" style={inputStyle} value={certData.authorisingDate} onChange={e => update("authorisingDate",e.target.value)}/></>)}
+    </>
+  );
+
+  const renderStep12 = () => {
+    const c1Count = observations.filter(o => o.classification==="C1").length;
+    const c2Count = observations.filter(o => o.classification==="C2").length;
+    const c3Count = observations.filter(o => o.classification==="C3").length;
+    const fiCount = observations.filter(o => o.classification==="FI").length;
+    const inspSatisfactory = inspectionItems.filter(i => i.outcome==="✓").length;
+    const inspTotal = inspectionItems.filter(i => i.outcome !== "").length;
+    return (
+      <>
+        <div style={secTitle}>Review & Generate</div>
+        <div style={{ padding:"16px", borderRadius:12, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", marginBottom:16 }}>
+          <div style={{ color:"rgba(255,255,255,0.5)", fontSize:11, textTransform:"uppercase", fontWeight:700, marginBottom:10 }}>Summary</div>
+          {[
+            ["Certificate Ref", certData.certRef],
+            ["Client", certData.clientName],
+            ["Address", certData.clientAddress],
+            ["Premises", certData.premisesDescription],
+            ["Overall Assessment", certData.overallAssessment],
+            ["Inspector", certData.inspectorName],
+            ["Company", certData.inspectorCompany],
+            ["Next Inspection", certData.nextInspectionDate],
+          ].map(([k,v]) => (
+            <div key={k} style={{ display:"flex", gap:12, marginBottom:6 }}>
+              <span style={{ color:"rgba(255,255,255,0.45)", fontSize:12, minWidth:120 }}>{k}</span>
+              <span style={{ color:"#e8edf2", fontSize:12, fontWeight:600 }}>{v||"—"}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
+          {[
+            ["C1 Codes",c1Count,"#ef4444"],["C2 Codes",c2Count,"#f97316"],["C3 Codes",c3Count,"#eab308"],["FI Codes",fiCount,"#8b5cf6"],
+            ["Circuits",circuits.length,"#3b82f6"],["Test Rows",testResults.length,"#3b82f6"],
+            ["Items Inspected",`${inspSatisfactory}✓ / ${inspTotal} done`,"#22c55e"],["Observations",observations.filter(o=>o.observationText).length,"#e8edf2"],
+          ].map(([label,val,colour]) => (
+            <div key={label} style={{ padding:"10px 12px", borderRadius:10, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)" }}>
+              <div style={{ color:"rgba(255,255,255,0.5)", fontSize:10, textTransform:"uppercase", fontWeight:700 }}>{label}</div>
+              <div style={{ color:colour, fontSize:22, fontWeight:700 }}>{val}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ padding:"10px 14px", borderRadius:8, background: certData.overallAssessment==="SATISFACTORY"?"rgba(34,197,94,0.1)":"rgba(239,68,68,0.1)", border: certData.overallAssessment==="SATISFACTORY"?"1px solid rgba(34,197,94,0.3)":"1px solid rgba(239,68,68,0.3)", marginBottom:16 }}>
+          <span style={{ fontSize:14, fontWeight:700, color: certData.overallAssessment==="SATISFACTORY"?"#22c55e":"#ef4444" }}>{certData.overallAssessment}</span>
+        </div>
+      </>
+    );
+  };
+
+  const stepRenderers = [renderStep0, renderStep1, renderStep2, renderStep3, () => {
+    return (
+      <>
+        {renderInspectionSection("1.", "Intake Equipment (1.x)")}
+        {renderInspectionSection("2.", "Other Sources (2.x)")}
+        {renderInspectionSection("3.", "Earthing & Bonding (3.x)")}
+      </>
+    );
+  }, renderStep5, renderStep6, renderStep7, renderStep8, renderStep9, renderStep10, renderStep11, renderStep12];
+
+  return (
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      {/* Header */}
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <div style={{ flex:1 }}>
+          <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", margin:0 }}>EICR — Condition Report</h2>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>BS 7671:2018+A2:2022</div>
+        </div>
+        <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", background:"rgba(255,255,255,0.06)", borderRadius:8, padding:"4px 8px" }}>{step+1}/{STEPS.length}</div>
+      </div>
+
+      {/* Step pills */}
+      <div style={{ overflowX:"auto", display:"flex", gap:6, padding:"10px 16px", flexShrink:0, scrollbarWidth:"none" }}>
+        {STEPS.map((s,i) => (
+          <button key={i} onClick={() => setStep(i)}
+            style={{ flexShrink:0, padding:"5px 12px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", border:"1px solid", borderColor: i===step?"#3b82f6":i<step?"rgba(34,197,94,0.4)":"rgba(255,255,255,0.12)", background: i===step?"rgba(59,130,246,0.2)":i<step?"rgba(34,197,94,0.08)":"rgba(255,255,255,0.04)", color: i===step?"#3b82f6":i<step?"#22c55e":"rgba(255,255,255,0.45)" }}>
+            {i<step?"✓ ":""}{s}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+        {stepRenderers[step]()}
+      </div>
+
+      {/* Bottom navigation */}
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+        {step > 0 && (
+          <button onClick={() => setStep(s => s-1)} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>
+        )}
+        {step < STEPS.length - 1 ? (
+          <button onClick={() => setStep(s => s+1)} style={{ flex:1, padding:"13px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
+        ) : (
+          <>
+            <button onClick={handleSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save EICR</button>
+            <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"13px", borderRadius:12, background:"rgba(255,255,255,0.1)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── EIC FORM — Electrical Installation Certificate ────────────────────────
+function EICForm({ onBack, onSave, currentUser }) {
+  const STEPS = ["Client & Installation","Design","Construction","Inspection & Testing","Supply & Earthing","Installation Particulars","Circuit Details","Test Results","Review & Generate"];
+  const [step, setStep] = useState(0);
+  const [showPDF, setShowPDF] = useState(false);
+  const [certData, setCertData] = useState({
+    certRef: "EIC-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().split("T")[0],
+    clientName: "", clientAddress: "", clientPostcode: "", clientEmail: "", clientTel: "",
+    installAddress: "", installDescription: "", extentCovered: "",
+    installationType: "new", // new / addition / alteration
+    designerName1: "", designerDate1: "", designerName2: "", designerDate2: "",
+    designBSAmendment: "2022", designDepartures: "", designPermittedExceptions: "", designRiskAssessment: false,
+    constructorName: "", constructorDate: "", constructBSAmendment: "2022", constructDepartures: "",
+    inspectorName: "", inspectorDate: "", inspectBSAmendment: "2022", inspectDepartures: "",
+    nextInspectionInterval: "",
+    designer1Company: "", designer1Address: "", designer1Postcode: "", designer1Tel: "",
+    designer2Company: "", designer2Address: "", designer2Postcode: "", designer2Tel: "",
+    constructorCompany: "", constructorAddress: "", constructorPostcode: "", constructorTel: "",
+    inspectorCompany: "", inspectorAddress: "", inspectorPostcode: "", inspectorTel: "",
+    earthingArrangement: "", supplyType: "AC", liveConductors: "1-phase 2-wire",
+    nominalVoltage: "230", nominalFrequency: "50", prospectiveFaultCurrent: "", externalZe: "",
+    supplyProtectiveBSEN: "", supplyProtectiveType: "", supplyProtectiveRating: "",
+    supplyPolarityConfirmed: false, otherSourcesOfSupply: false,
+    meansOfEarthing: "", earthElectrodeType: "", earthElectrodeLocation: "", earthElectrodeResistance: "",
+    earthingConductorMaterial: "", earthingConductorCSA: "", earthingConductorVerified: false,
+    mainBondingMaterial: "", mainBondingCSA: "", mainBondingVerified: false,
+    bondingWater: false, bondingGas: false, bondingOil: false, bondingSteel: false, bondingLightning: false, bondingOther: false,
+    mainSwitchLocation: "", mainSwitchBSEN: "", mainSwitchPoles: "", mainSwitchCurrentRating: "", mainSwitchFuseRating: "", mainSwitchVoltageRating: "",
+    rcdType: "", rcdIdn: "", rcdTimeDelay: "", rcdMeasuredTime: "",
+    commentsOnExisting: "",
+    signatureData: null, inspectorSignatureData: null,
+    companyName: "", scheme: "", schemeNumber: "",
+  });
+  const [circuits, setCircuits] = useState([{ circuitNumber:"1", circuitDescription:"", wiringType:"", referenceMethod:"", pointsServed:"", liveConductorCSA:"", cpcCSA:"", ocpdBSEN:"", ocpdType:"", ocpdRating:"", ocpdBreakingCapacity:"", maxPermittedZs:"", rcdBSEN:"", rcdType:"", rcdIdn:"", rcdRating:"" }]);
+  const [testResults, setTestResults] = useState([{ circuitNumber:"1", r1Line:"", rnNeutral:"", r2CPC:"", ringR1R2:"", insulationTestVoltage:"500", insulationLiveLive:"", insulationLiveEarth:"", polarity:"✓", zsMax:"", rcdDisconnectionTime:"", rcdTestButton:"", afddTestButton:"", remarks:"" }]);
+
+  useEffect(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
+      setCertData(prev => ({ ...prev, inspectorName: p.fullName || currentUser?.displayName || "", inspectorCompany: p.companyName || "", companyName: p.companyName || "", schemeNumber: p.schemeNumber || "" }));
+    } catch {}
+  }, [currentUser]);
+
+  const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
+  const updateCircuit = (idx, k, v) => setCircuits(prev => { const n = [...prev]; n[idx] = { ...n[idx], [k]: v }; return n; });
+  const addCircuit = () => { const num = String(circuits.length + 1); setCircuits(prev => [...prev, { circuitNumber:num, circuitDescription:"", wiringType:"", referenceMethod:"", pointsServed:"", liveConductorCSA:"", cpcCSA:"", ocpdBSEN:"", ocpdType:"", ocpdRating:"", ocpdBreakingCapacity:"", maxPermittedZs:"", rcdBSEN:"", rcdType:"", rcdIdn:"", rcdRating:"" }]); setTestResults(prev => [...prev, { circuitNumber:num, r1Line:"", rnNeutral:"", r2CPC:"", ringR1R2:"", insulationTestVoltage:"500", insulationLiveLive:"", insulationLiveEarth:"", polarity:"✓", zsMax:"", rcdDisconnectionTime:"", rcdTestButton:"", afddTestButton:"", remarks:"" }]); };
+  const removeCircuit = (idx) => { if (circuits.length <= 1) return; setCircuits(prev => prev.filter((_, i) => i !== idx)); setTestResults(prev => prev.filter((_, i) => i !== idx)); };
+  const updateTest = (idx, k, v) => setTestResults(prev => { const n = [...prev]; n[idx] = { ...n[idx], [k]: v }; return n; });
+
+  const handleSave = () => {
+    const record = { ...certData, circuits, testResults, trade:"electrical", type:"eic", savedAt: new Date().toISOString() };
+    if (onSave) onSave(record);
+    alert("EIC saved!");
+    onBack();
+  };
+
+  if (showPDF) return <ElectricalPDFPreview certData={{ ...certData, circuits, testResults }} certType="eic" certTitle="Electrical Installation Certificate — BS 7671:2018+A2:2022" onClose={() => setShowPDF(false)} />;
 
   const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
   const sectionTitleStyle = { color:"#3b82f6", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(59,130,246,0.3)", paddingBottom:6 };
   const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
   const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const checkStyle = (checked) => ({ padding:"8px 14px", borderRadius:8, fontWeight:600, fontSize:12, cursor:"pointer", border:"2px solid", borderColor: checked ? "#3b82f6" : "rgba(255,255,255,0.15)", background: checked ? "rgba(59,130,246,0.15)" : "transparent", color: checked ? "#3b82f6" : "rgba(255,255,255,0.5)" });
+
+  const renderStep = () => {
+    switch(step) {
+    case 0: return <>
+      <div style={sectionTitleStyle}>Certificate Details</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
+      <div style={sectionTitleStyle}>Client Details</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Client Address</div><input style={inputStyle} value={certData.clientAddress} onChange={e => update("clientAddress", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.clientPostcode} onChange={e => update("clientPostcode", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Telephone</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+      <div style={sectionTitleStyle}>Installation Details</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Installation Address (if different)</div><input style={inputStyle} value={certData.installAddress} onChange={e => update("installAddress", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Description of Installation</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.installDescription} onChange={e => update("installDescription", e.target.value)} placeholder="e.g. Single phase domestic dwelling, 3-bed semi-detached"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Extent Covered</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.extentCovered} onChange={e => update("extentCovered", e.target.value)} placeholder="Describe extent of new installation/alteration"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Installation Type</div>
+        <div style={{ display:"flex", gap:8 }}>
+          {["new","addition","alteration"].map(v => <button key={v} type="button" onClick={() => update("installationType", v)} style={checkStyle(certData.installationType === v)}>{v === "new" ? "New Installation" : v === "addition" ? "Addition" : "Alteration"}</button>)}
+        </div>
+      </div>
+    </>;
+    case 1: return <>
+      <div style={sectionTitleStyle}>For Design</div>
+      <div style={{ padding:"10px 12px", borderRadius:10, background:"rgba(59,130,246,0.08)", border:"1px solid rgba(59,130,246,0.2)", marginBottom:12 }}>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:11, lineHeight:1.6, margin:0 }}>I/We being the person(s) responsible for the design of the electrical installation (as indicated by my/our signatures below), particulars of which are described above, having exercised reasonable skill and care when carrying out the design, hereby CERTIFY that the design work for which I/we have been responsible is to the best of my/our knowledge and belief in accordance with BS 7671:2018+A2:2022, except for the departures, if any, detailed below.</p>
+      </div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>BS 7671 Amendment Date Applied</div><input style={inputStyle} value={certData.designBSAmendment} onChange={e => update("designBSAmendment", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Departures from BS 7671 (Reg 120.3, 133.1.3, 133.5)</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.designDepartures} onChange={e => update("designDepartures", e.target.value)} placeholder="Detail any departures, or state None"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Permitted Exceptions (Reg 411.3.3)</div><input style={inputStyle} value={certData.designPermittedExceptions} onChange={e => update("designPermittedExceptions", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Risk Assessment Attached</div>
+        <button type="button" onClick={() => update("designRiskAssessment", !certData.designRiskAssessment)} style={checkStyle(certData.designRiskAssessment)}>{certData.designRiskAssessment ? "☑ Yes" : "☐ No"}</button>
+      </div>
+      <div style={sectionTitleStyle}>Designer No. 1</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Name</div><input style={inputStyle} value={certData.designerName1} onChange={e => update("designerName1", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.designerDate1} onChange={e => update("designerDate1", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Company</div><input style={inputStyle} value={certData.designer1Company} onChange={e => update("designer1Company", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Address</div><input style={inputStyle} value={certData.designer1Address} onChange={e => update("designer1Address", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Tel</div><input type="tel" style={inputStyle} value={certData.designer1Tel} onChange={e => update("designer1Tel", e.target.value)}/></div>
+      <div style={sectionTitleStyle}>Designer No. 2 (if applicable)</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Name</div><input style={inputStyle} value={certData.designerName2} onChange={e => update("designerName2", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.designerDate2} onChange={e => update("designerDate2", e.target.value)}/></div>
+    </>;
+    case 2: return <>
+      <div style={sectionTitleStyle}>For Construction</div>
+      <div style={{ padding:"10px 12px", borderRadius:10, background:"rgba(59,130,246,0.08)", border:"1px solid rgba(59,130,246,0.2)", marginBottom:12 }}>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:11, lineHeight:1.6, margin:0 }}>I/We being the person(s) responsible for the construction of the electrical installation (as indicated by my/our signatures below), having exercised reasonable skill and care when carrying out the construction, hereby CERTIFY that the construction work for which I/we have been responsible is to the best of my/our knowledge and belief in accordance with BS 7671:2018+A2:2022.</p>
+      </div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>BS 7671 Amendment Date Applied</div><input style={inputStyle} value={certData.constructBSAmendment} onChange={e => update("constructBSAmendment", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Departures from BS 7671</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.constructDepartures} onChange={e => update("constructDepartures", e.target.value)} placeholder="Detail any departures, or state None"/></div>
+      <div style={sectionTitleStyle}>Constructor Details</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Name</div><input style={inputStyle} value={certData.constructorName} onChange={e => update("constructorName", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.constructorDate} onChange={e => update("constructorDate", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Company</div><input style={inputStyle} value={certData.constructorCompany} onChange={e => update("constructorCompany", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Address</div><input style={inputStyle} value={certData.constructorAddress} onChange={e => update("constructorAddress", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Tel</div><input type="tel" style={inputStyle} value={certData.constructorTel} onChange={e => update("constructorTel", e.target.value)}/></div>
+    </>;
+    case 3: return <>
+      <div style={sectionTitleStyle}>For Inspection & Testing</div>
+      <div style={{ padding:"10px 12px", borderRadius:10, background:"rgba(59,130,246,0.08)", border:"1px solid rgba(59,130,246,0.2)", marginBottom:12 }}>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:11, lineHeight:1.6, margin:0 }}>I/We being the person(s) responsible for the inspection and testing of the electrical installation (as indicated by my/our signatures below), having exercised reasonable skill and care when carrying out the inspection and testing, hereby CERTIFY that the work for which I/we have been responsible is to the best of my/our knowledge and belief in accordance with BS 7671:2018+A2:2022.</p>
+      </div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>BS 7671 Amendment Date Applied</div><input style={inputStyle} value={certData.inspectBSAmendment} onChange={e => update("inspectBSAmendment", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Departures from BS 7671</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.inspectDepartures} onChange={e => update("inspectDepartures", e.target.value)} placeholder="Detail any departures, or state None"/></div>
+      <div style={sectionTitleStyle}>Inspector Details</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Name</div><input style={inputStyle} value={certData.inspectorName} onChange={e => update("inspectorName", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.inspectorDate} onChange={e => update("inspectorDate", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Company</div><input style={inputStyle} value={certData.inspectorCompany} onChange={e => update("inspectorCompany", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Address</div><input style={inputStyle} value={certData.inspectorAddress} onChange={e => update("inspectorAddress", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Tel</div><input type="tel" style={inputStyle} value={certData.inspectorTel} onChange={e => update("inspectorTel", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme</div><select style={selectStyle} value={certData.scheme} onChange={e => update("scheme", e.target.value)}><option value="">Select...</option><option>NICEIC</option><option>NAPIT</option><option>ELECSA</option></select></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme Number</div><input style={inputStyle} value={certData.schemeNumber} onChange={e => update("schemeNumber", e.target.value)}/></div>
+      <div style={sectionTitleStyle}>Next Inspection</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Recommended Interval</div><input style={inputStyle} value={certData.nextInspectionInterval} onChange={e => update("nextInspectionInterval", e.target.value)} placeholder="e.g. 10 years"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Comments on Existing Installation</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.commentsOnExisting} onChange={e => update("commentsOnExisting", e.target.value)}/></div>
+    </>;
+    case 4: return <>
+      <div style={sectionTitleStyle}>Earthing Arrangement</div>
+      <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:12 }}>
+        {["TN-C","TN-S","TN-C-S","TT","IT"].map(v => <button key={v} type="button" onClick={() => update("earthingArrangement", v)} style={checkStyle(certData.earthingArrangement === v)}>{v}</button>)}
+      </div>
+      <div style={sectionTitleStyle}>Supply Type & Live Conductors</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Supply Type</div><div style={{ display:"flex", gap:8 }}>{["AC","DC"].map(v => <button key={v} type="button" onClick={() => update("supplyType", v)} style={checkStyle(certData.supplyType === v)}>{v}</button>)}</div></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Live Conductors</div><select style={selectStyle} value={certData.liveConductors} onChange={e => update("liveConductors", e.target.value)}><option>1-phase 2-wire</option><option>2-phase 3-wire</option><option>3-phase 3-wire</option><option>3-phase 4-wire</option><option>Other</option></select></div>
+      <div style={sectionTitleStyle}>Supply Parameters</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Nominal Voltage U/U0 (V)</div><input type="number" style={inputStyle} value={certData.nominalVoltage} onChange={e => update("nominalVoltage", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Nominal Frequency (Hz)</div><input type="number" style={inputStyle} value={certData.nominalFrequency} onChange={e => update("nominalFrequency", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Prospective Fault Current Ipf (kA)</div><input type="number" step="0.01" style={inputStyle} value={certData.prospectiveFaultCurrent} onChange={e => update("prospectiveFaultCurrent", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>External Earth Fault Loop Impedance Ze (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.externalZe} onChange={e => update("externalZe", e.target.value)}/></div>
+      <div style={sectionTitleStyle}>Supply Protective Device</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>BS(EN)</div><input style={inputStyle} value={certData.supplyProtectiveBSEN} onChange={e => update("supplyProtectiveBSEN", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Type</div><input style={inputStyle} value={certData.supplyProtectiveType} onChange={e => update("supplyProtectiveType", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Rated Current (A)</div><input type="number" style={inputStyle} value={certData.supplyProtectiveRating} onChange={e => update("supplyProtectiveRating", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Polarity Confirmed</div><button type="button" onClick={() => update("supplyPolarityConfirmed", !certData.supplyPolarityConfirmed)} style={checkStyle(certData.supplyPolarityConfirmed)}>{certData.supplyPolarityConfirmed ? "☑ Confirmed" : "☐ Not confirmed"}</button></div>
+    </>;
+    case 5: return <>
+      <div style={sectionTitleStyle}>Means of Earthing</div>
+      <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:12 }}>
+        {["Distributor's facility","Installation earth electrode"].map(v => <button key={v} type="button" onClick={() => update("meansOfEarthing", v)} style={checkStyle(certData.meansOfEarthing === v)}>{v}</button>)}
+      </div>
+      {certData.meansOfEarthing === "Installation earth electrode" && <>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Electrode Type</div><input style={inputStyle} value={certData.earthElectrodeType} onChange={e => update("earthElectrodeType", e.target.value)} placeholder="e.g. Rod, Plate, Tape"/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Electrode Location</div><input style={inputStyle} value={certData.earthElectrodeLocation} onChange={e => update("earthElectrodeLocation", e.target.value)}/></div>
+        <div style={{ marginBottom:10 }}><div style={labelSt}>Electrode Resistance (Ω)</div><input type="number" step="0.1" style={inputStyle} value={certData.earthElectrodeResistance} onChange={e => update("earthElectrodeResistance", e.target.value)}/></div>
+      </>}
+      <div style={sectionTitleStyle}>Earthing Conductor</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Material</div><select style={selectStyle} value={certData.earthingConductorMaterial} onChange={e => update("earthingConductorMaterial", e.target.value)}><option value="">Select...</option><option>Copper</option><option>Aluminium</option><option>Steel</option></select></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>CSA (mm²)</div><input type="number" step="0.5" style={inputStyle} value={certData.earthingConductorCSA} onChange={e => update("earthingConductorCSA", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Connection Verified</div><button type="button" onClick={() => update("earthingConductorVerified", !certData.earthingConductorVerified)} style={checkStyle(certData.earthingConductorVerified)}>{certData.earthingConductorVerified ? "☑ Verified" : "☐ Not verified"}</button></div>
+      <div style={sectionTitleStyle}>Main Protective Bonding</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Material</div><select style={selectStyle} value={certData.mainBondingMaterial} onChange={e => update("mainBondingMaterial", e.target.value)}><option value="">Select...</option><option>Copper</option><option>Aluminium</option><option>Steel</option></select></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>CSA (mm²)</div><input type="number" step="0.5" style={inputStyle} value={certData.mainBondingCSA} onChange={e => update("mainBondingCSA", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Connection Verified</div><button type="button" onClick={() => update("mainBondingVerified", !certData.mainBondingVerified)} style={checkStyle(certData.mainBondingVerified)}>{certData.mainBondingVerified ? "☑ Verified" : "☐ Not verified"}</button></div>
+      <div style={sectionTitleStyle}>Bonding To</div>
+      <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:12 }}>
+        {[["bondingWater","Water"],["bondingGas","Gas"],["bondingOil","Oil"],["bondingSteel","Structural Steel"],["bondingLightning","Lightning"],["bondingOther","Other"]].map(([k,l]) => <button key={k} type="button" onClick={() => update(k, !certData[k])} style={checkStyle(certData[k])}>{certData[k] ? "☑" : "☐"} {l}</button>)}
+      </div>
+      <div style={sectionTitleStyle}>Main Switch</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Location</div><input style={inputStyle} value={certData.mainSwitchLocation} onChange={e => update("mainSwitchLocation", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>BS(EN)</div><input style={inputStyle} value={certData.mainSwitchBSEN} onChange={e => update("mainSwitchBSEN", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>No. of Poles</div><input type="number" style={inputStyle} value={certData.mainSwitchPoles} onChange={e => update("mainSwitchPoles", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Current Rating (A)</div><input type="number" style={inputStyle} value={certData.mainSwitchCurrentRating} onChange={e => update("mainSwitchCurrentRating", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Fuse/Device Rating (A)</div><input type="number" style={inputStyle} value={certData.mainSwitchFuseRating} onChange={e => update("mainSwitchFuseRating", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Voltage Rating (V)</div><input type="number" style={inputStyle} value={certData.mainSwitchVoltageRating} onChange={e => update("mainSwitchVoltageRating", e.target.value)}/></div>
+      <div style={sectionTitleStyle}>If RCD Main Switch</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Type</div><select style={selectStyle} value={certData.rcdType} onChange={e => update("rcdType", e.target.value)}><option value="">N/A</option><option>AC</option><option>A</option><option>B</option><option>F</option><option>S</option></select></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>IΔn (mA)</div><input type="number" style={inputStyle} value={certData.rcdIdn} onChange={e => update("rcdIdn", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Rated Time Delay (ms)</div><input type="number" style={inputStyle} value={certData.rcdTimeDelay} onChange={e => update("rcdTimeDelay", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Measured Operating Time (ms)</div><input type="number" style={inputStyle} value={certData.rcdMeasuredTime} onChange={e => update("rcdMeasuredTime", e.target.value)}/></div>
+    </>;
+    case 6: return <>
+      <div style={sectionTitleStyle}>Schedule of Circuit Details</div>
+      <p style={{ color:"rgba(255,255,255,0.5)", fontSize:11, marginBottom:12 }}>Add each circuit installed/altered. Columns match BS 7671 Schedule columns 1-16.</p>
+      {circuits.map((c, i) => (
+        <div key={i} style={{ background:"rgba(255,255,255,0.05)", borderRadius:12, padding:12, marginBottom:10, border:"1px solid rgba(255,255,255,0.1)" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+            <span style={{ color:"#3b82f6", fontWeight:700, fontSize:13 }}>Circuit {c.circuitNumber}</span>
+            {circuits.length > 1 && <button type="button" onClick={() => removeCircuit(i)} style={{ background:"rgba(239,68,68,0.15)", color:"#ef4444", border:"1px solid rgba(239,68,68,0.3)", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Remove</button>}
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+            <div><div style={labelSt}>Circuit No.</div><input style={inputStyle} value={c.circuitNumber} onChange={e => updateCircuit(i,"circuitNumber",e.target.value)}/></div>
+            <div><div style={labelSt}>Description</div><input style={inputStyle} value={c.circuitDescription} onChange={e => updateCircuit(i,"circuitDescription",e.target.value)} placeholder="e.g. Ring final — sockets"/></div>
+            <div><div style={labelSt}>Wiring Type</div><input style={inputStyle} value={c.wiringType} onChange={e => updateCircuit(i,"wiringType",e.target.value)} placeholder="e.g. T+E PVC"/></div>
+            <div><div style={labelSt}>Ref Method</div><input style={inputStyle} value={c.referenceMethod} onChange={e => updateCircuit(i,"referenceMethod",e.target.value)} placeholder="e.g. C"/></div>
+            <div><div style={labelSt}>Points Served</div><input type="number" style={inputStyle} value={c.pointsServed} onChange={e => updateCircuit(i,"pointsServed",e.target.value)}/></div>
+            <div><div style={labelSt}>Live CSA (mm²)</div><input type="number" step="0.5" style={inputStyle} value={c.liveConductorCSA} onChange={e => updateCircuit(i,"liveConductorCSA",e.target.value)}/></div>
+            <div><div style={labelSt}>CPC CSA (mm²)</div><input type="number" step="0.5" style={inputStyle} value={c.cpcCSA} onChange={e => updateCircuit(i,"cpcCSA",e.target.value)}/></div>
+            <div><div style={labelSt}>OCPD BS(EN)</div><input style={inputStyle} value={c.ocpdBSEN} onChange={e => updateCircuit(i,"ocpdBSEN",e.target.value)}/></div>
+            <div><div style={labelSt}>OCPD Type</div><input style={inputStyle} value={c.ocpdType} onChange={e => updateCircuit(i,"ocpdType",e.target.value)} placeholder="e.g. B, C, D"/></div>
+            <div><div style={labelSt}>OCPD Rating (A)</div><input type="number" style={inputStyle} value={c.ocpdRating} onChange={e => updateCircuit(i,"ocpdRating",e.target.value)}/></div>
+            <div><div style={labelSt}>Breaking Cap (kA)</div><input type="number" step="0.1" style={inputStyle} value={c.ocpdBreakingCapacity} onChange={e => updateCircuit(i,"ocpdBreakingCapacity",e.target.value)}/></div>
+            <div><div style={labelSt}>Max Zs (Ω)</div><input type="number" step="0.01" style={inputStyle} value={c.maxPermittedZs} onChange={e => updateCircuit(i,"maxPermittedZs",e.target.value)}/></div>
+            <div><div style={labelSt}>RCD BS(EN)</div><input style={inputStyle} value={c.rcdBSEN} onChange={e => updateCircuit(i,"rcdBSEN",e.target.value)}/></div>
+            <div><div style={labelSt}>RCD Type</div><input style={inputStyle} value={c.rcdType} onChange={e => updateCircuit(i,"rcdType",e.target.value)}/></div>
+            <div><div style={labelSt}>RCD IΔn (mA)</div><input type="number" style={inputStyle} value={c.rcdIdn} onChange={e => updateCircuit(i,"rcdIdn",e.target.value)}/></div>
+            <div><div style={labelSt}>RCD Rating (A)</div><input type="number" style={inputStyle} value={c.rcdRating} onChange={e => updateCircuit(i,"rcdRating",e.target.value)}/></div>
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={addCircuit} style={{ width:"100%", padding:"12px", borderRadius:10, background:"rgba(59,130,246,0.15)", color:"#3b82f6", fontWeight:700, fontSize:13, border:"1px dashed rgba(59,130,246,0.4)", cursor:"pointer" }}>+ Add Circuit</button>
+    </>;
+    case 7: return <>
+      <div style={sectionTitleStyle}>Schedule of Test Results</div>
+      <p style={{ color:"rgba(255,255,255,0.5)", fontSize:11, marginBottom:12 }}>Test results for each circuit. Columns match BS 7671 Schedule columns 17-31.</p>
+      {testResults.map((t, i) => (
+        <div key={i} style={{ background:"rgba(255,255,255,0.05)", borderRadius:12, padding:12, marginBottom:10, border:"1px solid rgba(255,255,255,0.1)" }}>
+          <div style={{ color:"#3b82f6", fontWeight:700, fontSize:13, marginBottom:8 }}>Circuit {t.circuitNumber} — {circuits[i]?.circuitDescription || ""}</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+            <div><div style={labelSt}>R1 Line (Ω)</div><input type="number" step="0.01" style={inputStyle} value={t.r1Line} onChange={e => updateTest(i,"r1Line",e.target.value)}/></div>
+            <div><div style={labelSt}>Rn Neutral (Ω)</div><input type="number" step="0.01" style={inputStyle} value={t.rnNeutral} onChange={e => updateTest(i,"rnNeutral",e.target.value)}/></div>
+            <div><div style={labelSt}>R2 CPC (Ω)</div><input type="number" step="0.01" style={inputStyle} value={t.r2CPC} onChange={e => updateTest(i,"r2CPC",e.target.value)}/></div>
+            <div><div style={labelSt}>Ring R1+R2 (Ω)</div><input type="number" step="0.01" style={inputStyle} value={t.ringR1R2} onChange={e => updateTest(i,"ringR1R2",e.target.value)}/></div>
+            <div><div style={labelSt}>Ins Test V</div><input type="number" style={inputStyle} value={t.insulationTestVoltage} onChange={e => updateTest(i,"insulationTestVoltage",e.target.value)}/></div>
+            <div><div style={labelSt}>Ins L-L (MΩ)</div><input type="number" step="0.01" style={inputStyle} value={t.insulationLiveLive} onChange={e => updateTest(i,"insulationLiveLive",e.target.value)}/></div>
+            <div><div style={labelSt}>Ins L-E (MΩ)</div><input type="number" step="0.01" style={inputStyle} value={t.insulationLiveEarth} onChange={e => updateTest(i,"insulationLiveEarth",e.target.value)}/></div>
+            <div><div style={labelSt}>Polarity</div><select style={selectStyle} value={t.polarity} onChange={e => updateTest(i,"polarity",e.target.value)}><option>✓</option><option>✕</option></select></div>
+            <div><div style={labelSt}>Zs Max (Ω)</div><input type="number" step="0.01" style={inputStyle} value={t.zsMax} onChange={e => updateTest(i,"zsMax",e.target.value)}/></div>
+            <div><div style={labelSt}>RCD Time (ms)</div><input type="number" style={inputStyle} value={t.rcdDisconnectionTime} onChange={e => updateTest(i,"rcdDisconnectionTime",e.target.value)}/></div>
+            <div><div style={labelSt}>RCD Button</div><select style={selectStyle} value={t.rcdTestButton} onChange={e => updateTest(i,"rcdTestButton",e.target.value)}><option value="">N/A</option><option>✓</option><option>✕</option></select></div>
+            <div><div style={labelSt}>AFDD Button</div><select style={selectStyle} value={t.afddTestButton} onChange={e => updateTest(i,"afddTestButton",e.target.value)}><option value="">N/A</option><option>✓</option><option>✕</option></select></div>
+          </div>
+          <div style={{ marginTop:8 }}><div style={labelSt}>Remarks</div><input style={inputStyle} value={t.remarks} onChange={e => updateTest(i,"remarks",e.target.value)}/></div>
+        </div>
+      ))}
+    </>;
+    case 8: return <>
+      <div style={sectionTitleStyle}>Review & Generate</div>
+      <div style={{ background:"rgba(255,255,255,0.05)", borderRadius:12, padding:16, marginBottom:12 }}>
+        <div style={{ color:"#fff", fontSize:15, fontWeight:700, marginBottom:12 }}>Electrical Installation Certificate</div>
+        <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginBottom:4 }}>Ref: {certData.certRef} | Date: {certData.date}</div>
+        <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginBottom:4 }}>Client: {certData.clientName}</div>
+        <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginBottom:4 }}>Address: {certData.installAddress || certData.clientAddress}</div>
+        <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginBottom:4 }}>Type: {certData.installationType === "new" ? "New Installation" : certData.installationType === "addition" ? "Addition" : "Alteration"}</div>
+        <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginBottom:4 }}>Earthing: {certData.earthingArrangement} | Supply: {certData.supplyType} {certData.liveConductors}</div>
+        <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginBottom:4 }}>Circuits: {circuits.length} | Next Inspection: {certData.nextInspectionInterval}</div>
+        <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginBottom:4 }}>Designer: {certData.designerName1} | Constructor: {certData.constructorName} | Inspector: {certData.inspectorName}</div>
+      </div>
+      <div style={sectionTitleStyle}>Signature</div>
+      <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
+        <canvas ref={(c) => { if (!c) return; const ctx = c.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; }} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}/>
+      </div>
+    </>;
+    default: return null;
+    }
+  };
 
   return (
     <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
@@ -22134,107 +23960,69 @@ function EICRForm({ onBack, onSave, currentUser }) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
-        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>EICR — Condition Report</h2>
+        <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", flex:1 }}>EIC — Installation Certificate</h2>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
-        <div style={sectionTitleStyle}>Client Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Address</div><input style={inputStyle} value={certData.clientAddress} onChange={e => update("clientAddress", e.target.value)} placeholder="Full address"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.clientPostcode} onChange={e => update("clientPostcode", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Telephone</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Installation Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Description of Installation</div><input style={inputStyle} value={certData.installDescription} onChange={e => update("installDescription", e.target.value)} placeholder="e.g. Domestic dwelling, 3-bed semi"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Age of Wiring</div><input style={inputStyle} value={certData.wiringAge} onChange={e => update("wiringAge", e.target.value)} placeholder="e.g. 1990s"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Date of Last Inspection</div><input type="date" style={inputStyle} value={certData.lastInspection} onChange={e => update("lastInspection", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Evidence of Additions / Alterations</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.additionsAlterations} onChange={e => update("additionsAlterations", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Supply Characteristics</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>System Type</div><select style={selectStyle} value={certData.systemType} onChange={e => update("systemType", e.target.value)}><option value="">Select...</option><option>TN-S</option><option>TN-C-S</option><option>TT</option><option>IT</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Number of Phases</div><select style={selectStyle} value={certData.numPhases} onChange={e => update("numPhases", e.target.value)}><option>1</option><option>3</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Supply Protective Device Type</div><input style={inputStyle} value={certData.supplyProtectiveType} onChange={e => update("supplyProtectiveType", e.target.value)} placeholder="e.g. BS 1361 fuse"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Supply Protective Device Rating (A)</div><input type="number" style={inputStyle} value={certData.supplyProtectiveRating} onChange={e => update("supplyProtectiveRating", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Nominal Voltage (V)</div><input type="number" style={inputStyle} value={certData.nominalVoltage} onChange={e => update("nominalVoltage", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Nominal Frequency (Hz)</div><input type="number" style={inputStyle} value={certData.nominalFrequency} onChange={e => update("nominalFrequency", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Prospective Fault Current (kA)</div><input type="number" step="0.01" style={inputStyle} value={certData.prospectiveFaultCurrent} onChange={e => update("prospectiveFaultCurrent", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>External Loop Impedance Ze (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.ze} onChange={e => update("ze", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Extent & Limitations</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Extent of Inspection</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.extentOfInspection} onChange={e => update("extentOfInspection", e.target.value)} placeholder="Circuits and areas covered..."/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Agreed Limitations</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.agreedLimitations} onChange={e => update("agreedLimitations", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Operational Limitations</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.operationalLimitations} onChange={e => update("operationalLimitations", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Observations</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Observations</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.observations} onChange={e => update("observations", e.target.value)} placeholder="Describe observations found during inspection..."/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Classification Code</div><select style={selectStyle} value={certData.observationCode} onChange={e => update("observationCode", e.target.value)}><option value="">Select...</option><option value="C1">C1 — Danger present</option><option value="C2">C2 — Potentially dangerous</option><option value="C3">C3 — Improvement recommended</option><option value="FI">FI — Further investigation</option></select></div>
-        <div style={{ padding:"8px 12px", borderRadius:8, background: certData.result === "Satisfactory" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", border: certData.result === "Satisfactory" ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(239,68,68,0.3)", marginBottom:10 }}>
-          <span style={{ fontSize:12, color:"rgba(255,255,255,0.6)" }}>Auto-result: </span>
-          <span style={{ fontSize:13, fontWeight:700, color: certData.result === "Satisfactory" ? "#22c55e" : "#ef4444" }}>{certData.result}</span>
-          <span style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginLeft:8 }}>(C1/C2 = Unsatisfactory)</span>
-        </div>
-
-        <div style={sectionTitleStyle}>Next Inspection</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Recommended Next Inspection Date</div><input type="date" style={inputStyle} value={certData.nextInspectionDate} onChange={e => update("nextInspectionDate", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Notes</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Additional Notes</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Inspector Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Inspector Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Qualifications</div><input style={inputStyle} value={certData.qualifications} onChange={e => update("qualifications", e.target.value)} placeholder="e.g. C&G 2391, 18th Edition"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme</div><select style={selectStyle} value={certData.scheme} onChange={e => update("scheme", e.target.value)}><option value="">Select...</option><option>NICEIC</option><option>NAPIT</option><option>ELECSA</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme Number</div><input style={inputStyle} value={certData.schemeNumber} onChange={e => update("schemeNumber", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Signature</div>
-        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
-          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
-            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
-          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+      <div style={{ padding:"0 16px 8px", overflowX:"auto" }}>
+        <div style={{ display:"flex", gap:4, minWidth:"max-content" }}>
+          {STEPS.map((s, i) => <button key={i} onClick={() => setStep(i)} style={{ padding:"6px 10px", borderRadius:8, border:"none", fontSize:10, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", background: i === step ? "#3b82f6" : i < step ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.08)", color: i === step ? "#fff" : i < step ? "#4ade80" : "rgba(255,255,255,0.4)" }}>{i+1}. {s}</button>)}
         </div>
       </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
-        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
-        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 120px" }}>{renderStep()}</div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:8 }}>
+        {step > 0 && <button onClick={() => setStep(step - 1)} style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Back</button>}
+        {step < STEPS.length - 1 ? (
+          <button onClick={() => setStep(step + 1)} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
+        ) : (
+          <>
+            <button onClick={handleSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save EIC</button>
+            <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"13px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Generate PDF</button>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── MINOR WORKS FORM ───────────────────────────────────────────────────────
+// ─── MINOR WORKS FORM — Multi-Step Wizard ──────────────────────────────────
 function MinorWorksForm({ onBack, onSave, currentUser }) {
+  const STEPS = ["Client & Description","Earthing & Bonding","Circuit Details","Test Results","Declaration"];
+  const [step, setStep] = useState(0);
+  const [showPDF, setShowPDF] = useState(false);
   const [certData, setCertData] = useState({
     certRef: "MW-" + Date.now().toString(36).toUpperCase(),
     date: new Date().toISOString().split("T")[0],
     clientName: "", clientAddress: "", clientPostcode: "", clientEmail: "", clientTel: "",
-    workLocation: "", workDescription: "",
-    circuitRef: "", circuitType: "", protectiveDeviceType: "", protectiveDeviceRating: "",
-    earthingArrangement: "", meansOfEarthing: "",
-    r1r2: "", r2: "", insulationResistance: "", polarity: "Confirmed", zs: "", rcdTime: "", rcdType: "",
-    installerName: "", companyName: "", scheme: "", schemeNumber: "",
+    installationAddress: "", workDescription: "", workCompleteDate: "",
+    bsAmendmentDate: "2022", departures: "", permittedExceptions: "", riskAssessmentAttached: false,
+    commentsOnExisting: "",
+    earthingSystem: "", zdbAtDB: "",
+    earthingConductorAdequate: false, mainBondingWater: false, mainBondingGas: false, mainBondingOil: false, mainBondingSteel: false, mainBondingOther: false,
+    dbReference: "", dbLocation: "", dbType: "",
+    circuitNumber: "", circuitDescription: "", installationRefMethod: "",
+    liveConductorCSA: "", cpcCSA: "",
+    ocpdBSEN: "", ocpdType: "", ocpdRating: "",
+    rcdBSEN: "", rcdType: "", rcdRating: "", rcdIdn: "",
+    afddBSEN: "", afddRating: "",
+    spdBSEN: "", spdType: "",
+    r1r2: "", r2: "",
+    ringLL: "", ringNN: "", ringCPC: "",
+    insulationTestVoltage: "500", insulationLiveLive: "", insulationLiveEarth: "",
+    polaritySatisfactory: true, zsMax: "",
+    rcdDisconnectionTime: "", rcdTestButtonOp: true,
+    afddTestButtonOp: false, spdFunctionalityConfirmed: false,
+    installerName: "", companyName: "", companyAddress: "", installerPosition: "",
+    scheme: "", schemeNumber: "",
     notes: "", signatureData: null,
   });
-  const [showPDF, setShowPDF] = useState(false);
-  const sigCanvasRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState(false);
 
   useEffect(() => {
     try {
       const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
-      setCertData(prev => ({ ...prev, installerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", schemeNumber: p.schemeNumber || "" }));
+      setCertData(prev => ({ ...prev, installerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", companyAddress: p.address || "", schemeNumber: p.schemeNumber || "" }));
     } catch {}
   }, [currentUser]);
 
   const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
-
-  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
-  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
-  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
-  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
-  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
 
   const handleSave = () => {
     const record = { ...certData, trade:"electrical", type:"minor_works", engineerName: certData.installerName, savedAt: new Date().toISOString() };
@@ -22243,12 +24031,128 @@ function MinorWorksForm({ onBack, onSave, currentUser }) {
     onBack();
   };
 
-  if (showPDF) return <ElectricalPDFPreview certData={{ ...certData, engineerName: certData.installerName }} certType="minor_works" certTitle="Minor Electrical Installation Works Certificate — BS 7671" onClose={() => setShowPDF(false)} />;
+  if (showPDF) return <ElectricalPDFPreview certData={{ ...certData, engineerName: certData.installerName }} certType="minor_works" certTitle="Minor Electrical Installation Works Certificate — BS 7671:2018+A2:2022" onClose={() => setShowPDF(false)} />;
 
   const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
   const sectionTitleStyle = { color:"#3b82f6", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(59,130,246,0.3)", paddingBottom:6 };
   const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
   const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const checkStyle = (checked) => ({ padding:"8px 14px", borderRadius:8, fontWeight:600, fontSize:12, cursor:"pointer", border:"2px solid", borderColor: checked ? "#3b82f6" : "rgba(255,255,255,0.15)", background: checked ? "rgba(59,130,246,0.15)" : "transparent", color: checked ? "#3b82f6" : "rgba(255,255,255,0.5)" });
+
+  const renderStep = () => {
+    switch(step) {
+    case 0: return <>
+      <div style={sectionTitleStyle}>Part 1 — Description of Minor Works</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Client Address</div><input style={inputStyle} value={certData.clientAddress} onChange={e => update("clientAddress", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.clientPostcode} onChange={e => update("clientPostcode", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Date Minor Works Completed</div><input type="date" style={inputStyle} value={certData.workCompleteDate || certData.date} onChange={e => update("workCompleteDate", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Installation Location/Address</div><input style={inputStyle} value={certData.installationAddress} onChange={e => update("installationAddress", e.target.value)} placeholder="If different from client address"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Description of Minor Works</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.workDescription} onChange={e => update("workDescription", e.target.value)} placeholder="Describe the work carried out in detail"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>BS 7671 Amendment Date</div><input style={inputStyle} value={certData.bsAmendmentDate} onChange={e => update("bsAmendmentDate", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Departures from BS 7671</div><textarea style={{ ...inputStyle, minHeight:40 }} value={certData.departures} onChange={e => update("departures", e.target.value)} placeholder="State any departures, or None"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Permitted Exceptions (Reg 411.3.3)</div><input style={inputStyle} value={certData.permittedExceptions} onChange={e => update("permittedExceptions", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Risk Assessment Attached</div><button type="button" onClick={() => update("riskAssessmentAttached", !certData.riskAssessmentAttached)} style={checkStyle(certData.riskAssessmentAttached)}>{certData.riskAssessmentAttached ? "☑ Yes" : "☐ No"}</button></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Comments on Existing Installation (defects observed)</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.commentsOnExisting} onChange={e => update("commentsOnExisting", e.target.value)}/></div>
+    </>;
+    case 1: return <>
+      <div style={sectionTitleStyle}>Part 2 — Earthing & Bonding (Reg 132.16)</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>System Earthing</div>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+          {["TN-S","TN-C-S","TT"].map(v => <button key={v} type="button" onClick={() => update("earthingSystem", v)} style={checkStyle(certData.earthingSystem === v)}>{v}</button>)}
+        </div>
+      </div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Zdb at Distribution Board (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.zdbAtDB} onChange={e => update("zdbAtDB", e.target.value)}/></div>
+      <div style={sectionTitleStyle}>Adequate Main Protective Conductors</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Earthing Conductor</div><button type="button" onClick={() => update("earthingConductorAdequate", !certData.earthingConductorAdequate)} style={checkStyle(certData.earthingConductorAdequate)}>{certData.earthingConductorAdequate ? "☑ Adequate" : "☐ Not checked"}</button></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Main Bonding To:</div>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+          {[["mainBondingWater","Water"],["mainBondingGas","Gas"],["mainBondingOil","Oil"],["mainBondingSteel","Structural Steel"],["mainBondingOther","Other"]].map(([k,l]) => <button key={k} type="button" onClick={() => update(k, !certData[k])} style={checkStyle(certData[k])}>{certData[k] ? "☑" : "☐"} {l}</button>)}
+        </div>
+      </div>
+    </>;
+    case 2: return <>
+      <div style={sectionTitleStyle}>Part 3 — Circuit Details</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>DB Reference No.</div><input style={inputStyle} value={certData.dbReference} onChange={e => update("dbReference", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>DB Location & Type</div><input style={inputStyle} value={certData.dbLocation} onChange={e => update("dbLocation", e.target.value)} placeholder="e.g. Under stairs, consumer unit"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Circuit Number</div><input style={inputStyle} value={certData.circuitNumber} onChange={e => update("circuitNumber", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Circuit Description</div><input style={inputStyle} value={certData.circuitDescription} onChange={e => update("circuitDescription", e.target.value)} placeholder="e.g. Lighting circuit, first floor"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Installation Reference Method</div><input style={inputStyle} value={certData.installationRefMethod} onChange={e => update("installationRefMethod", e.target.value)} placeholder="e.g. C"/></div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+        <div><div style={labelSt}>Live CSA (mm²)</div><input type="number" step="0.5" style={inputStyle} value={certData.liveConductorCSA} onChange={e => update("liveConductorCSA", e.target.value)}/></div>
+        <div><div style={labelSt}>CPC CSA (mm²)</div><input type="number" step="0.5" style={inputStyle} value={certData.cpcCSA} onChange={e => update("cpcCSA", e.target.value)}/></div>
+      </div>
+      <div style={sectionTitleStyle}>OCPD</div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+        <div><div style={labelSt}>BS(EN)</div><input style={inputStyle} value={certData.ocpdBSEN} onChange={e => update("ocpdBSEN", e.target.value)}/></div>
+        <div><div style={labelSt}>Type</div><input style={inputStyle} value={certData.ocpdType} onChange={e => update("ocpdType", e.target.value)} placeholder="B/C/D"/></div>
+        <div><div style={labelSt}>Rating (A)</div><input type="number" style={inputStyle} value={certData.ocpdRating} onChange={e => update("ocpdRating", e.target.value)}/></div>
+      </div>
+      <div style={sectionTitleStyle}>RCD</div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+        <div><div style={labelSt}>BS(EN)</div><input style={inputStyle} value={certData.rcdBSEN} onChange={e => update("rcdBSEN", e.target.value)}/></div>
+        <div><div style={labelSt}>Type</div><input style={inputStyle} value={certData.rcdType} onChange={e => update("rcdType", e.target.value)}/></div>
+        <div><div style={labelSt}>Rating (A)</div><input type="number" style={inputStyle} value={certData.rcdRating} onChange={e => update("rcdRating", e.target.value)}/></div>
+        <div><div style={labelSt}>IΔn (mA)</div><input type="number" style={inputStyle} value={certData.rcdIdn} onChange={e => update("rcdIdn", e.target.value)}/></div>
+      </div>
+      <div style={sectionTitleStyle}>AFDD</div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+        <div><div style={labelSt}>BS(EN)</div><input style={inputStyle} value={certData.afddBSEN} onChange={e => update("afddBSEN", e.target.value)}/></div>
+        <div><div style={labelSt}>Rating</div><input style={inputStyle} value={certData.afddRating} onChange={e => update("afddRating", e.target.value)}/></div>
+      </div>
+      <div style={sectionTitleStyle}>SPD</div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+        <div><div style={labelSt}>BS(EN)</div><input style={inputStyle} value={certData.spdBSEN} onChange={e => update("spdBSEN", e.target.value)}/></div>
+        <div><div style={labelSt}>Type</div><input style={inputStyle} value={certData.spdType} onChange={e => update("spdType", e.target.value)}/></div>
+      </div>
+    </>;
+    case 3: return <>
+      <div style={sectionTitleStyle}>Part 4 — Test Results</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Protective Conductor Continuity (R1+R2) Ω</div><input type="number" step="0.01" style={inputStyle} value={certData.r1r2} onChange={e => update("r1r2", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>R2 (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.r2} onChange={e => update("r2", e.target.value)}/></div>
+      <div style={sectionTitleStyle}>Ring Final Circuit Continuity</div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+        <div><div style={labelSt}>L/L (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.ringLL} onChange={e => update("ringLL", e.target.value)}/></div>
+        <div><div style={labelSt}>N/N (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.ringNN} onChange={e => update("ringNN", e.target.value)}/></div>
+        <div><div style={labelSt}>CPC/CPC (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.ringCPC} onChange={e => update("ringCPC", e.target.value)}/></div>
+      </div>
+      <div style={sectionTitleStyle}>Insulation Resistance</div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+        <div><div style={labelSt}>Test V</div><input type="number" style={inputStyle} value={certData.insulationTestVoltage} onChange={e => update("insulationTestVoltage", e.target.value)}/></div>
+        <div><div style={labelSt}>L-L (MΩ)</div><input type="number" step="0.01" style={inputStyle} value={certData.insulationLiveLive} onChange={e => update("insulationLiveLive", e.target.value)}/></div>
+        <div><div style={labelSt}>L-E (MΩ)</div><input type="number" step="0.01" style={inputStyle} value={certData.insulationLiveEarth} onChange={e => update("insulationLiveEarth", e.target.value)}/></div>
+      </div>
+      <div style={{ marginTop:12, marginBottom:10 }}><div style={labelSt}>Polarity Satisfactory</div><button type="button" onClick={() => update("polaritySatisfactory", !certData.polaritySatisfactory)} style={checkStyle(certData.polaritySatisfactory)}>{certData.polaritySatisfactory ? "☑ Satisfactory" : "☐ Not confirmed"}</button></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Maximum Measured Zs (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.zsMax} onChange={e => update("zsMax", e.target.value)}/></div>
+      <div style={sectionTitleStyle}>RCD</div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+        <div><div style={labelSt}>Disconnection Time at IΔn (ms)</div><input type="number" style={inputStyle} value={certData.rcdDisconnectionTime} onChange={e => update("rcdDisconnectionTime", e.target.value)}/></div>
+        <div><div style={labelSt}>Test Button</div><button type="button" onClick={() => update("rcdTestButtonOp", !certData.rcdTestButtonOp)} style={checkStyle(certData.rcdTestButtonOp)}>{certData.rcdTestButtonOp ? "☑ OK" : "☐ Fail"}</button></div>
+      </div>
+      <div style={{ marginTop:12, display:"flex", gap:8, flexWrap:"wrap" }}>
+        <div><div style={labelSt}>AFDD Test Button</div><button type="button" onClick={() => update("afddTestButtonOp", !certData.afddTestButtonOp)} style={checkStyle(certData.afddTestButtonOp)}>{certData.afddTestButtonOp ? "☑ OK" : "☐ N/A"}</button></div>
+        <div><div style={labelSt}>SPD Confirmed</div><button type="button" onClick={() => update("spdFunctionalityConfirmed", !certData.spdFunctionalityConfirmed)} style={checkStyle(certData.spdFunctionalityConfirmed)}>{certData.spdFunctionalityConfirmed ? "☑ OK" : "☐ N/A"}</button></div>
+      </div>
+    </>;
+    case 4: return <>
+      <div style={sectionTitleStyle}>Part 5 — Declaration</div>
+      <div style={{ padding:"10px 12px", borderRadius:10, background:"rgba(59,130,246,0.08)", border:"1px solid rgba(59,130,246,0.2)", marginBottom:12 }}>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:11, lineHeight:1.6, margin:0 }}>I CERTIFY that the minor works described above have been designed, constructed, inspected and tested in accordance with BS 7671:2018+A2:2022 (IET Wiring Regulations). The work described does not include the provision of a new circuit.</p>
+      </div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Name</div><input style={inputStyle} value={certData.installerName} onChange={e => update("installerName", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Company</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Address</div><input style={inputStyle} value={certData.companyAddress} onChange={e => update("companyAddress", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Position</div><input style={inputStyle} value={certData.installerPosition} onChange={e => update("installerPosition", e.target.value)} placeholder="e.g. Electrician, Approved Contractor"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme</div><select style={selectStyle} value={certData.scheme} onChange={e => update("scheme", e.target.value)}><option value="">Select...</option><option>NICEIC</option><option>NAPIT</option><option>ELECSA</option></select></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme Number</div><input style={inputStyle} value={certData.schemeNumber} onChange={e => update("schemeNumber", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
+      <div style={sectionTitleStyle}>Notes</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Additional Notes</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
+    </>;
+    default: return null;
+    }
+  };
 
   return (
     <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
@@ -22257,124 +24161,182 @@ function MinorWorksForm({ onBack, onSave, currentUser }) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
-        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>Minor Works Certificate</h2>
+        <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", flex:1 }}>Minor Works Certificate</h2>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
-        <div style={sectionTitleStyle}>Client Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Address</div><input style={inputStyle} value={certData.clientAddress} onChange={e => update("clientAddress", e.target.value)} placeholder="Full address"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.clientPostcode} onChange={e => update("clientPostcode", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Telephone</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Description of Work</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Location of Work</div><input style={inputStyle} value={certData.workLocation} onChange={e => update("workLocation", e.target.value)} placeholder="e.g. Kitchen, first floor"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Description of Minor Works</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.workDescription} onChange={e => update("workDescription", e.target.value)} placeholder="Describe the work carried out..."/></div>
-
-        <div style={sectionTitleStyle}>Circuit Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Circuit Reference</div><input style={inputStyle} value={certData.circuitRef} onChange={e => update("circuitRef", e.target.value)} placeholder="e.g. C1, Ring 1"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Circuit Type</div><input style={inputStyle} value={certData.circuitType} onChange={e => update("circuitType", e.target.value)} placeholder="e.g. Ring final, radial, lighting"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Protective Device Type</div><input style={inputStyle} value={certData.protectiveDeviceType} onChange={e => update("protectiveDeviceType", e.target.value)} placeholder="e.g. MCB Type B"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Protective Device Rating (A)</div><input type="number" style={inputStyle} value={certData.protectiveDeviceRating} onChange={e => update("protectiveDeviceRating", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Installation Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Earthing Arrangement</div><select style={selectStyle} value={certData.earthingArrangement} onChange={e => update("earthingArrangement", e.target.value)}><option value="">Select...</option><option>TN-S</option><option>TN-C-S</option><option>TT</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Means of Earthing</div><input style={inputStyle} value={certData.meansOfEarthing} onChange={e => update("meansOfEarthing", e.target.value)} placeholder="e.g. Supply company earth, earth electrode"/></div>
-
-        <div style={sectionTitleStyle}>Test Results</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>R1+R2 (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.r1r2} onChange={e => update("r1r2", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>R2 (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.r2} onChange={e => update("r2", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Insulation Resistance (MΩ)</div><input type="number" step="0.01" style={inputStyle} value={certData.insulationResistance} onChange={e => update("insulationResistance", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Polarity</div>
-          <div style={{ display:"flex", gap:8 }}>
-            {["Confirmed","Not Confirmed"].map(v => (
-              <button key={v} onClick={() => update("polarity", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.polarity === v ? (v==="Confirmed"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.polarity === v ? (v==="Confirmed"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.polarity === v ? (v==="Confirmed"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
-            ))}
-          </div>
-        </div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Zs (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.zs} onChange={e => update("zs", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Operation Time (ms)</div><input type="number" style={inputStyle} value={certData.rcdTime} onChange={e => update("rcdTime", e.target.value)} placeholder="If applicable"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Type</div><input style={inputStyle} value={certData.rcdType} onChange={e => update("rcdType", e.target.value)} placeholder="If applicable"/></div>
-
-        <div style={sectionTitleStyle}>Declaration</div>
-        <div style={{ padding:"12px", borderRadius:10, background:"rgba(59,130,246,0.08)", border:"1px solid rgba(59,130,246,0.2)", marginBottom:10 }}>
-          <p style={{ color:"rgba(255,255,255,0.7)", fontSize:12, lineHeight:1.5, margin:0 }}>I declare that the work described above complies with BS 7671 (IET Wiring Regulations) to the best of my knowledge and belief.</p>
-        </div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Installer Name</div><input style={inputStyle} value={certData.installerName} onChange={e => update("installerName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme</div><select style={selectStyle} value={certData.scheme} onChange={e => update("scheme", e.target.value)}><option value="">Select...</option><option>NICEIC</option><option>NAPIT</option><option>ELECSA</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme Number</div><input style={inputStyle} value={certData.schemeNumber} onChange={e => update("schemeNumber", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Notes</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Additional Notes</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Signature</div>
-        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
-          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
-            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
-          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+      <div style={{ padding:"0 16px 8px", overflowX:"auto" }}>
+        <div style={{ display:"flex", gap:4, minWidth:"max-content" }}>
+          {STEPS.map((s, i) => <button key={i} onClick={() => setStep(i)} style={{ padding:"6px 10px", borderRadius:8, border:"none", fontSize:10, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", background: i === step ? "#3b82f6" : i < step ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.08)", color: i === step ? "#fff" : i < step ? "#4ade80" : "rgba(255,255,255,0.4)" }}>{i+1}. {s}</button>)}
         </div>
       </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
-        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
-        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 120px" }}>{renderStep()}</div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:8 }}>
+        {step > 0 && <button onClick={() => setStep(step - 1)} style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Back</button>}
+        {step < STEPS.length - 1 ? (
+          <button onClick={() => setStep(step + 1)} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
+        ) : (
+          <>
+            <button onClick={handleSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save</button>
+            <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"13px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Generate PDF</button>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── EV CHARGER FORM ────────────────────────────────────────────────────────
+// ─── EV CHARGER FORM — Multi-Step Wizard ───────────────────────────────────
 function EVChargerForm({ onBack, onSave, currentUser }) {
+  const STEPS = ["Client & Site","Charger Details","Installation & RCD","PME Assessment","Test Results","Commissioning","Declaration"];
+  const [step, setStep] = useState(0);
+  const [showPDF, setShowPDF] = useState(false);
   const [certData, setCertData] = useState({
     certRef: "EV-" + Date.now().toString(36).toUpperCase(),
     date: new Date().toISOString().split("T")[0],
     clientName: "", clientAddress: "", clientPostcode: "", clientEmail: "", clientTel: "",
-    chargerMake: "", chargerModel: "", chargerSerial: "", maxChargingCurrent: "", chargingMode: "",
+    installAddress: "",
+    chargerMake: "", chargerModel: "", chargerSerial: "",
+    chargingMode: "", outputRating: "", socketType: "",
     earthingArrangement: "", supplyType: "", supplyProtectiveDevice: "",
-    cableType: "", cableSize: "", cableLength: "", cableRoute: "", protectionMethod: "",
-    rcdType: "", rcdRating: "", rcdTestTime: "",
-    pmeSupply: "", earthElectrode: "", earthElectrodeResistance: "",
+    cableType: "", cableSize: "", cableLength: "", cableRoute: "",
+    rcdType: "", rcdRating: "", rcdIdn: "",
+    pmeAssessmentResult: "", earthRodInstalled: "", earthRodResistance: "",
+    dnoNotificationRef: "", ozevRef: "",
     ze: "", zs: "", r1r2: "", insulationResistance: "", polarity: "Confirmed", rcdOperation: "",
-    ozevRef: "",
+    prospectiveFaultCurrent: "",
+    commissionCableRoute: false, commissionIPRating: false, commissionLoadTest: false, commissionRCDTest: false, commissionFunctionalTest: false,
     result: "Satisfactory",
-    engineerName: "", companyName: "", scheme: "", schemeNumber: "",
+    designerName: "", designerDate: "", constructorName: "", constructorDate: "",
+    inspectorName: "", inspectorDate: "",
+    companyName: "", companyAddress: "", scheme: "", schemeNumber: "",
+    nextInspectionInterval: "",
     notes: "", signatureData: null,
   });
-  const [showPDF, setShowPDF] = useState(false);
-  const sigCanvasRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState(false);
 
   useEffect(() => {
     try {
       const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
-      setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", schemeNumber: p.schemeNumber || "" }));
+      setCertData(prev => ({ ...prev, inspectorName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", companyAddress: p.address || "", schemeNumber: p.schemeNumber || "" }));
     } catch {}
   }, [currentUser]);
 
   const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
 
-  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
-  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
-  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
-  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
-  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
-
   const handleSave = () => {
-    const record = { ...certData, trade:"electrical", type:"ev_charger", savedAt: new Date().toISOString() };
+    const record = { ...certData, trade:"electrical", type:"ev_charger", engineerName: certData.inspectorName, savedAt: new Date().toISOString() };
     if (onSave) onSave(record);
     alert("EV Charger Certificate saved!");
     onBack();
   };
 
-  if (showPDF) return <ElectricalPDFPreview certData={certData} certType="ev_charger" certTitle="EV Charger Installation Certificate" onClose={() => setShowPDF(false)} />;
+  if (showPDF) return <ElectricalPDFPreview certData={{ ...certData, engineerName: certData.inspectorName }} certType="ev_charger" certTitle="EV Charger Installation Certificate — BS 7671 Section 722" onClose={() => setShowPDF(false)} />;
 
   const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
   const sectionTitleStyle = { color:"#3b82f6", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(59,130,246,0.3)", paddingBottom:6 };
   const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
   const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const checkStyle = (checked) => ({ padding:"8px 14px", borderRadius:8, fontWeight:600, fontSize:12, cursor:"pointer", border:"2px solid", borderColor: checked ? "#3b82f6" : "rgba(255,255,255,0.15)", background: checked ? "rgba(59,130,246,0.15)" : "transparent", color: checked ? "#3b82f6" : "rgba(255,255,255,0.5)" });
+
+  const renderStep = () => {
+    switch(step) {
+    case 0: return <>
+      <div style={sectionTitleStyle}>Certificate Details</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
+      <div style={sectionTitleStyle}>Client Details</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Client Address</div><input style={inputStyle} value={certData.clientAddress} onChange={e => update("clientAddress", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.clientPostcode} onChange={e => update("clientPostcode", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Telephone</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Installation Address (if different)</div><input style={inputStyle} value={certData.installAddress} onChange={e => update("installAddress", e.target.value)}/></div>
+    </>;
+    case 1: return <>
+      <div style={sectionTitleStyle}>EVSE Details</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Make</div><input style={inputStyle} value={certData.chargerMake} onChange={e => update("chargerMake", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Model</div><input style={inputStyle} value={certData.chargerModel} onChange={e => update("chargerModel", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Serial Number</div><input style={inputStyle} value={certData.chargerSerial} onChange={e => update("chargerSerial", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Mode of Charging</div><select style={selectStyle} value={certData.chargingMode} onChange={e => update("chargingMode", e.target.value)}><option value="">Select...</option><option>Mode 1</option><option>Mode 2</option><option>Mode 3</option><option>Mode 4</option></select></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Output Rating (kW)</div><input type="number" step="0.1" style={inputStyle} value={certData.outputRating} onChange={e => update("outputRating", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Socket Type</div><select style={selectStyle} value={certData.socketType} onChange={e => update("socketType", e.target.value)}><option value="">Select...</option><option>Type 1</option><option>Type 2</option><option>CCS</option><option>CHAdeMO</option></select></div>
+    </>;
+    case 2: return <>
+      <div style={sectionTitleStyle}>Installation Details</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Earthing Arrangement</div>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+          {["TN-S","TN-C-S","TT"].map(v => <button key={v} type="button" onClick={() => update("earthingArrangement", v)} style={checkStyle(certData.earthingArrangement === v)}>{v}</button>)}
+        </div>
+      </div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Supply Type</div><input style={inputStyle} value={certData.supplyType} onChange={e => update("supplyType", e.target.value)} placeholder="e.g. Single phase 230V"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Supply Protective Device</div><input style={inputStyle} value={certData.supplyProtectiveDevice} onChange={e => update("supplyProtectiveDevice", e.target.value)} placeholder="e.g. 100A BS 1361"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Cable Type</div><input style={inputStyle} value={certData.cableType} onChange={e => update("cableType", e.target.value)} placeholder="e.g. SWA, Twin & Earth"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Cable Size (mm²)</div><input type="number" step="0.5" style={inputStyle} value={certData.cableSize} onChange={e => update("cableSize", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Cable Length (m)</div><input type="number" step="0.1" style={inputStyle} value={certData.cableLength} onChange={e => update("cableLength", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Cable Route</div><textarea style={{ ...inputStyle, minHeight:40 }} value={certData.cableRoute} onChange={e => update("cableRoute", e.target.value)} placeholder="Describe cable route"/></div>
+      <div style={sectionTitleStyle}>RCD Protection</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Type</div><select style={selectStyle} value={certData.rcdType} onChange={e => update("rcdType", e.target.value)}><option value="">Select...</option><option>Type A</option><option>Type B</option><option>Type F</option></select></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Rating (A)</div><input type="number" style={inputStyle} value={certData.rcdRating} onChange={e => update("rcdRating", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>RCD IΔn (mA)</div><input type="number" style={inputStyle} value={certData.rcdIdn} onChange={e => update("rcdIdn", e.target.value)}/></div>
+    </>;
+    case 3: return <>
+      <div style={sectionTitleStyle}>PME Earthing Assessment</div>
+      <div style={{ padding:"10px 12px", borderRadius:10, background:"rgba(239,168,68,0.08)", border:"1px solid rgba(239,168,68,0.2)", marginBottom:12 }}>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:11, lineHeight:1.6, margin:0 }}>BS 7671 Section 722 requires assessment of PME earthing for EV charging installations. If supply is PME (TN-C-S), additional earth electrode protection may be required per the ESQCR.</p>
+      </div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>PME Assessment Result</div><select style={selectStyle} value={certData.pmeAssessmentResult} onChange={e => update("pmeAssessmentResult", e.target.value)}><option value="">Select...</option><option>PME supply — additional earth rod required</option><option>PME supply — existing earth rod adequate</option><option>Non-PME supply — no additional earth required</option><option>TT system</option></select></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Earth Rod Installed</div>
+        <div style={{ display:"flex", gap:8 }}>
+          {["Yes","No"].map(v => <button key={v} type="button" onClick={() => update("earthRodInstalled", v)} style={checkStyle(certData.earthRodInstalled === v)}>{v}</button>)}
+        </div>
+      </div>
+      {certData.earthRodInstalled === "Yes" && <div style={{ marginBottom:10 }}><div style={labelSt}>Earth Rod Resistance (Ω)</div><input type="number" step="0.1" style={inputStyle} value={certData.earthRodResistance} onChange={e => update("earthRodResistance", e.target.value)}/></div>}
+      <div style={sectionTitleStyle}>Notifications & References</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>DNO Notification Reference</div><input style={inputStyle} value={certData.dnoNotificationRef} onChange={e => update("dnoNotificationRef", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>OZEV Grant Reference (if applicable)</div><input style={inputStyle} value={certData.ozevRef} onChange={e => update("ozevRef", e.target.value)}/></div>
+    </>;
+    case 4: return <>
+      <div style={sectionTitleStyle}>Test Results</div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+        <div><div style={labelSt}>Ze (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.ze} onChange={e => update("ze", e.target.value)}/></div>
+        <div><div style={labelSt}>Zs (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.zs} onChange={e => update("zs", e.target.value)}/></div>
+        <div><div style={labelSt}>R1+R2 (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.r1r2} onChange={e => update("r1r2", e.target.value)}/></div>
+        <div><div style={labelSt}>Ipf (kA)</div><input type="number" step="0.01" style={inputStyle} value={certData.prospectiveFaultCurrent} onChange={e => update("prospectiveFaultCurrent", e.target.value)}/></div>
+        <div><div style={labelSt}>Insulation (MΩ)</div><input type="number" step="0.01" style={inputStyle} value={certData.insulationResistance} onChange={e => update("insulationResistance", e.target.value)}/></div>
+        <div><div style={labelSt}>RCD Op Time (ms)</div><input type="number" style={inputStyle} value={certData.rcdOperation} onChange={e => update("rcdOperation", e.target.value)}/></div>
+      </div>
+      <div style={{ marginTop:12, marginBottom:10 }}><div style={labelSt}>Polarity</div>
+        <div style={{ display:"flex", gap:8 }}>
+          {["Confirmed","Not Confirmed"].map(v => <button key={v} type="button" onClick={() => update("polarity", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.polarity === v ? (v==="Confirmed"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.polarity === v ? (v==="Confirmed"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.polarity === v ? (v==="Confirmed"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>)}
+        </div>
+      </div>
+    </>;
+    case 5: return <>
+      <div style={sectionTitleStyle}>Commissioning Checks</div>
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {[["commissionCableRoute","Cable route correct and undamaged"],["commissionIPRating","IP rating appropriate for location"],["commissionLoadTest","Load test performed"],["commissionRCDTest","RCD test performed"],["commissionFunctionalTest","Functional test completed"]].map(([k,l]) => (
+          <button key={k} type="button" onClick={() => update(k, !certData[k])} style={{ ...checkStyle(certData[k]), textAlign:"left", padding:"12px 14px" }}>{certData[k] ? "☑" : "☐"} {l}</button>
+        ))}
+      </div>
+      <div style={sectionTitleStyle}>Overall Result</div>
+      <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+        {["Satisfactory","Unsatisfactory"].map(v => <button key={v} type="button" onClick={() => update("result", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v==="Satisfactory"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>)}
+      </div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Next Inspection Interval</div><input style={inputStyle} value={certData.nextInspectionInterval} onChange={e => update("nextInspectionInterval", e.target.value)} placeholder="e.g. 5 years"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Notes</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
+    </>;
+    case 6: return <>
+      <div style={sectionTitleStyle}>Declaration</div>
+      <div style={{ padding:"10px 12px", borderRadius:10, background:"rgba(59,130,246,0.08)", border:"1px solid rgba(59,130,246,0.2)", marginBottom:12 }}>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:11, lineHeight:1.6, margin:0 }}>I/We CERTIFY that the EV charging installation described above has been designed, constructed, inspected and tested in accordance with BS 7671:2018+A2:2022 Section 722.</p>
+      </div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Inspector Name</div><input style={inputStyle} value={certData.inspectorName} onChange={e => update("inspectorName", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Company</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Address</div><input style={inputStyle} value={certData.companyAddress} onChange={e => update("companyAddress", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme</div><select style={selectStyle} value={certData.scheme} onChange={e => update("scheme", e.target.value)}><option value="">Select...</option><option>NICEIC</option><option>NAPIT</option><option>ELECSA</option></select></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme Number</div><input style={inputStyle} value={certData.schemeNumber} onChange={e => update("schemeNumber", e.target.value)}/></div>
+    </>;
+    default: return null;
+    }
+  };
 
   return (
     <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
@@ -22383,151 +24345,158 @@ function EVChargerForm({ onBack, onSave, currentUser }) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
-        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>EV Charger Certificate</h2>
+        <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", flex:1 }}>EV Charger Certificate</h2>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
-        <div style={sectionTitleStyle}>Client Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Address</div><input style={inputStyle} value={certData.clientAddress} onChange={e => update("clientAddress", e.target.value)} placeholder="Full address"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.clientPostcode} onChange={e => update("clientPostcode", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Telephone</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Charger Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Make</div><input style={inputStyle} value={certData.chargerMake} onChange={e => update("chargerMake", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Model</div><input style={inputStyle} value={certData.chargerModel} onChange={e => update("chargerModel", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Serial Number</div><input style={inputStyle} value={certData.chargerSerial} onChange={e => update("chargerSerial", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Max Charging Current (A)</div><input type="number" style={inputStyle} value={certData.maxChargingCurrent} onChange={e => update("maxChargingCurrent", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Charging Mode</div><select style={selectStyle} value={certData.chargingMode} onChange={e => update("chargingMode", e.target.value)}><option value="">Select...</option><option>Mode 1</option><option>Mode 2</option><option>Mode 3</option><option>Mode 4</option></select></div>
-
-        <div style={sectionTitleStyle}>Installation Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Earthing Arrangement</div><select style={selectStyle} value={certData.earthingArrangement} onChange={e => update("earthingArrangement", e.target.value)}><option value="">Select...</option><option>TN-S</option><option>TN-C-S</option><option>TT</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Supply Type</div><input style={inputStyle} value={certData.supplyType} onChange={e => update("supplyType", e.target.value)} placeholder="e.g. Single phase 230V"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Supply Protective Device</div><input style={inputStyle} value={certData.supplyProtectiveDevice} onChange={e => update("supplyProtectiveDevice", e.target.value)} placeholder="e.g. 100A BS 1361"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Cable Type</div><input style={inputStyle} value={certData.cableType} onChange={e => update("cableType", e.target.value)} placeholder="e.g. SWA, Twin & Earth"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Cable Size (mm²)</div><input type="number" step="0.5" style={inputStyle} value={certData.cableSize} onChange={e => update("cableSize", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Cable Length (m)</div><input type="number" step="0.1" style={inputStyle} value={certData.cableLength} onChange={e => update("cableLength", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Cable Route</div><input style={inputStyle} value={certData.cableRoute} onChange={e => update("cableRoute", e.target.value)} placeholder="Describe cable route"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Protection Method</div><input style={inputStyle} value={certData.protectionMethod} onChange={e => update("protectionMethod", e.target.value)} placeholder="e.g. MCB 32A Type B + RCD"/></div>
-
-        <div style={sectionTitleStyle}>RCD Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Type</div><select style={selectStyle} value={certData.rcdType} onChange={e => update("rcdType", e.target.value)}><option value="">Select...</option><option>Type A</option><option>Type B</option><option>Type F</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Rating (mA)</div><input type="number" style={inputStyle} value={certData.rcdRating} onChange={e => update("rcdRating", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Test Time (ms)</div><input type="number" style={inputStyle} value={certData.rcdTestTime} onChange={e => update("rcdTestTime", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>PME Assessment</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>PME Supply</div>
-          <div style={{ display:"flex", gap:8 }}>
-            {["Yes","No"].map(v => (
-              <button key={v} onClick={() => update("pmeSupply", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.pmeSupply === v ? "#3b82f6" : "rgba(255,255,255,0.15)", background: certData.pmeSupply === v ? "rgba(59,130,246,0.15)" : "transparent", color: certData.pmeSupply === v ? "#3b82f6" : "rgba(255,255,255,0.5)" }}>{v}</button>
-            ))}
-          </div>
-        </div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Earth Electrode Installed</div>
-          <div style={{ display:"flex", gap:8 }}>
-            {["Yes","No"].map(v => (
-              <button key={v} onClick={() => update("earthElectrode", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.earthElectrode === v ? "#3b82f6" : "rgba(255,255,255,0.15)", background: certData.earthElectrode === v ? "rgba(59,130,246,0.15)" : "transparent", color: certData.earthElectrode === v ? "#3b82f6" : "rgba(255,255,255,0.5)" }}>{v}</button>
-            ))}
-          </div>
-        </div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Earth Electrode Resistance (Ω)</div><input type="number" step="0.1" style={inputStyle} value={certData.earthElectrodeResistance} onChange={e => update("earthElectrodeResistance", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Test Results</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Ze (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.ze} onChange={e => update("ze", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Zs (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.zs} onChange={e => update("zs", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>R1+R2 (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.r1r2} onChange={e => update("r1r2", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Insulation Resistance (MΩ)</div><input type="number" step="0.01" style={inputStyle} value={certData.insulationResistance} onChange={e => update("insulationResistance", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Polarity</div>
-          <div style={{ display:"flex", gap:8 }}>
-            {["Confirmed","Not Confirmed"].map(v => (
-              <button key={v} onClick={() => update("polarity", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.polarity === v ? (v==="Confirmed"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.polarity === v ? (v==="Confirmed"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.polarity === v ? (v==="Confirmed"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
-            ))}
-          </div>
-        </div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>RCD Operation (ms)</div><input type="number" style={inputStyle} value={certData.rcdOperation} onChange={e => update("rcdOperation", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>OZEV Grant</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>OZEV Grant Reference (Optional)</div><input style={inputStyle} value={certData.ozevRef} onChange={e => update("ozevRef", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Result</div>
-        <div style={{ marginBottom:10 }}>
-          <div style={{ display:"flex", gap:8 }}>
-            {["Satisfactory","Unsatisfactory"].map(v => (
-              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v==="Satisfactory"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
-            ))}
-          </div>
-        </div>
-
-        <div style={sectionTitleStyle}>Notes</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Additional Notes</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Inspector Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Inspector Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme</div><select style={selectStyle} value={certData.scheme} onChange={e => update("scheme", e.target.value)}><option value="">Select...</option><option>NICEIC</option><option>NAPIT</option><option>ELECSA</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme Number</div><input style={inputStyle} value={certData.schemeNumber} onChange={e => update("schemeNumber", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Signature</div>
-        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
-          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
-            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
-          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+      <div style={{ padding:"0 16px 8px", overflowX:"auto" }}>
+        <div style={{ display:"flex", gap:4, minWidth:"max-content" }}>
+          {STEPS.map((s, i) => <button key={i} onClick={() => setStep(i)} style={{ padding:"6px 10px", borderRadius:8, border:"none", fontSize:10, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", background: i === step ? "#3b82f6" : i < step ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.08)", color: i === step ? "#fff" : i < step ? "#4ade80" : "rgba(255,255,255,0.4)" }}>{i+1}. {s}</button>)}
         </div>
       </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
-        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
-        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 120px" }}>{renderStep()}</div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:8 }}>
+        {step > 0 && <button onClick={() => setStep(step - 1)} style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Back</button>}
+        {step < STEPS.length - 1 ? (
+          <button onClick={() => setStep(step + 1)} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
+        ) : (
+          <>
+            <button onClick={handleSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save</button>
+            <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"13px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Generate PDF</button>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── PAT TESTING FORM ───────────────────────────────────────────────────────
+// ─── PAT TESTING FORM — Multi-Step Wizard ──────────────────────────────────
 function PATTestingForm({ onBack, onSave, currentUser }) {
+  const STEPS = ["Site & Tester","Equipment Register","Review & Generate"];
+  const [step, setStep] = useState(0);
+  const [showPDF, setShowPDF] = useState(false);
   const [certData, setCertData] = useState({
     certRef: "PAT-" + Date.now().toString(36).toUpperCase(),
     date: new Date().toISOString().split("T")[0],
     clientName: "", clientAddress: "", clientPostcode: "", clientEmail: "", clientTel: "",
-    testNumber: "1", equipDescription: "", equipMake: "", equipModel: "", equipSerial: "", equipLocation: "",
-    visualInspection: "Pass", earthContinuity: "", insulationResistance: "", leakageCurrent: "",
-    result: "PASS", nextTestDate: "",
-    engineerName: "", companyName: "", scheme: "", schemeNumber: "",
+    testLocation: "",
+    testEquipMake: "", testEquipModel: "", testEquipSerial: "", testEquipCalDate: "",
+    testerName: "", testerQualification: "", companyName: "", scheme: "", schemeNumber: "",
     notes: "", signatureData: null,
   });
-  const [showPDF, setShowPDF] = useState(false);
-  const sigCanvasRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState(false);
+  const [appliances, setAppliances] = useState([{
+    itemNo: "1", description: "", assetNo: "", makeModelSerial: "", appClass: "I", location: "",
+    plugCondition: "Pass", flexCondition: "Pass", bodyCondition: "Pass", socketCondition: "Pass", otherVisual: "Pass",
+    earthContinuity: "", insulationResistance: "", polarity: "✓", functionalTest: "✓", earthLeakage: "", touchCurrent: "",
+    suitableForUse: "Y", comments: "", nextTestDate: "",
+  }]);
 
   useEffect(() => {
     try {
       const p = JSON.parse(localStorage.getItem(`${currentUser?.username}_user_profile`) || "{}");
-      setCertData(prev => ({ ...prev, engineerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", schemeNumber: p.schemeNumber || "" }));
+      setCertData(prev => ({ ...prev, testerName: p.fullName || currentUser?.displayName || "", companyName: p.companyName || "", schemeNumber: p.schemeNumber || "" }));
     } catch {}
   }, [currentUser]);
 
   const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
-
-  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
-  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
-  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
-  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
-  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+  const updateApp = (idx, k, v) => setAppliances(prev => { const n = [...prev]; n[idx] = { ...n[idx], [k]: v }; return n; });
+  const addAppliance = () => { setAppliances(prev => [...prev, { itemNo: String(prev.length + 1), description: "", assetNo: "", makeModelSerial: "", appClass: "I", location: "", plugCondition: "Pass", flexCondition: "Pass", bodyCondition: "Pass", socketCondition: "Pass", otherVisual: "Pass", earthContinuity: "", insulationResistance: "", polarity: "✓", functionalTest: "✓", earthLeakage: "", touchCurrent: "", suitableForUse: "Y", comments: "", nextTestDate: "" }]); };
+  const removeAppliance = (idx) => { if (appliances.length <= 1) return; setAppliances(prev => prev.filter((_, i) => i !== idx)); };
 
   const handleSave = () => {
-    const record = { ...certData, trade:"electrical", type:"pat_testing", savedAt: new Date().toISOString() };
+    const record = { ...certData, appliances, trade:"electrical", type:"pat_testing", engineerName: certData.testerName, savedAt: new Date().toISOString() };
     if (onSave) onSave(record);
-    alert("PAT Testing Certificate saved!");
+    alert("PAT Testing Record saved!");
     onBack();
   };
 
-  if (showPDF) return <ElectricalPDFPreview certData={certData} certType="pat_testing" certTitle="Portable Appliance Testing Certificate" onClose={() => setShowPDF(false)} />;
+  if (showPDF) return <ElectricalPDFPreview certData={{ ...certData, appliances, engineerName: certData.testerName }} certType="pat_testing" certTitle="Portable Appliance Testing Record — IET Code of Practice" onClose={() => setShowPDF(false)} />;
 
   const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
   const sectionTitleStyle = { color:"#3b82f6", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(59,130,246,0.3)", paddingBottom:6 };
   const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const pfBtnStyle = (val, check) => ({ flex:1, padding:"8px", borderRadius:8, fontWeight:700, fontSize:12, cursor:"pointer", border:"2px solid", borderColor: val === check ? (check === "Pass" || check === "✓" || check === "Y" ? "#22c55e" : "#ef4444") : "rgba(255,255,255,0.15)", background: val === check ? (check === "Pass" || check === "✓" || check === "Y" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)") : "transparent", color: val === check ? (check === "Pass" || check === "✓" || check === "Y" ? "#22c55e" : "#ef4444") : "rgba(255,255,255,0.5)" });
+
+  const renderStep = () => {
+    switch(step) {
+    case 0: return <>
+      <div style={sectionTitleStyle}>Certificate Details</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Report/Certificate No</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
+      <div style={sectionTitleStyle}>Client Details</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Client Address</div><input style={inputStyle} value={certData.clientAddress} onChange={e => update("clientAddress", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.clientPostcode} onChange={e => update("clientPostcode", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Test Location/Site</div><input style={inputStyle} value={certData.testLocation} onChange={e => update("testLocation", e.target.value)} placeholder="e.g. Office building, Ground floor"/></div>
+      <div style={sectionTitleStyle}>Test Equipment Used</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Make</div><input style={inputStyle} value={certData.testEquipMake} onChange={e => update("testEquipMake", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Model</div><input style={inputStyle} value={certData.testEquipModel} onChange={e => update("testEquipModel", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Serial Number</div><input style={inputStyle} value={certData.testEquipSerial} onChange={e => update("testEquipSerial", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Calibration Date</div><input type="date" style={inputStyle} value={certData.testEquipCalDate} onChange={e => update("testEquipCalDate", e.target.value)}/></div>
+      <div style={sectionTitleStyle}>Tester Details</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Tester Name</div><input style={inputStyle} value={certData.testerName} onChange={e => update("testerName", e.target.value)}/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Qualification</div><input style={inputStyle} value={certData.testerQualification} onChange={e => update("testerQualification", e.target.value)} placeholder="e.g. C&G 2377"/></div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Company</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
+    </>;
+    case 1: return <>
+      <div style={sectionTitleStyle}>Equipment Register</div>
+      <p style={{ color:"rgba(255,255,255,0.5)", fontSize:11, marginBottom:12 }}>Add each appliance tested. Include visual inspection and electrical test results.</p>
+      {appliances.map((a, i) => (
+        <div key={i} style={{ background:"rgba(255,255,255,0.05)", borderRadius:12, padding:12, marginBottom:12, border:"1px solid rgba(255,255,255,0.1)" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+            <span style={{ color:"#3b82f6", fontWeight:700, fontSize:13 }}>Item {a.itemNo}</span>
+            {appliances.length > 1 && <button type="button" onClick={() => removeAppliance(i)} style={{ background:"rgba(239,68,68,0.15)", color:"#ef4444", border:"1px solid rgba(239,68,68,0.3)", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Remove</button>}
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+            <div><div style={labelSt}>Item No</div><input style={inputStyle} value={a.itemNo} onChange={e => updateApp(i,"itemNo",e.target.value)}/></div>
+            <div><div style={labelSt}>Description</div><input style={inputStyle} value={a.description} onChange={e => updateApp(i,"description",e.target.value)} placeholder="e.g. Kettle"/></div>
+            <div><div style={labelSt}>Asset/ID No</div><input style={inputStyle} value={a.assetNo} onChange={e => updateApp(i,"assetNo",e.target.value)}/></div>
+            <div><div style={labelSt}>Make/Model/Serial</div><input style={inputStyle} value={a.makeModelSerial} onChange={e => updateApp(i,"makeModelSerial",e.target.value)}/></div>
+            <div><div style={labelSt}>Class</div><select style={selectStyle} value={a.appClass} onChange={e => updateApp(i,"appClass",e.target.value)}><option>I</option><option>II</option><option>III</option></select></div>
+            <div><div style={labelSt}>Location</div><input style={inputStyle} value={a.location} onChange={e => updateApp(i,"location",e.target.value)}/></div>
+          </div>
+          <div style={{ color:"rgba(255,255,255,0.5)", fontSize:10, fontWeight:700, textTransform:"uppercase", marginBottom:6, marginTop:8 }}>Visual Inspection</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6, marginBottom:8 }}>
+            {[["plugCondition","Plug"],["flexCondition","Flex"],["bodyCondition","Body"],["socketCondition","Socket"],["otherVisual","Other"]].map(([k,l]) => (
+              <div key={k}><div style={labelSt}>{l}</div><div style={{ display:"flex", gap:4 }}><button type="button" onClick={() => updateApp(i,k,"Pass")} style={pfBtnStyle(a[k],"Pass")}>Pass</button><button type="button" onClick={() => updateApp(i,k,"Fail")} style={pfBtnStyle(a[k],"Fail")}>Fail</button></div></div>
+            ))}
+          </div>
+          <div style={{ color:"rgba(255,255,255,0.5)", fontSize:10, fontWeight:700, textTransform:"uppercase", marginBottom:6, marginTop:8 }}>Test Results</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+            <div><div style={labelSt}>Earth Cont (Ω)</div><input type="number" step="0.01" style={inputStyle} value={a.earthContinuity} onChange={e => updateApp(i,"earthContinuity",e.target.value)}/></div>
+            <div><div style={labelSt}>Insulation (MΩ)</div><input type="number" step="0.01" style={inputStyle} value={a.insulationResistance} onChange={e => updateApp(i,"insulationResistance",e.target.value)}/></div>
+            <div><div style={labelSt}>Polarity</div><div style={{ display:"flex", gap:4 }}><button type="button" onClick={() => updateApp(i,"polarity","✓")} style={pfBtnStyle(a.polarity,"✓")}>✓</button><button type="button" onClick={() => updateApp(i,"polarity","✕")} style={pfBtnStyle(a.polarity,"✕")}>✕</button></div></div>
+            <div><div style={labelSt}>Functional</div><div style={{ display:"flex", gap:4 }}><button type="button" onClick={() => updateApp(i,"functionalTest","✓")} style={pfBtnStyle(a.functionalTest,"✓")}>✓</button><button type="button" onClick={() => updateApp(i,"functionalTest","✕")} style={pfBtnStyle(a.functionalTest,"✕")}>✕</button></div></div>
+            <div><div style={labelSt}>Leakage (mA)</div><input type="number" step="0.01" style={inputStyle} value={a.earthLeakage} onChange={e => updateApp(i,"earthLeakage",e.target.value)}/></div>
+            <div><div style={labelSt}>Touch (mA)</div><input type="number" step="0.01" style={inputStyle} value={a.touchCurrent} onChange={e => updateApp(i,"touchCurrent",e.target.value)}/></div>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+            <div><div style={labelSt}>Suitable for Use</div><div style={{ display:"flex", gap:4 }}><button type="button" onClick={() => updateApp(i,"suitableForUse","Y")} style={pfBtnStyle(a.suitableForUse,"Y")}>Y</button><button type="button" onClick={() => updateApp(i,"suitableForUse","N")} style={pfBtnStyle(a.suitableForUse,"N")}>N</button></div></div>
+            <div><div style={labelSt}>Next Test Due</div><input type="date" style={inputStyle} value={a.nextTestDate} onChange={e => updateApp(i,"nextTestDate",e.target.value)}/></div>
+          </div>
+          <div><div style={labelSt}>Comments</div><input style={inputStyle} value={a.comments} onChange={e => updateApp(i,"comments",e.target.value)}/></div>
+        </div>
+      ))}
+      <button type="button" onClick={addAppliance} style={{ width:"100%", padding:"12px", borderRadius:10, background:"rgba(59,130,246,0.15)", color:"#3b82f6", fontWeight:700, fontSize:13, border:"1px dashed rgba(59,130,246,0.4)", cursor:"pointer" }}>+ Add Appliance</button>
+    </>;
+    case 2: return <>
+      <div style={sectionTitleStyle}>Summary</div>
+      <div style={{ background:"rgba(255,255,255,0.05)", borderRadius:12, padding:16, marginBottom:12 }}>
+        <div style={{ color:"#fff", fontSize:15, fontWeight:700, marginBottom:12 }}>PAT Testing Record</div>
+        <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginBottom:4 }}>Ref: {certData.certRef} | Date: {certData.date}</div>
+        <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginBottom:4 }}>Client: {certData.clientName}</div>
+        <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginBottom:4 }}>Location: {certData.testLocation}</div>
+        <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginBottom:4 }}>Appliances Tested: {appliances.length}</div>
+        <div style={{ color:"#22c55e", fontSize:12, marginBottom:4 }}>Passed: {appliances.filter(a => a.suitableForUse === "Y").length}</div>
+        <div style={{ color:"#ef4444", fontSize:12, marginBottom:4 }}>Failed: {appliances.filter(a => a.suitableForUse === "N").length}</div>
+        <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginBottom:4 }}>Tester: {certData.testerName}</div>
+        <div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginBottom:4 }}>Equipment: {[certData.testEquipMake, certData.testEquipModel].filter(Boolean).join(" ")}</div>
+      </div>
+      <div style={sectionTitleStyle}>Notes</div>
+      <div style={{ marginBottom:10 }}><div style={labelSt}>Additional Notes</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
+    </>;
+    default: return null;
+    }
+  };
 
   return (
     <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
@@ -22536,68 +24505,24 @@ function PATTestingForm({ onBack, onSave, currentUser }) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
-        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>PAT Testing Certificate</h2>
+        <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", flex:1 }}>PAT Testing Record</h2>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
-        <div style={sectionTitleStyle}>Client / Site Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Address</div><input style={inputStyle} value={certData.clientAddress} onChange={e => update("clientAddress", e.target.value)} placeholder="Full address"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.clientPostcode} onChange={e => update("clientPostcode", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Telephone</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Equipment Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Test Number</div><input style={inputStyle} value={certData.testNumber} onChange={e => update("testNumber", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Equipment Description</div><input style={inputStyle} value={certData.equipDescription} onChange={e => update("equipDescription", e.target.value)} placeholder="e.g. Desktop computer, Kettle"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Make</div><input style={inputStyle} value={certData.equipMake} onChange={e => update("equipMake", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Model</div><input style={inputStyle} value={certData.equipModel} onChange={e => update("equipModel", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Serial Number</div><input style={inputStyle} value={certData.equipSerial} onChange={e => update("equipSerial", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Location</div><input style={inputStyle} value={certData.equipLocation} onChange={e => update("equipLocation", e.target.value)} placeholder="e.g. Office 1, Kitchen"/></div>
-
-        <div style={sectionTitleStyle}>Test Results</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Visual Inspection</div>
-          <div style={{ display:"flex", gap:8 }}>
-            {["Pass","Fail"].map(v => (
-              <button key={v} onClick={() => update("visualInspection", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.visualInspection === v ? (v==="Pass"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.visualInspection === v ? (v==="Pass"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.visualInspection === v ? (v==="Pass"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
-            ))}
-          </div>
-        </div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Earth Continuity (Ω)</div><input type="number" step="0.01" style={inputStyle} value={certData.earthContinuity} onChange={e => update("earthContinuity", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Insulation Resistance (MΩ)</div><input type="number" step="0.01" style={inputStyle} value={certData.insulationResistance} onChange={e => update("insulationResistance", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Leakage Current (mA) — Optional</div><input type="number" step="0.01" style={inputStyle} value={certData.leakageCurrent} onChange={e => update("leakageCurrent", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Overall Result</div>
-        <div style={{ marginBottom:10 }}>
-          <div style={{ display:"flex", gap:8 }}>
-            {["PASS","FAIL"].map(v => (
-              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"14px", borderRadius:10, fontWeight:800, fontSize:15, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v==="PASS"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v==="PASS"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v==="PASS"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
-            ))}
-          </div>
-        </div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Next Test Due Date</div><input type="date" style={inputStyle} value={certData.nextTestDate} onChange={e => update("nextTestDate", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Notes</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Additional Notes</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Inspector Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Inspector Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme</div><input style={inputStyle} value={certData.scheme} onChange={e => update("scheme", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Scheme Number</div><input style={inputStyle} value={certData.schemeNumber} onChange={e => update("schemeNumber", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Signature</div>
-        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
-          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
-            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
-          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+      <div style={{ padding:"0 16px 8px", overflowX:"auto" }}>
+        <div style={{ display:"flex", gap:4, minWidth:"max-content" }}>
+          {STEPS.map((s, i) => <button key={i} onClick={() => setStep(i)} style={{ padding:"6px 10px", borderRadius:8, border:"none", fontSize:10, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", background: i === step ? "#3b82f6" : i < step ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.08)", color: i === step ? "#fff" : i < step ? "#4ade80" : "rgba(255,255,255,0.4)" }}>{i+1}. {s}</button>)}
         </div>
       </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
-        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
-        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 120px" }}>{renderStep()}</div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:8 }}>
+        {step > 0 && <button onClick={() => setStep(step - 1)} style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Back</button>}
+        {step < STEPS.length - 1 ? (
+          <button onClick={() => setStep(step + 1)} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
+        ) : (
+          <>
+            <button onClick={handleSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save</button>
+            <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"13px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Generate PDF</button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -22617,6 +24542,7 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
   };
 
   if (elecScreen === "eicr") return <EICRForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
+  if (elecScreen === "eic") return <EICForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
   if (elecScreen === "minorWorks") return <MinorWorksForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
   if (elecScreen === "evCharger") return <EVChargerForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
   if (elecScreen === "pat") return <PATTestingForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
@@ -22731,6 +24657,9 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
         <ElecPillBtn onClick={() => setElecScreen("eicr")} label="New EICR" color="#3b82f6" iconBg="#1d4ed8">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
         </ElecPillBtn>
+        <ElecPillBtn onClick={() => setElecScreen("eic")} label="New EIC" color="#3b82f6" iconBg="#1d4ed8">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M9 12l2 2 4-4M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+        </ElecPillBtn>
         <ElecPillBtn onClick={() => setElecScreen("minorWorks")} label="Minor Works Certificate" color="#fff200" iconBg="#0d1f2d">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
         </ElecPillBtn>
@@ -22797,278 +24726,567 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
 // ─── FIRE SAFETY DASHBOARD ──────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function FireSafetyPDFPreview({ certData, certType, certTitle, onClose }) {
-  const [downloading, setDownloading] = useState(false);
-  const certRef = useRef(null);
+// ─── Fire Safety PDF Generator (jsPDF direct) ─────────────────────────────────
+async function generateFireSafetyPDF(type, data) {
+  await new Promise((res, rej) => { if (window.jspdf) return res(); const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const W = 210, H = 297, M = 12, CW = W - 2 * M;
+  let y = M;
+  let pageNum = 1;
+  const certRef = data.certRef || "";
 
-  const downloadPDF = async () => {
-    setDownloading(true);
-    try {
-      await Promise.all([
-        new Promise((res, rej) => { if (window.html2canvas) return res(); const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; s.onload = res; s.onerror = rej; document.head.appendChild(s); }),
-        new Promise((res, rej) => { if (window.jspdf) return res(); const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload = res; s.onerror = rej; document.head.appendChild(s); })
-      ]);
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
-      const el = certRef.current;
-      const prevW = el.style.width; el.style.width = "800px"; el.style.maxWidth = "800px";
-      await new Promise(r => setTimeout(r, 150));
-      const canvas = await window.html2canvas(el, { scale:2, useCORS:true, logging:false, width:800, height:el.scrollHeight, windowWidth:800 });
-      el.style.width = prevW; el.style.maxWidth = prevW;
-      const pdfW = 210, pdfH = 297;
-      const imgR = canvas.width / canvas.height;
-      const pgR = pdfW / pdfH;
-      let dW, dH, dX, dY;
-      if (imgR > pgR) { dW = pdfW - 10; dH = dW / imgR; dX = 5; dY = 5; }
-      else { dH = pdfH - 10; dW = dH * imgR; dX = (pdfW - dW) / 2; dY = 5; }
-      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", dX, dY, dW, dH);
-      const fn = (certData.siteName || certData.clientName || certType).replace(/[^a-zA-Z0-9 ]/g,"").trim().replace(/\s+/g,"_") + ".pdf";
-      pdf.save(fn);
-    } catch(e) { console.error(e); alert("Could not generate PDF: " + e.message); }
-    setDownloading(false);
+  const addFooter = () => { pdf.setFontSize(7); pdf.setTextColor(120); pdf.text(`${certRef}`, M, H - 5); pdf.text(`Page ${pageNum}`, W - M, H - 5, { align: "right" }); pdf.setTextColor(0); };
+  const checkPage = (need) => { if (y + need > H - 15) { addFooter(); pdf.addPage(); pageNum++; y = M; } };
+
+  const sectionHeader = (title) => { checkPage(10); pdf.setFillColor(51, 51, 51); pdf.rect(M, y, CW, 8, "F"); pdf.setFontSize(9); pdf.setTextColor(255); pdf.setFont(undefined, "bold"); pdf.text(title, M + 3, y + 5.5); pdf.setTextColor(0); pdf.setFont(undefined, "normal"); y += 10; };
+  const subHeader = (title) => { checkPage(8); pdf.setFillColor(74, 124, 255); pdf.rect(M, y, CW, 7, "F"); pdf.setFontSize(8); pdf.setTextColor(255); pdf.setFont(undefined, "bold"); pdf.text(title, M + 3, y + 5); pdf.setTextColor(0); pdf.setFont(undefined, "normal"); y += 8; };
+
+  const fieldRow = (label, value, shaded) => {
+    checkPage(7);
+    if (shaded) { pdf.setFillColor(245, 245, 245); pdf.rect(M, y, CW, 6.5, "F"); }
+    pdf.setDrawColor(200); pdf.rect(M, y, CW, 6.5); pdf.rect(M, y, CW * 0.4, 6.5);
+    pdf.setFontSize(7.5); pdf.setFont(undefined, "bold"); pdf.text(label, M + 2, y + 4.5);
+    pdf.setFont(undefined, "normal"); pdf.text(String(value || ""), M + CW * 0.4 + 2, y + 4.5);
+    y += 6.5;
   };
 
-  const sectionStyle = { marginBottom:16, padding:"12px 16px", background:"#f8f9fa", borderRadius:8, border:"1px solid #e0e0e0" };
-  const labelStyle = { color:"#555", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
-  const valueStyle = { color:"#1a1a2e", fontSize:13, fontWeight:500 };
-  const headerBg = { background:"linear-gradient(135deg, #ff6b35 0%, #d63031 100%)", padding:"20px 24px", color:"#fff" };
+  const checkBox = (val) => val ? "\u2611" : "\u2610";
+  const cb = (v) => (v === "Yes" || v === true || v === "Pass" || v === "Satisfactory" || v === "\u2713") ? "\u2611" : "\u2610";
 
-  const renderField = (label, value) => {
-    if (!value || value === "N/A") return null;
-    return <div style={{ marginBottom:8 }}><div style={labelStyle}>{label}</div><div style={valueStyle}>{value}</div></div>;
+  const tableHeader = (cols, widths) => {
+    checkPage(8);
+    pdf.setFillColor(51, 51, 51); let tx = M;
+    cols.forEach((c, i) => { const w = widths[i]; pdf.rect(tx, y, w, 7, "F"); pdf.setFontSize(6.5); pdf.setTextColor(255); pdf.setFont(undefined, "bold"); pdf.text(c, tx + 1.5, y + 4.8); tx += w; });
+    pdf.setTextColor(0); pdf.setFont(undefined, "normal"); y += 7;
   };
 
-  const renderPassFail = (label, value) => {
-    const colors = { Pass:"#22c55e", Fail:"#ef4444", Advisory:"#f59e0b", Satisfactory:"#22c55e", Unsatisfactory:"#ef4444", "N/A":"#888" };
-    return <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 0", borderBottom:"1px solid #eee" }}>
-      <span style={{ fontSize:12, color:"#333" }}>{label}</span>
-      <span style={{ fontSize:11, fontWeight:700, color: colors[value] || "#333", padding:"2px 10px", borderRadius:4, background: value === "Pass" || value === "Satisfactory" ? "#e8f8ef" : value === "Fail" || value === "Unsatisfactory" ? "#fde8e8" : value === "Advisory" ? "#fff8e8" : "#f0f0f0" }}>{value || "—"}</span>
-    </div>;
+  const tableRow = (cells, widths, shaded) => {
+    checkPage(7);
+    if (shaded) { pdf.setFillColor(245, 245, 245); pdf.rect(M, y, CW, 6, "F"); }
+    pdf.setDrawColor(200); let tx = M;
+    cells.forEach((c, i) => { const w = widths[i]; pdf.rect(tx, y, w, 6); pdf.setFontSize(6.5); pdf.text(String(c || "").substring(0, Math.floor(w / 1.8)), tx + 1, y + 4); tx += w; });
+    y += 6;
   };
 
+  const wrapText = (text, maxW, fontSize) => {
+    pdf.setFontSize(fontSize || 7.5);
+    const lines = pdf.splitTextToSize(String(text || ""), maxW);
+    return lines;
+  };
+
+  const textBlock = (text) => {
+    const lines = wrapText(text, CW - 4, 7.5);
+    const h = lines.length * 3.5 + 3;
+    checkPage(h);
+    pdf.setDrawColor(200); pdf.rect(M, y, CW, h);
+    pdf.setFontSize(7.5);
+    lines.forEach((ln, i) => { pdf.text(ln, M + 2, y + 3.5 + i * 3.5); });
+    y += h;
+  };
+
+  // ── Title Block ──
+  const titleMap = {
+    fra: "FIRE RISK ASSESSMENT\nPAS 79-1:2020 / Regulatory Reform (Fire Safety) Order 2005",
+    extinguisher: "FIRE EXTINGUISHER SERVICE CERTIFICATE\nBS 5306-3:2017",
+    emergencyLighting: "EMERGENCY LIGHTING CERTIFICATE\nBS 5266-1:2016 / BS EN 50172:2004 / BS EN 1838:2013",
+    fireAlarm: "FIRE ALARM CERTIFICATE\nBS 5839-1:2017 / BS 5839-6:2019",
+    fireDoor: "FIRE DOOR INSPECTION CERTIFICATE\nBS 8214:2016 / Regulatory Reform (Fire Safety) Order 2005",
+  };
+
+  pdf.setFillColor(74, 124, 255); pdf.rect(0, 0, W, 28, "F");
+  pdf.setFontSize(14); pdf.setTextColor(255); pdf.setFont(undefined, "bold");
+  const tLines = (titleMap[type] || "FIRE SAFETY CERTIFICATE").split("\n");
+  pdf.text(tLines[0], W / 2, 12, { align: "center" });
+  if (tLines[1]) { pdf.setFontSize(8); pdf.setFont(undefined, "normal"); pdf.text(tLines[1], W / 2, 18, { align: "center" }); }
+  pdf.setFontSize(7); pdf.text(`Cert: ${certRef}  |  Date: ${data.date || ""}`, W / 2, 24, { align: "center" });
+  pdf.setTextColor(0); pdf.setFont(undefined, "normal");
+  y = 32;
+
+  // ── Company & Inspector ──
+  sectionHeader("ASSESSOR / ENGINEER DETAILS");
+  fieldRow("Name", data.engineerName, true);
+  fieldRow("Company", data.companyName, false);
+  fieldRow("Qualification / Reg No", data.bafeNumber || data.qualificationNo || "", true);
+  if (data.companyBafeReg) fieldRow("Company BAFE Reg", data.companyBafeReg, false);
+
+  sectionHeader("CLIENT & SITE DETAILS");
+  fieldRow("Client Name", data.clientName, true);
+  fieldRow("Client Email", data.clientEmail, false);
+  fieldRow("Client Tel", data.clientTel, true);
+  fieldRow("Site Name", data.siteName, false);
+  fieldRow("Site Address", [data.siteAddr1, data.siteAddr2, data.sitePostcode].filter(Boolean).join(", "), true);
+
+  // ── Type-specific content ──
+  if (type === "fra") {
+    sectionHeader("SECTION 1: THE PREMISES (Clause 12)");
+    fieldRow("Responsible Person", data.responsiblePerson, true);
+    fieldRow("Persons Consulted", data.personsConsulted, false);
+    fieldRow("Date of Previous Assessment", data.prevAssessmentDate, true);
+    fieldRow("Suggested Date for Review", data.nextReviewDate, false);
+    fieldRow("Number of Floors", data.floors, true);
+    fieldRow("Approximate Floor Area (m\u00B2)", data.floorArea, false);
+    fieldRow("Primary Use", data.primaryUse, true);
+    fieldRow("Construction Type", data.constructionType, false);
+    fieldRow("Year Built / Building Age", data.buildingAge, true);
+    fieldRow("Brief Description", data.premisesDescription, false);
+
+    sectionHeader("SECTION 2: THE OCCUPANTS");
+    fieldRow("Maximum Number of Occupants", data.maxOccupancy, true);
+    fieldRow("Sleeping Occupants", cb(data.sleepingOccupants), false);
+    fieldRow("Disabled Persons", cb(data.disabledPersons), true);
+    fieldRow("Persons in Remote Areas", cb(data.remoteAreaPersons), false);
+    fieldRow("Lone Workers", cb(data.loneWorkers), true);
+    fieldRow("Young Persons", cb(data.youngPersons), false);
+    fieldRow("Details of At-Risk Occupants", data.atRiskDetails, true);
+
+    sectionHeader("SECTION 3: FIRE LOSS EXPERIENCE");
+    textBlock(data.fireLossExperience || "No significant fire loss experience reported.");
+
+    // Sections 4-12: Fire Hazards
+    const hazardSections = [
+      { num: 4, title: "ELECTRICAL SOURCES OF IGNITION", key: "electrical" },
+      { num: 5, title: "SMOKING", key: "smoking" },
+      { num: 6, title: "ARSON", key: "arson" },
+      { num: 7, title: "PORTABLE HEATERS", key: "heaters" },
+      { num: 8, title: "COOKING", key: "cooking" },
+      { num: 9, title: "HOUSEKEEPING", key: "housekeeping" },
+      { num: 10, title: "HAZARDOUS MATERIALS / PROCESSES", key: "hazmat" },
+    ];
+    sectionHeader("SECTIONS 4-12: FIRE HAZARDS (Clause 13, Annex B)");
+    const hzItems = data.hazardItems || [];
+    if (hzItems.length > 0) {
+      const hw = [CW * 0.06, CW * 0.35, CW * 0.12, CW * 0.12, CW * 0.35];
+      tableHeader(["Sec", "Assessment Item", "Yes/No/NA", "Action?", "Comments"], hw);
+      hzItems.forEach((item, idx) => tableRow([item.section || "", item.question || "", item.answer || "", item.requiresAction || "", item.comments || ""], hw, idx % 2 === 0));
+    } else {
+      hazardSections.forEach((sec) => {
+        subHeader(`Section ${sec.num}: ${sec.title}`);
+        const k = sec.key;
+        fieldRow("Assessment", data[`hazard_${k}_assessment`] || "N/A", true);
+        fieldRow("Requires Action", data[`hazard_${k}_action`] || "No", false);
+        fieldRow("Comments", data[`hazard_${k}_comments`] || "", true);
+      });
+    }
+
+    // Sections 13-21: Fire Protection Measures
+    sectionHeader("SECTIONS 13-21: FIRE PROTECTION MEASURES (Clause 15)");
+    const protItems = data.protectionItems || [];
+    if (protItems.length > 0) {
+      const pw = [CW * 0.06, CW * 0.35, CW * 0.12, CW * 0.12, CW * 0.35];
+      tableHeader(["Sec", "Assessment Item", "Yes/No/NA", "Action?", "Comments"], pw);
+      protItems.forEach((item, idx) => tableRow([item.section || "", item.question || "", item.answer || "", item.requiresAction || "", item.comments || ""], pw, idx % 2 === 0));
+    } else {
+      const protSections = [
+        { num: 13, title: "MEANS OF ESCAPE", key: "escape" },
+        { num: 14, title: "ESCAPE ROUTE PROTECTION / FIRE SEPARATION", key: "separation" },
+        { num: 15, title: "FIRE DOORS", key: "fireDoors" },
+        { num: 16, title: "EMERGENCY ESCAPE LIGHTING", key: "emergLighting" },
+        { num: 17, title: "FIRE DETECTION AND FIRE ALARM", key: "fireAlarm" },
+        { num: 18, title: "SIGNS AND NOTICES", key: "signage" },
+        { num: 19, title: "FIRE-FIGHTING EQUIPMENT", key: "equipment" },
+        { num: 20, title: "MEASURES TO LIMIT FIRE SPREAD", key: "fireSpread" },
+      ];
+      protSections.forEach((sec) => {
+        subHeader(`Section ${sec.num}: ${sec.title}`);
+        fieldRow("Assessment", data[`prot_${sec.key}_assessment`] || "N/A", true);
+        fieldRow("Requires Action", data[`prot_${sec.key}_action`] || "No", false);
+        fieldRow("Comments", data[`prot_${sec.key}_comments`] || "", true);
+      });
+    }
+
+    // Sections 22-28: Management
+    sectionHeader("SECTIONS 22-28: MANAGEMENT OF FIRE SAFETY");
+    const mgmtItems = data.managementItems || [];
+    if (mgmtItems.length > 0) {
+      const mw = [CW * 0.06, CW * 0.4, CW * 0.12, CW * 0.42];
+      tableHeader(["Sec", "Item", "Status", "Comments"], mw);
+      mgmtItems.forEach((item, idx) => tableRow([item.section || "", item.question || "", item.answer || "", item.comments || ""], mw, idx % 2 === 0));
+    } else {
+      fieldRow("Fire Safety Management", data.fireSafetyManagement || "N/A", true);
+      fieldRow("Procedures & Arrangements", data.procedures || "N/A", false);
+      fieldRow("Training", data.training || "N/A", true);
+      fieldRow("Testing & Maintenance", data.testingMaint || "N/A", false);
+      fieldRow("Records", data.records || "N/A", true);
+    }
+
+    // Risk Assessment Matrix
+    sectionHeader("RISK ASSESSMENT");
+    subHeader("Likelihood \u00D7 Consequence = Risk Level");
+    fieldRow("Likelihood of Fire", data.likelihood, true);
+    fieldRow("Likely Consequence", data.consequence, false);
+    fieldRow("Overall Risk Level", data.overallRisk, true);
+    if (data.riskJustification) { checkPage(12); pdf.setFontSize(7); pdf.setFont(undefined, "italic"); pdf.text("Justification:", M + 2, y + 3); pdf.setFont(undefined, "normal"); y += 4; textBlock(data.riskJustification); }
+
+    // Action Plan
+    sectionHeader("ACTION PLAN");
+    const actions = data.actionPlanItems || [];
+    if (actions.length > 0) {
+      const aw = [CW * 0.05, CW * 0.4, CW * 0.15, CW * 0.15, CW * 0.25];
+      tableHeader(["No", "Action Required", "Priority", "Target Date", "Responsibility"], aw);
+      actions.forEach((a, idx) => tableRow([String(idx + 1), a.action || "", a.priority || "", a.targetDate || "", a.responsibility || ""], aw, idx % 2 === 0));
+    } else {
+      fieldRow("Significant Findings", data.significantFindings, true);
+      fieldRow("Action Plan", data.actionPlan, false);
+      fieldRow("Priority", data.actionPriority, true);
+    }
+
+    sectionHeader("CONCLUSIONS");
+    fieldRow("Overall Fire Risk Level", data.overallFireRisk, true);
+    fieldRow("Critical Actions", data.criticalActions, false);
+    fieldRow("Next Review Date", data.nextReviewDate, true);
+    if (data.notes) { subHeader("Additional Notes"); textBlock(data.notes); }
+  }
+
+  if (type === "extinguisher") {
+    sectionHeader("SERVICE DETAILS");
+    fieldRow("Type of Service", data.serviceType, true);
+    fieldRow("Date of Service", data.date, false);
+    fieldRow("Next Service Due", data.nextServiceDate, true);
+    fieldRow("Overall Adequacy of Provision", data.overallAdequacy || "Adequate", false);
+    fieldRow("Condemned / Replaced Units", data.condemnedUnits || "None", true);
+
+    sectionHeader("SCHEDULE OF EXTINGUISHERS");
+    const exts = data.extinguishers || [];
+    if (exts.length > 0) {
+      const ew = [CW * 0.12, CW * 0.1, CW * 0.08, CW * 0.1, CW * 0.08, CW * 0.08, CW * 0.08, CW * 0.08, CW * 0.08, CW * 0.1, CW * 0.1];
+      tableHeader(["Location", "Type", "Cap.", "Serial", "Body", "Pin/Seal", "Hose", "Gauge", "Bracket", "Result", "Next Due"], ew);
+      exts.forEach((ex, idx) => tableRow([ex.location, ex.type, ex.capacity, ex.serialNo, cb(ex.body), cb(ex.pinSeal), cb(ex.hose), cb(ex.gauge), cb(ex.bracket), ex.result || "Pass", ex.nextDue || ""], ew, idx % 2 === 0));
+    } else {
+      fieldRow("Asset ID / Serial", data.assetId, true);
+      fieldRow("Type", data.extinguisherType, false);
+      fieldRow("Capacity", data.capacity, true);
+      fieldRow("Location", data.location, false);
+      fieldRow("Manufacturer", data.manufacturer, true);
+      fieldRow("Condition Checks", data.serviceChecks || "See form", false);
+      fieldRow("Result", data.condition || data.result, true);
+    }
+
+    if (data.notes) { sectionHeader("NOTES"); textBlock(data.notes); }
+  }
+
+  if (type === "emergencyLighting") {
+    sectionHeader("PART 2: DETAILS OF INSTALLATION");
+    fieldRow("Description & Extent", data.installDescription, true);
+    fieldRow("System Type", data.systemType, false);
+    fieldRow("Category", data.systemCategory, true);
+    fieldRow("Number of Luminaires", data.numLuminaires, false);
+    fieldRow("Inspection Type", data.inspectionType, true);
+    fieldRow("Departures from Code", data.departures || "None", false);
+
+    sectionHeader("SCHEDULE OF ITEMS INSPECTED AND TESTED");
+    fieldRow("Emergency Lighting System", data.elSystem, true);
+    fieldRow("Duration of System", data.systemDuration, false);
+    const inspItems = [
+      ["Central Power Supply Condition", data.centralSupply],
+      ["Charging Indicators", data.chargingIndicators],
+      ["Battery Condition", data.batteryCondition],
+      ["Change-over Device Operation", data.changeoverDevice],
+      ["Luminaire Condition", data.luminaireCondition],
+      ["Illuminance Levels Adequate", data.illuminanceLevels],
+      ["Exit Signs Illuminated & Visible", data.exitSigns],
+      ["Log Book Maintained", data.logBookMaintained],
+      ["Monthly Function Test Records", data.monthlyTestRecords],
+    ];
+    const iw = [CW * 0.6, CW * 0.4];
+    tableHeader(["Inspection Item", "Result"], iw);
+    inspItems.forEach(([label, val], idx) => tableRow([label, val || "N/A"], iw, idx % 2 === 0));
+
+    fieldRow("Duration Test (Annual) - Date", data.durationTestDate, true);
+    fieldRow("Duration Achieved", data.durationAchieved, false);
+
+    sectionHeader("SCHEDULE OF LUMINAIRES TESTED");
+    const lums = data.luminaires || [];
+    if (lums.length > 0) {
+      const lw = [CW * 0.06, CW * 0.18, CW * 0.2, CW * 0.12, CW * 0.1, CW * 0.08, CW * 0.08, CW * 0.08, CW * 0.1];
+      tableHeader(["Ref", "Description", "Location", "Battery", "Duration", "Date", "Lamp", "Op.", "Comments"], lw);
+      lums.forEach((l, idx) => tableRow([l.ref, l.description, l.location, l.batteryType, l.testDuration, l.date, cb(l.lampOk), cb(l.operational), l.comments || ""], lw, idx % 2 === 0));
+    }
+
+    if (data.eicrReference) fieldRow("EICR Reference", data.eicrReference, true);
+    if (data.notes) { sectionHeader("NOTES"); textBlock(data.notes); }
+  }
+
+  if (type === "fireAlarm") {
+    sectionHeader("SYSTEM DETAILS");
+    fieldRow("Certificate Type", data.certType || "Periodic Inspection", true);
+    fieldRow("System Category", data.systemCategory, false);
+    fieldRow("System Grade", data.systemGrade, true);
+    fieldRow("Description / Areas Protected", data.areasProtected, false);
+    fieldRow("Variations from BS 5839", data.variations || "None", true);
+    fieldRow("Date Commissioned", data.commissionDate, false);
+    fieldRow("Soak Test Period", data.soakTestPeriod, true);
+
+    sectionHeader("CONTROL PANEL & DEVICES");
+    fieldRow("Panel Make", data.panelMake, true);
+    fieldRow("Panel Model", data.panelModel, false);
+    fieldRow("Panel Location", data.panelLocation, true);
+    fieldRow("Number of Zones", data.numZones, false);
+    fieldRow("Detection Devices", data.numDetectors, true);
+    fieldRow("Call Points", data.numCallPoints, false);
+    fieldRow("Sounders", data.numSounders, true);
+    fieldRow("Beacons", data.numBeacons, false);
+
+    sectionHeader("BACKUP POWER");
+    fieldRow("Battery Type", data.batteryType, true);
+    fieldRow("Battery Capacity", data.batteryCapacity, false);
+    fieldRow("Standby Duration", data.standbyDuration, true);
+    fieldRow("Remote Signalling", data.remoteSignalling, false);
+    fieldRow("ARC Details", data.arcDetails, true);
+
+    sectionHeader("TEST RESULTS");
+    const zones = data.zoneTests || [];
+    if (zones.length > 0) {
+      const zw = [CW * 0.12, CW * 0.25, CW * 0.25, CW * 0.38];
+      tableHeader(["Zone", "Device Tested", "Device Type", "Response"], zw);
+      zones.forEach((z, idx) => tableRow([z.zoneNo, z.deviceTested, z.deviceType, z.response], zw, idx % 2 === 0));
+    }
+    fieldRow("Sounder Levels Adequate", data.sounderLevels, true);
+    fieldRow("dB Reading (if measured)", data.dbReading, false);
+    fieldRow("Call Point Test", data.callPointTest, true);
+    fieldRow("Battery Condition / Voltage", data.batteryVoltage, false);
+    fieldRow("Fault Indication Test", data.faultTest, true);
+    fieldRow("Cause & Effect Verified", data.causeEffect, false);
+    fieldRow("False Alarm Causes Noted", data.falseAlarmCauses, true);
+    fieldRow("Follow-up Actions", data.followUpActions, false);
+
+    if (data.notes) { sectionHeader("NOTES"); textBlock(data.notes); }
+  }
+
+  if (type === "fireDoor") {
+    sectionHeader("INSPECTION DETAILS");
+    fieldRow("Inspection Type", data.inspectionType, true);
+    fieldRow("Number of Doors Inspected", (data.doors || []).length || "1", false);
+
+    const doors = data.doors && data.doors.length > 0 ? data.doors : [data];
+    doors.forEach((door, di) => {
+      sectionHeader(`DOOR ${di + 1}: ${door.doorId || "N/A"} — ${door.doorLocation || ""}`);
+      fieldRow("Fire Rating", door.fireRating, true);
+      fieldRow("FD-S Rated", door.fdSRated || "N/A", false);
+
+      subHeader("Certification & Labelling");
+      fieldRow("Certification Label Present", cb(door.certLabel), true);
+      fieldRow("Label Legible & Permanent", cb(door.labelLegible), false);
+      fieldRow("Fire Door Signage Present", cb(door.doorSignage), true);
+
+      subHeader("Door Leaf & Frame");
+      fieldRow("Leaf Free from Damage/Warping/Holes", cb(door.leafCondition), true);
+      fieldRow("Frame Securely Fixed, No Gaps", cb(door.frameCondition), false);
+      fieldRow("No Unauthorised Modifications", cb(door.noModifications), true);
+      fieldRow("Fire-rated Glazing Matches Spec", cb(door.glazingOk), false);
+
+      subHeader("Gaps & Clearances");
+      fieldRow("Head Gap (mm)", door.headGap, true);
+      fieldRow("Latch Side Gap (mm)", door.latchGap, false);
+      fieldRow("Hinge Side Gap (mm)", door.hingeGap, true);
+      fieldRow("Bottom Gap (mm)", door.bottomGap, false);
+      fieldRow("All Within Tolerance", cb(door.gapsWithinTolerance), true);
+
+      subHeader("Intumescent Strips & Smoke Seals");
+      fieldRow("Strips Present & Continuous", cb(door.stripsContinuous), true);
+      fieldRow("Strips Undamaged", cb(door.stripsUndamaged), false);
+      fieldRow("Cold Smoke Seal (where required)", cb(door.smokeSeal), true);
+
+      subHeader("Hardware");
+      fieldRow("Min 3 CE-marked Hinges", cb(door.hingesOk), true);
+      fieldRow("Hinges Secure & Undamaged", cb(door.hingesSecure), false);
+      fieldRow("Closer Fitted & Functional", cb(door.closerOk), true);
+      fieldRow("Latch Engages Correctly", cb(door.latchOk), false);
+      fieldRow("Lock/Furniture Compliant", cb(door.lockOk), true);
+      fieldRow("Hold-open Device Linked to Alarm", cb(door.holdOpen), false);
+
+      subHeader("Fire Stopping");
+      fieldRow("Frame-to-wall Fire Stopped", cb(door.frameFireStop), true);
+      fieldRow("Surrounding Construction Intact", cb(door.constructionIntact), false);
+      fieldRow("Service Penetrations Fire-stopped", cb(door.servicePenetrations), true);
+
+      subHeader("Overall Assessment");
+      fieldRow("Door Closes Fully Unassisted", cb(door.closesUnassisted), true);
+      fieldRow("Operates Smoothly", cb(door.operatesSmoothly), false);
+      fieldRow("Fit for Purpose", cb(door.fitForPurpose), true);
+      if (door.defectsSummary) fieldRow("Defects Summary", door.defectsSummary, false);
+      if (door.remedialActions) fieldRow("Remedial Actions", door.remedialActions, true);
+    });
+  }
+
+  // ── Declaration ──
+  sectionHeader("DECLARATION");
+  checkPage(25);
+  pdf.setFontSize(7); pdf.text("I confirm that this certificate has been completed honestly and accurately to the best of my knowledge.", M + 2, y + 3);
+  y += 6;
+  fieldRow("Name", data.engineerName, true);
+  fieldRow("Company", data.companyName, false);
+  fieldRow("Position", data.position || "Fire Safety Engineer", true);
+  fieldRow("Date", data.date, false);
+  if (data.signatureData) {
+    checkPage(22);
+    fieldRow("Signature", "", true);
+    try { pdf.addImage(data.signatureData, "PNG", M + CW * 0.4 + 2, y - 5, 40, 15); } catch (e) { /* ignore */ }
+    y += 12;
+  }
+
+  // ── Result banner ──
+  checkPage(14);
+  const result = data.result || data.overallCondition || "Satisfactory";
+  const isPass = result === "Satisfactory" || result === "Pass";
+  pdf.setFillColor(isPass ? 34 : 239, isPass ? 197 : 68, isPass ? 94 : 68);
+  pdf.rect(M, y, CW, 10, "F");
+  pdf.setFontSize(12); pdf.setTextColor(255); pdf.setFont(undefined, "bold");
+  pdf.text(`RESULT: ${result.toUpperCase()}`, W / 2, y + 7, { align: "center" });
+  pdf.setTextColor(0); pdf.setFont(undefined, "normal");
+  y += 12;
+
+  addFooter();
+  const fn = (data.siteName || data.clientName || type).replace(/[^a-zA-Z0-9 ]/g, "").trim().replace(/\s+/g, "_") + "_" + type + ".pdf";
+  pdf.save(fn);
+}
+
+// ─── Shared Fire Safety Form Shell ──────────────────────────────────────────
+function FireFormShell({ title, step, totalSteps, stepLabels, onBack, onPrev, onNext, onSave, onPDF, children }) {
+  const pct = Math.round(((step + 1) / totalSteps) * 100);
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
   return (
-    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", fontFamily:"'Segoe UI',sans-serif" }}>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
       <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
-        <button onClick={onClose} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2" }}>PDF Preview</h2>
-        <div style={{ flex:1 }}/>
-        <button onClick={downloadPDF} disabled={downloading} style={{ background:"#ff6b35", color:"#fff", border:"none", borderRadius:10, padding:"8px 18px", fontWeight:700, fontSize:13, cursor:"pointer", opacity: downloading ? 0.6 : 1 }}>
-          {downloading ? "Generating..." : "Download PDF"}
-        </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", flex:1 }}>{title}</h2>
       </div>
-      <div style={{ padding:"12px", overflowY:"auto" }}>
-        <div ref={certRef} style={{ background:"#fff", borderRadius:12, overflow:"hidden", maxWidth:800, margin:"0 auto" }}>
-          <div style={headerBg}>
-            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
-              <img src={APP_LOGO_SVG} style={{ height:48, objectFit:"contain" }} alt="Logo"/>
-              <div>
-                <div style={{ fontSize:20, fontWeight:800 }}>{certTitle}</div>
-                <div style={{ fontSize:12, opacity:0.85 }}>Fire Safety Certificate</div>
-              </div>
-            </div>
-            {certData.engineerName && <div style={{ fontSize:12, opacity:0.9 }}>{certData.engineerName}{certData.companyName ? ` · ${certData.companyName}` : ""}</div>}
-            {certData.bafeNumber && <div style={{ fontSize:11, opacity:0.8 }}>BAFE Reg: {certData.bafeNumber}</div>}
-          </div>
-          <div style={{ padding:"20px 24px" }}>
-            {renderField("Certificate Reference", certData.certRef)}
-            {renderField("Date", certData.date)}
-            {renderField("Client / Site Name", certData.siteName || certData.clientName)}
-            {renderField("Site Address", [certData.siteAddr1, certData.siteAddr2, certData.sitePostcode].filter(Boolean).join(", "))}
-            {renderField("Client Name", certData.clientName)}
-            {renderField("Client Email", certData.clientEmail)}
-            {renderField("Client Tel", certData.clientTel)}
-
-            {certType === "fra" && <>
-              <div style={{ ...sectionStyle, background:"#fff5f0", borderColor:"#ff6b35" }}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#d63031", marginBottom:10 }}>Premises Description</div>
-                {renderField("Building Age", certData.buildingAge)}
-                {renderField("Construction Type", certData.constructionType)}
-                {renderField("Number of Floors", certData.floors)}
-                {renderField("Floor Area (m²)", certData.floorArea)}
-                {renderField("Primary Use", certData.primaryUse)}
-              </div>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Fire Hazards</div>
-                {renderField("Sources of Ignition", certData.ignitionSources)}
-                {renderField("Fuel Sources", certData.fuelSources)}
-                {renderField("Oxygen Sources", certData.oxygenSources)}
-                {renderField("Existing Controls", certData.existingControls)}
-              </div>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Fire Protection Measures</div>
-                {renderPassFail("Compartmentation", certData.compartmentation)}
-                {renderPassFail("Fire Doors", certData.fireDoors)}
-                {renderPassFail("Fire Stopping", certData.fireStopping)}
-                {renderField("Alarm Category", certData.alarmCategory)}
-                {renderPassFail("Emergency Lighting", certData.emergencyLighting)}
-                {renderPassFail("Extinguishers", certData.extinguishers)}
-                {renderPassFail("Sprinklers", certData.sprinklers)}
-              </div>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Management</div>
-                {renderField("Responsible Person", certData.responsiblePerson)}
-                {renderPassFail("Fire Safety Policy", certData.fireSafetyPolicy)}
-                {renderPassFail("Drill Records", certData.drillRecords)}
-                {renderPassFail("Maintenance Records", certData.maintenanceRecords)}
-              </div>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Occupancy</div>
-                {renderField("Occupant Types", certData.occupantTypes)}
-                {renderField("Max Occupancy", certData.maxOccupancy)}
-                {renderField("Vulnerable Occupants", certData.vulnerableOccupants)}
-              </div>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Risk Evaluation</div>
-                {renderField("Likelihood", certData.likelihood)}
-                {renderField("Consequence", certData.consequence)}
-                {renderField("Overall Risk Rating", certData.overallRisk)}
-                {renderField("Justification", certData.riskJustification)}
-              </div>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Significant Findings & Action Plan</div>
-                {renderField("Findings", certData.significantFindings)}
-                {renderField("Action Plan", certData.actionPlan)}
-                {renderField("Priority", certData.actionPriority)}
-              </div>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Conclusions</div>
-                {renderField("Overall Fire Risk Level", certData.overallFireRisk)}
-                {renderField("Critical Actions", certData.criticalActions)}
-                {renderField("Next Review Date", certData.nextReviewDate)}
-              </div>
-            </>}
-
-            {certType === "extinguisher" && <>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Extinguisher Details</div>
-                {renderField("Asset ID / Serial Number", certData.assetId)}
-                {renderField("Extinguisher Type", certData.extinguisherType)}
-                {renderField("Manufacturer", certData.manufacturer)}
-                {renderField("Model", certData.model)}
-                {renderField("Capacity", certData.capacity)}
-                {renderField("Location", certData.location)}
-              </div>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Service Details</div>
-                {renderField("Service Type", certData.serviceType)}
-                {renderField("Work Carried Out", certData.workCarriedOut)}
-                {renderPassFail("Condition", certData.condition)}
-                {renderField("Service Label Attached", certData.serviceLabelAttached)}
-                {renderField("Next Service Due", certData.nextServiceDate)}
-              </div>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Technician</div>
-                {renderField("BAFE SP101 ID", certData.bafeNumber)}
-                {renderField("Company BAFE SP101 Reg", certData.companyBafeReg)}
-              </div>
-            </>}
-
-            {certType === "emergencyLighting" && <>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Test Details</div>
-                {renderField("Test Type", certData.testType)}
-                {renderField("Duration Achieved", certData.durationAchieved)}
-                {renderPassFail("All Luminaires OK", certData.allLuminairesOk)}
-                {renderField("Faults Noted", certData.faultsNoted)}
-                {renderField("Repairs Carried Out", certData.repairs)}
-                {renderField("Lux Level Readings", certData.luxReadings)}
-                {renderPassFail("BS 5266 Compliance", certData.bs5266Compliance)}
-                {renderField("Next Test Date", certData.nextTestDate)}
-              </div>
-            </>}
-
-            {certType === "fireAlarm" && <>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>System Details</div>
-                {renderField("System Type", certData.systemType)}
-                {renderField("Panel Manufacturer", certData.panelManufacturer)}
-                {renderField("Service Scope", certData.serviceScope)}
-              </div>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Test Results</div>
-                {renderField("Devices Tested", certData.devicesTested)}
-                {renderPassFail("Test Results", certData.testResults)}
-                {renderPassFail("Battery Condition", certData.batteryCondition)}
-                {renderField("Major Findings", certData.majorFindings)}
-                {renderField("Recommendations", certData.recommendations)}
-                {renderField("BAFE SP203-1 Number", certData.bafeNumber)}
-                {renderField("Next Service Date", certData.nextServiceDate)}
-              </div>
-            </>}
-
-            {certType === "fireDoor" && <>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Door Details</div>
-                {renderField("Door Unique ID", certData.doorId)}
-                {renderField("Door Location", certData.doorLocation)}
-                {renderField("Door Type", certData.doorType)}
-                {renderField("Fire Rating", certData.fireRating)}
-                {renderField("Quarterly Inspection (11m+ building)", certData.quarterlyInspection)}
-              </div>
-              <div style={sectionStyle}>
-                <div style={{ fontWeight:700, fontSize:14, color:"#1a1a2e", marginBottom:10 }}>Inspection Checklist</div>
-                {renderPassFail("Door Leaf Condition", certData.doorLeaf)}
-                {renderPassFail("Frame / Architrave", certData.frameCondition)}
-                {renderPassFail("Seals (Smoke/Intumescent)", certData.seals)}
-                {renderPassFail("Hinges", certData.hinges)}
-                {renderPassFail("Latch / Lock", certData.latchLock)}
-                {renderPassFail("Door Closer", certData.doorCloser)}
-                {renderPassFail("Signage", certData.signage)}
-                {renderPassFail("Vision Panel", certData.visionPanel)}
-                {renderPassFail("Threshold Gap", certData.thresholdGap)}
-                {renderPassFail("Side / Head Gaps", certData.sideHeadGaps)}
-              </div>
-              <div style={sectionStyle}>
-                {renderPassFail("Overall Condition", certData.overallCondition)}
-                {renderField("Next Inspection Due", certData.nextInspectionDate)}
-              </div>
-            </>}
-
-            {renderField("Notes / Observations", certData.notes)}
-            {renderField("Overall Result", certData.result)}
-
-            {certData.signatureData && <div style={{ marginTop:16, borderTop:"1px solid #e0e0e0", paddingTop:12 }}>
-              <div style={labelStyle}>Signature</div>
-              <img src={certData.signatureData} style={{ maxWidth:260, height:80, objectFit:"contain" }} alt="Signature"/>
-            </div>}
-
-            <div style={{ marginTop:20, paddingTop:12, borderTop:"2px solid #ff6b35", display:"flex", justifyContent:"space-between", fontSize:10, color:"#888" }}>
-              <span>Ref: {certData.certRef || "—"}</span>
-              <span>Generated: {new Date().toLocaleDateString()}</span>
-            </div>
-          </div>
+      {/* Step indicator */}
+      <div style={{ padding:"0 16px 8px" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+          <span style={{ color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600 }}>Step {step + 1} of {totalSteps}: {stepLabels[step] || ""}</span>
+          <span style={{ color:"#ff6b35", fontSize:11, fontWeight:700 }}>{pct}%</span>
+        </div>
+        <div style={{ height:4, background:"rgba(255,255,255,0.1)", borderRadius:2, overflow:"hidden" }}>
+          <div style={{ height:"100%", width:`${pct}%`, background:"linear-gradient(90deg, #ff6b35, #ff8c5a)", borderRadius:2, transition:"width 0.3s ease" }}/>
         </div>
       </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 120px" }}>
+        {children}
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 60%, transparent 100%)", display:"flex", gap:8 }}>
+        {step > 0 && <button onClick={onPrev} style={{ padding:"12px 18px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Back</button>}
+        {step < totalSteps - 1 && <button onClick={onNext} style={{ flex:1, padding:"12px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Next</button>}
+        {step === totalSteps - 1 && <>
+          <button onClick={onSave} style={{ flex:1, padding:"12px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save Certificate</button>
+          <button onClick={onPDF} style={{ flex:1, padding:"12px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+        </>}
+      </div>
     </div>
+  );
+}
+
+// ─── Shared form styles ─────────────────────────────────────────────────────
+const FS_INPUT = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
+const FS_SELECT = { ...FS_INPUT, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+const FS_SECTION = { color:"#ff6b35", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(255,107,53,0.3)", paddingBottom:6 };
+const FS_LABEL = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
+
+function FSField({ label, children }) {
+  return <div style={{ marginBottom:10 }}><div style={FS_LABEL}>{label}</div>{children}</div>;
+}
+function FSInput({ label, value, onChange, type, placeholder }) {
+  return <FSField label={label}><input type={type || "text"} style={FS_INPUT} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}/></FSField>;
+}
+function FSSelect({ label, value, onChange, options }) {
+  return <FSField label={label}><select style={FS_SELECT} value={value} onChange={e => onChange(e.target.value)}><option value="">Select...</option>{options.map(o => <option key={o} value={o}>{o}</option>)}</select></FSField>;
+}
+function FSTextarea({ label, value, onChange, placeholder }) {
+  return <FSField label={label}><textarea style={{ ...FS_INPUT, minHeight:60 }} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}/></FSField>;
+}
+function FSToggle({ label, value, onChange, options }) {
+  const opts = options || ["Pass", "Fail", "N/A"];
+  const colors = { Pass:"#22c55e", Fail:"#ef4444", Advisory:"#f59e0b", Yes:"#22c55e", No:"#ef4444", "N/A":"#555", Satisfactory:"#22c55e", Unsatisfactory:"#ef4444" };
+  return (
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+      <span style={{ color:"rgba(255,255,255,0.8)", fontSize:13, flex:1 }}>{label}</span>
+      <div style={{ display:"flex", gap:4 }}>
+        {opts.map(v => (
+          <button key={v} onClick={() => onChange(v)} style={{
+            padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", border:"none",
+            background: value === v ? (colors[v] || "#555") : "rgba(255,255,255,0.08)",
+            color: value === v ? "#fff" : "rgba(255,255,255,0.5)",
+          }}>{v}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FSSignature({ sigRef, sigData, onUpdate }) {
+  const [isDrawing, setIsDrawing] = useState(false);
+  const initSig = (canvas) => { if (!canvas) return; sigRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
+  const startDraw = (e) => { setIsDrawing(true); const c = sigRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
+  const draw = (e) => { if (!isDrawing) return; const c = sigRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
+  const endDraw = () => { setIsDrawing(false); if (sigRef.current) onUpdate(sigRef.current.toDataURL()); };
+  const clearSig = () => { if (sigRef.current) { const ctx = sigRef.current.getContext("2d"); ctx.clearRect(0, 0, sigRef.current.width, sigRef.current.height); } onUpdate(null); };
+  return (
+    <>
+      <div style={FS_SECTION}>Signature</div>
+      <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
+        <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
+          onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
+          onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
+        <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+      </div>
+    </>
   );
 }
 
 // ─── Fire Safety Certificate Forms ──────────────────────────────────────────
 
 function FireRiskAssessmentForm({ onBack, onSave, currentUser }) {
+  const [step, setStep] = useState(0);
+  const sigCanvasRef = useRef(null);
   const [certData, setCertData] = useState({
     certRef: "FRA-" + Date.now().toString(36).toUpperCase(),
     date: new Date().toISOString().split("T")[0],
     siteName: "", siteAddr1: "", siteAddr2: "", sitePostcode: "",
     clientName: "", clientEmail: "", clientTel: "",
-    buildingAge: "", constructionType: "", floors: "", floorArea: "", primaryUse: "",
-    ignitionSources: "", fuelSources: "", oxygenSources: "", existingControls: "",
-    compartmentation: "N/A", fireDoors: "N/A", fireStopping: "N/A",
-    alarmCategory: "", emergencyLighting: "N/A", extinguishers: "N/A", sprinklers: "N/A",
-    responsiblePerson: "", fireSafetyPolicy: "N/A", drillRecords: "N/A", maintenanceRecords: "N/A",
-    occupantTypes: "", maxOccupancy: "", vulnerableOccupants: "",
+    responsiblePerson: "", personsConsulted: "", prevAssessmentDate: "", nextReviewDate: "",
+    floors: "", floorArea: "", primaryUse: "", constructionType: "", buildingAge: "", premisesDescription: "",
+    maxOccupancy: "", sleepingOccupants: "No", disabledPersons: "No", remoteAreaPersons: "No", loneWorkers: "No", youngPersons: "No", atRiskDetails: "",
+    fireLossExperience: "",
+    hazardItems: [
+      { section: "4", question: "Electrical sources of ignition adequately controlled?", answer: "Yes", requiresAction: "No", comments: "" },
+      { section: "5", question: "Smoking materials adequately controlled?", answer: "Yes", requiresAction: "No", comments: "" },
+      { section: "6", question: "Arson risk adequately addressed?", answer: "Yes", requiresAction: "No", comments: "" },
+      { section: "7", question: "Portable heaters safely positioned & maintained?", answer: "N/A", requiresAction: "No", comments: "" },
+      { section: "8", question: "Cooking facilities adequately controlled?", answer: "Yes", requiresAction: "No", comments: "" },
+      { section: "9", question: "Housekeeping satisfactory — combustibles stored safely?", answer: "Yes", requiresAction: "No", comments: "" },
+      { section: "10", question: "Hazardous materials/processes adequately controlled?", answer: "N/A", requiresAction: "No", comments: "" },
+      { section: "11", question: "Other ignition sources identified and managed?", answer: "Yes", requiresAction: "No", comments: "" },
+      { section: "12", question: "Fuel sources adequately separated from ignition sources?", answer: "Yes", requiresAction: "No", comments: "" },
+    ],
+    protectionItems: [
+      { section: "13", question: "Means of escape adequate for occupants?", answer: "Yes", requiresAction: "No", comments: "" },
+      { section: "14", question: "Escape routes adequately protected/fire separation?", answer: "Yes", requiresAction: "No", comments: "" },
+      { section: "15", question: "Fire doors adequate and in good condition?", answer: "Yes", requiresAction: "No", comments: "" },
+      { section: "16", question: "Emergency escape lighting adequate?", answer: "Yes", requiresAction: "No", comments: "" },
+      { section: "17", question: "Fire detection and alarm system adequate?", answer: "Yes", requiresAction: "No", comments: "" },
+      { section: "18", question: "Signs and notices adequate and correct?", answer: "Yes", requiresAction: "No", comments: "" },
+      { section: "19", question: "Fire-fighting equipment adequate & maintained?", answer: "Yes", requiresAction: "No", comments: "" },
+      { section: "20", question: "Measures to limit fire spread satisfactory?", answer: "Yes", requiresAction: "No", comments: "" },
+      { section: "21", question: "Other fire protection measures adequate?", answer: "Yes", requiresAction: "No", comments: "" },
+    ],
+    managementItems: [
+      { section: "22", question: "Fire safety management satisfactory?", answer: "Yes", comments: "" },
+      { section: "23", question: "Procedures and arrangements documented?", answer: "Yes", comments: "" },
+      { section: "24", question: "Staff fire safety training adequate?", answer: "Yes", comments: "" },
+      { section: "25", question: "Testing and maintenance records up to date?", answer: "Yes", comments: "" },
+      { section: "26", question: "Fire safety records maintained?", answer: "Yes", comments: "" },
+      { section: "27", question: "Fire drills conducted at appropriate intervals?", answer: "Yes", comments: "" },
+      { section: "28", question: "Cooperation and coordination adequate (shared buildings)?", answer: "N/A", comments: "" },
+    ],
     likelihood: "", consequence: "", overallRisk: "", riskJustification: "",
-    significantFindings: "", actionPlan: "", actionPriority: "",
-    overallFireRisk: "", criticalActions: "", nextReviewDate: "",
+    actionPlanItems: [{ action: "", priority: "Routine", targetDate: "", responsibility: "" }],
+    significantFindings: "", overallFireRisk: "", criticalActions: "",
     notes: "", result: "Satisfactory",
-    engineerName: "", companyName: "", bafeNumber: "",
-    signatureData: null,
+    engineerName: "", companyName: "", bafeNumber: "", signatureData: null,
   });
-  const [showPDF, setShowPDF] = useState(false);
-  const sigCanvasRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState(false);
 
   useEffect(() => {
     try {
@@ -23078,160 +25296,204 @@ function FireRiskAssessmentForm({ onBack, onSave, currentUser }) {
   }, [currentUser]);
 
   const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
-
-  const initSig = (canvas) => {
-    if (!canvas) return; sigCanvasRef.current = canvas;
-    const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round";
-  };
-  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
-  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
-  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
-  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+  const updateHazard = (idx, field, val) => setCertData(prev => { const items = [...prev.hazardItems]; items[idx] = { ...items[idx], [field]: val }; return { ...prev, hazardItems: items }; });
+  const updateProt = (idx, field, val) => setCertData(prev => { const items = [...prev.protectionItems]; items[idx] = { ...items[idx], [field]: val }; return { ...prev, protectionItems: items }; });
+  const updateMgmt = (idx, field, val) => setCertData(prev => { const items = [...prev.managementItems]; items[idx] = { ...items[idx], [field]: val }; return { ...prev, managementItems: items }; });
+  const updateAction = (idx, field, val) => setCertData(prev => { const items = [...prev.actionPlanItems]; items[idx] = { ...items[idx], [field]: val }; return { ...prev, actionPlanItems: items }; });
+  const addAction = () => setCertData(prev => ({ ...prev, actionPlanItems: [...prev.actionPlanItems, { action: "", priority: "Routine", targetDate: "", responsibility: "" }] }));
+  const removeAction = (idx) => setCertData(prev => ({ ...prev, actionPlanItems: prev.actionPlanItems.filter((_, i) => i !== idx) }));
 
   const handleSave = () => {
-    const record = { ...certData, trade:"fire", type:"fra", savedAt: new Date().toISOString() };
+    const record = { ...certData, trade: "fire", type: "fra", savedAt: new Date().toISOString() };
     if (onSave) onSave(record);
     alert("Fire Risk Assessment saved!");
     onBack();
   };
+  const handlePDF = () => generateFireSafetyPDF("fra", certData);
 
-  if (showPDF) return <FireSafetyPDFPreview certData={certData} certType="fra" certTitle="Fire Risk Assessment — PAS 79-1:2020" onClose={() => setShowPDF(false)} />;
+  const stepLabels = ["General Info", "Premises", "Occupants", "Fire Loss", "Fire Hazards", "Fire Protection", "Management", "Risk Assessment", "Action Plan", "Sign-off"];
+  const totalSteps = stepLabels.length;
 
-  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
-  const sectionTitleStyle = { color:"#ff6b35", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(255,107,53,0.3)", paddingBottom:6 };
-  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
-  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
-  const toggleRow = (label, field) => (
-    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
-      <span style={{ color:"rgba(255,255,255,0.8)", fontSize:13 }}>{label}</span>
-      <div style={{ display:"flex", gap:4 }}>
-        {["Pass","Fail","Advisory","N/A"].map(v => (
-          <button key={v} onClick={() => update(field, v)} style={{
-            padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", border:"none",
-            background: certData[field] === v ? (v==="Pass"?"#22c55e":v==="Fail"?"#ef4444":v==="Advisory"?"#f59e0b":"#555") : "rgba(255,255,255,0.08)",
-            color: certData[field] === v ? "#fff" : "rgba(255,255,255,0.5)",
-          }}>{v}</button>
-        ))}
+  const checklistItem = (item, idx, updateFn) => (
+    <div key={idx} style={{ padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+      <div style={{ color:"rgba(255,255,255,0.8)", fontSize:12, marginBottom:6 }}><strong>S{item.section}:</strong> {item.question}</div>
+      <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
+        <div style={{ display:"flex", gap:3 }}>
+          {["Yes", "No", "N/A"].map(v => (
+            <button key={v} onClick={() => updateFn(idx, "answer", v)} style={{
+              padding:"3px 8px", borderRadius:5, fontSize:10, fontWeight:700, cursor:"pointer", border:"none",
+              background: item.answer === v ? (v === "Yes" ? "#22c55e" : v === "No" ? "#ef4444" : "#555") : "rgba(255,255,255,0.08)",
+              color: item.answer === v ? "#fff" : "rgba(255,255,255,0.5)",
+            }}>{v}</button>
+          ))}
+        </div>
+        <div style={{ display:"flex", gap:3 }}>
+          {["Yes", "No"].map(v => (
+            <button key={v} onClick={() => updateFn(idx, "requiresAction", v)} style={{
+              padding:"3px 8px", borderRadius:5, fontSize:10, fontWeight:700, cursor:"pointer", border:"none",
+              background: item.requiresAction === v ? (v === "Yes" ? "#f59e0b" : "#555") : "rgba(255,255,255,0.08)",
+              color: item.requiresAction === v ? "#fff" : "rgba(255,255,255,0.5)",
+            }}>{v === "Yes" ? "Action" : "No Action"}</button>
+          ))}
+        </div>
+        <input style={{ ...FS_INPUT, flex:1, minWidth:120, padding:"6px 8px", fontSize:11 }} value={item.comments} onChange={e => updateFn(idx, "comments", e.target.value)} placeholder="Comments"/>
+      </div>
+    </div>
+  );
+
+  const mgmtItem = (item, idx) => (
+    <div key={idx} style={{ padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+      <div style={{ color:"rgba(255,255,255,0.8)", fontSize:12, marginBottom:6 }}><strong>S{item.section}:</strong> {item.question}</div>
+      <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
+        <div style={{ display:"flex", gap:3 }}>
+          {["Yes", "No", "N/A"].map(v => (
+            <button key={v} onClick={() => updateMgmt(idx, "answer", v)} style={{
+              padding:"3px 8px", borderRadius:5, fontSize:10, fontWeight:700, cursor:"pointer", border:"none",
+              background: item.answer === v ? (v === "Yes" ? "#22c55e" : v === "No" ? "#ef4444" : "#555") : "rgba(255,255,255,0.08)",
+              color: item.answer === v ? "#fff" : "rgba(255,255,255,0.5)",
+            }}>{v}</button>
+          ))}
+        </div>
+        <input style={{ ...FS_INPUT, flex:1, minWidth:120, padding:"6px 8px", fontSize:11 }} value={item.comments} onChange={e => updateMgmt(idx, "comments", e.target.value)} placeholder="Comments"/>
       </div>
     </div>
   );
 
   return (
-    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
-        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
-        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>Fire Risk Assessment</h2>
-      </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
-        <div style={sectionTitleStyle}>Client & Site Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Name</div><input style={inputStyle} value={certData.siteName} onChange={e => update("siteName", e.target.value)} placeholder="Building / premises name"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Address</div><input style={inputStyle} value={certData.siteAddr1} onChange={e => update("siteAddr1", e.target.value)} placeholder="Address line 1"/></div>
-        <div style={{ marginBottom:10 }}><input style={inputStyle} value={certData.siteAddr2} onChange={e => update("siteAddr2", e.target.value)} placeholder="Address line 2"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Postcode</div><input style={inputStyle} value={certData.sitePostcode} onChange={e => update("sitePostcode", e.target.value)} placeholder="Postcode"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Tel</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+    <FireFormShell title="Fire Risk Assessment — PAS 79-1:2020" step={step} totalSteps={totalSteps} stepLabels={stepLabels}
+      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF}>
 
-        <div style={sectionTitleStyle}>1. Premises Description</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Building Age</div><input style={inputStyle} value={certData.buildingAge} onChange={e => update("buildingAge", e.target.value)} placeholder="e.g. Pre-1900, 1960s, 2020"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Construction Type</div><select style={selectStyle} value={certData.constructionType} onChange={e => update("constructionType", e.target.value)}><option value="">Select...</option><option>Traditional Brick/Block</option><option>Timber Frame</option><option>Steel Frame</option><option>Concrete Frame</option><option>Mixed Construction</option><option>Modular/Prefab</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Number of Floors</div><input type="number" style={inputStyle} value={certData.floors} onChange={e => update("floors", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Floor Area (m²)</div><input type="number" style={inputStyle} value={certData.floorArea} onChange={e => update("floorArea", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Primary Use</div><select style={selectStyle} value={certData.primaryUse} onChange={e => update("primaryUse", e.target.value)}><option value="">Select...</option><option>Office</option><option>Retail</option><option>Industrial / Warehouse</option><option>Residential (HMO)</option><option>Residential (Flats)</option><option>Education</option><option>Healthcare</option><option>Hospitality</option><option>Assembly / Leisure</option><option>Mixed Use</option></select></div>
+      {step === 0 && <>
+        <div style={FS_SECTION}>General Information</div>
+        <FSInput label="Certificate Reference" value={certData.certRef} onChange={v => update("certRef", v)}/>
+        <FSInput label="Date of Assessment" type="date" value={certData.date} onChange={v => update("date", v)}/>
+        <FSInput label="Responsible Person" value={certData.responsiblePerson} onChange={v => update("responsiblePerson", v)} placeholder="Name of person having control"/>
+        <FSInput label="Person(s) Consulted" value={certData.personsConsulted} onChange={v => update("personsConsulted", v)}/>
+        <FSInput label="Date of Previous Assessment" type="date" value={certData.prevAssessmentDate} onChange={v => update("prevAssessmentDate", v)}/>
+        <FSInput label="Suggested Date for Review" type="date" value={certData.nextReviewDate} onChange={v => update("nextReviewDate", v)}/>
+        <div style={FS_SECTION}>Client & Site Details</div>
+        <FSInput label="Client Name" value={certData.clientName} onChange={v => update("clientName", v)}/>
+        <FSInput label="Client Email" type="email" value={certData.clientEmail} onChange={v => update("clientEmail", v)}/>
+        <FSInput label="Client Tel" type="tel" value={certData.clientTel} onChange={v => update("clientTel", v)}/>
+        <FSInput label="Site Name" value={certData.siteName} onChange={v => update("siteName", v)} placeholder="Building / premises name"/>
+        <FSInput label="Site Address Line 1" value={certData.siteAddr1} onChange={v => update("siteAddr1", v)}/>
+        <FSInput label="Site Address Line 2" value={certData.siteAddr2} onChange={v => update("siteAddr2", v)}/>
+        <FSInput label="Postcode" value={certData.sitePostcode} onChange={v => update("sitePostcode", v)}/>
+      </>}
 
-        <div style={sectionTitleStyle}>2. Fire Hazards</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Sources of Ignition</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.ignitionSources} onChange={e => update("ignitionSources", e.target.value)} placeholder="Electrical equipment, heating, cooking, smoking materials..."/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Fuel Sources</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.fuelSources} onChange={e => update("fuelSources", e.target.value)} placeholder="Combustible materials, furniture, paper, chemicals..."/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Oxygen Sources</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.oxygenSources} onChange={e => update("oxygenSources", e.target.value)} placeholder="Natural ventilation, mechanical ventilation, oxygen cylinders..."/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Existing Controls</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.existingControls} onChange={e => update("existingControls", e.target.value)} placeholder="Controls in place to mitigate identified hazards..."/></div>
+      {step === 1 && <>
+        <div style={FS_SECTION}>Section 1: The Premises (Clause 12)</div>
+        <FSInput label="Number of Floors" type="number" value={certData.floors} onChange={v => update("floors", v)}/>
+        <FSInput label="Approximate Floor Area (m\u00B2)" type="number" value={certData.floorArea} onChange={v => update("floorArea", v)}/>
+        <FSSelect label="Primary Use" value={certData.primaryUse} onChange={v => update("primaryUse", v)} options={["Office", "Retail", "Industrial / Warehouse", "Residential (HMO)", "Residential (Flats)", "Education", "Healthcare", "Hospitality", "Assembly / Leisure", "Mixed Use"]}/>
+        <FSSelect label="Construction Type" value={certData.constructionType} onChange={v => update("constructionType", v)} options={["Traditional Brick/Block", "Timber Frame", "Steel Frame", "Concrete Frame", "Mixed Construction", "Modular/Prefab"]}/>
+        <FSInput label="Year Built / Building Age" value={certData.buildingAge} onChange={v => update("buildingAge", v)} placeholder="e.g. 1960s, Pre-1900"/>
+        <FSTextarea label="Brief Description of Premises" value={certData.premisesDescription} onChange={v => update("premisesDescription", v)} placeholder="General description of premises, layout, construction..."/>
+      </>}
 
-        <div style={sectionTitleStyle}>3. Fire Protection Measures</div>
-        {toggleRow("Compartmentation", "compartmentation")}
-        {toggleRow("Fire Doors", "fireDoors")}
-        {toggleRow("Fire Stopping", "fireStopping")}
-        <div style={{ marginBottom:10, marginTop:10 }}><div style={labelSt}>Alarm Category</div><select style={selectStyle} value={certData.alarmCategory} onChange={e => update("alarmCategory", e.target.value)}><option value="">Select...</option><option>L1</option><option>L2</option><option>L3</option><option>L4</option><option>L5</option><option>P1</option><option>P2</option><option>M</option></select></div>
-        {toggleRow("Emergency Lighting", "emergencyLighting")}
-        {toggleRow("Extinguishers", "extinguishers")}
-        {toggleRow("Sprinklers", "sprinklers")}
+      {step === 2 && <>
+        <div style={FS_SECTION}>Section 2: The Occupants</div>
+        <FSInput label="Maximum Number of Occupants" type="number" value={certData.maxOccupancy} onChange={v => update("maxOccupancy", v)}/>
+        <div style={{ ...FS_SECTION, fontSize:12 }}>Occupants Especially at Risk</div>
+        <FSToggle label="Sleeping Occupants" value={certData.sleepingOccupants} onChange={v => update("sleepingOccupants", v)} options={["Yes", "No"]}/>
+        <FSToggle label="Disabled Persons" value={certData.disabledPersons} onChange={v => update("disabledPersons", v)} options={["Yes", "No"]}/>
+        <FSToggle label="Persons in Remote Areas" value={certData.remoteAreaPersons} onChange={v => update("remoteAreaPersons", v)} options={["Yes", "No"]}/>
+        <FSToggle label="Lone Workers" value={certData.loneWorkers} onChange={v => update("loneWorkers", v)} options={["Yes", "No"]}/>
+        <FSToggle label="Young Persons" value={certData.youngPersons} onChange={v => update("youngPersons", v)} options={["Yes", "No"]}/>
+        <FSTextarea label="Details of At-Risk Occupants" value={certData.atRiskDetails} onChange={v => update("atRiskDetails", v)} placeholder="Provide details of occupants especially at risk..."/>
+      </>}
 
-        <div style={sectionTitleStyle}>4. Management</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Responsible Person</div><input style={inputStyle} value={certData.responsiblePerson} onChange={e => update("responsiblePerson", e.target.value)}/></div>
-        {toggleRow("Fire Safety Policy", "fireSafetyPolicy")}
-        {toggleRow("Drill Records", "drillRecords")}
-        {toggleRow("Maintenance Records", "maintenanceRecords")}
+      {step === 3 && <>
+        <div style={FS_SECTION}>Section 3: Fire Loss Experience</div>
+        <FSTextarea label="Fire Loss Experience" value={certData.fireLossExperience} onChange={v => update("fireLossExperience", v)} placeholder="Record any previous fires, near misses, false alarms..."/>
+      </>}
 
-        <div style={sectionTitleStyle}>5. Occupancy</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Occupant Types</div><input style={inputStyle} value={certData.occupantTypes} onChange={e => update("occupantTypes", e.target.value)} placeholder="Staff, visitors, residents..."/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Max Occupancy</div><input type="number" style={inputStyle} value={certData.maxOccupancy} onChange={e => update("maxOccupancy", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Vulnerable Occupants</div><input style={inputStyle} value={certData.vulnerableOccupants} onChange={e => update("vulnerableOccupants", e.target.value)} placeholder="Elderly, disabled, children..."/></div>
+      {step === 4 && <>
+        <div style={FS_SECTION}>Sections 4-12: Fire Hazards (Clause 13, Annex B)</div>
+        <div style={{ maxHeight:"calc(100dvh - 260px)", overflowY:"auto", borderRadius:8, border:"1px solid rgba(255,255,255,0.1)" }}>
+          {certData.hazardItems.map((item, idx) => checklistItem(item, idx, updateHazard))}
+        </div>
+      </>}
 
-        <div style={sectionTitleStyle}>6. Risk Evaluation</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Likelihood</div><select style={selectStyle} value={certData.likelihood} onChange={e => update("likelihood", e.target.value)}><option value="">Select...</option><option>Low</option><option>Medium</option><option>High</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Consequence</div><select style={selectStyle} value={certData.consequence} onChange={e => update("consequence", e.target.value)}><option value="">Select...</option><option>Low</option><option>Medium</option><option>High</option><option>Catastrophic</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Overall Risk Rating</div><select style={selectStyle} value={certData.overallRisk} onChange={e => update("overallRisk", e.target.value)}><option value="">Select...</option><option>Trivial</option><option>Tolerable</option><option>Moderate</option><option>Substantial</option><option>Intolerable</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Justification</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.riskJustification} onChange={e => update("riskJustification", e.target.value)}/></div>
+      {step === 5 && <>
+        <div style={FS_SECTION}>Sections 13-21: Fire Protection Measures (Clause 15)</div>
+        <div style={{ maxHeight:"calc(100dvh - 260px)", overflowY:"auto", borderRadius:8, border:"1px solid rgba(255,255,255,0.1)" }}>
+          {certData.protectionItems.map((item, idx) => checklistItem(item, idx, updateProt))}
+        </div>
+      </>}
 
-        <div style={sectionTitleStyle}>7. Significant Findings & Action Plan</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Significant Findings</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.significantFindings} onChange={e => update("significantFindings", e.target.value)} placeholder="Description of significant findings..."/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Action Plan</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.actionPlan} onChange={e => update("actionPlan", e.target.value)} placeholder="Recommended actions..."/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Priority</div><select style={selectStyle} value={certData.actionPriority} onChange={e => update("actionPriority", e.target.value)}><option value="">Select...</option><option>Immediate</option><option>Within 1 Month</option><option>Within 3 Months</option><option>Routine</option></select></div>
+      {step === 6 && <>
+        <div style={FS_SECTION}>Sections 22-28: Management of Fire Safety</div>
+        <div style={{ maxHeight:"calc(100dvh - 260px)", overflowY:"auto", borderRadius:8, border:"1px solid rgba(255,255,255,0.1)" }}>
+          {certData.managementItems.map((item, idx) => mgmtItem(item, idx))}
+        </div>
+      </>}
 
-        <div style={sectionTitleStyle}>8. Conclusions</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Overall Fire Risk Level</div><select style={selectStyle} value={certData.overallFireRisk} onChange={e => update("overallFireRisk", e.target.value)}><option value="">Select...</option><option>Low</option><option>Medium</option><option>High</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Critical Actions Summary</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.criticalActions} onChange={e => update("criticalActions", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Next Review Date</div><input type="date" style={inputStyle} value={certData.nextReviewDate} onChange={e => update("nextReviewDate", e.target.value)}/></div>
+      {step === 7 && <>
+        <div style={FS_SECTION}>Risk Assessment</div>
+        <p style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginBottom:12 }}>Likelihood \u00D7 Consequence = Overall Risk Level</p>
+        <FSSelect label="Likelihood of Fire" value={certData.likelihood} onChange={v => update("likelihood", v)} options={["Low", "Medium", "High"]}/>
+        <FSSelect label="Likely Consequence" value={certData.consequence} onChange={v => update("consequence", v)} options={["Slight Harm", "Moderate Harm", "Extreme Harm"]}/>
+        <FSSelect label="Overall Risk Level" value={certData.overallRisk} onChange={v => update("overallRisk", v)} options={["Trivial", "Tolerable", "Moderate", "Substantial", "Intolerable"]}/>
+        <FSTextarea label="Justification" value={certData.riskJustification} onChange={v => update("riskJustification", v)} placeholder="Reasoning behind the risk rating..."/>
+        <FSSelect label="Overall Fire Risk Level" value={certData.overallFireRisk} onChange={v => update("overallFireRisk", v)} options={["Low", "Medium", "High"]}/>
+      </>}
 
-        <div style={sectionTitleStyle}>Notes & Result</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Notes / Observations</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Result</div>
+      {step === 8 && <>
+        <div style={FS_SECTION}>Action Plan</div>
+        {certData.actionPlanItems.map((a, idx) => (
+          <div key={idx} style={{ background:"rgba(255,255,255,0.05)", borderRadius:10, padding:12, marginBottom:10, border:"1px solid rgba(255,255,255,0.1)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <span style={{ color:"#ff6b35", fontSize:12, fontWeight:700 }}>Action {idx + 1}</span>
+              {certData.actionPlanItems.length > 1 && <button onClick={() => removeAction(idx)} style={{ background:"rgba(239,68,68,0.2)", color:"#ef4444", border:"none", borderRadius:6, padding:"3px 8px", fontSize:10, fontWeight:700, cursor:"pointer" }}>Remove</button>}
+            </div>
+            <FSTextarea label="Action Required" value={a.action} onChange={v => updateAction(idx, "action", v)} placeholder="Describe action needed..."/>
+            <FSSelect label="Priority" value={a.priority} onChange={v => updateAction(idx, "priority", v)} options={["Immediate", "Within 1 Month", "Within 3 Months", "Routine"]}/>
+            <FSInput label="Target Date" type="date" value={a.targetDate} onChange={v => updateAction(idx, "targetDate", v)}/>
+            <FSInput label="Responsibility" value={a.responsibility} onChange={v => updateAction(idx, "responsibility", v)} placeholder="Person responsible"/>
+          </div>
+        ))}
+        <button onClick={addAction} style={{ width:"100%", padding:10, borderRadius:10, border:"1px dashed rgba(255,255,255,0.3)", background:"transparent", color:"#ff6b35", fontWeight:700, fontSize:13, cursor:"pointer" }}>+ Add Action</button>
+        <FSTextarea label="Significant Findings Summary" value={certData.significantFindings} onChange={v => update("significantFindings", v)} placeholder="Summary of significant findings..."/>
+        <FSTextarea label="Critical Actions Summary" value={certData.criticalActions} onChange={v => update("criticalActions", v)}/>
+      </>}
+
+      {step === 9 && <>
+        <div style={FS_SECTION}>Conclusions & Sign-off</div>
+        <FSTextarea label="Notes / Observations" value={certData.notes} onChange={v => update("notes", v)}/>
+        <div style={{ marginBottom:10 }}><div style={FS_LABEL}>Result</div>
           <div style={{ display:"flex", gap:8 }}>
-            {["Satisfactory","Unsatisfactory"].map(v => (
-              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v==="Satisfactory"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            {["Satisfactory", "Unsatisfactory"].map(v => (
+              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v === "Satisfactory" ? "#22c55e" : "#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v === "Satisfactory" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v === "Satisfactory" ? "#22c55e" : "#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
             ))}
           </div>
         </div>
-
-        <div style={sectionTitleStyle}>Engineer Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Engineer Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>BAFE SP205 / IFE / IFSM Number</div><input style={inputStyle} value={certData.bafeNumber} onChange={e => update("bafeNumber", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Signature</div>
-        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
-          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
-            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
-          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
-        </div>
-      </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
-        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
-        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
-      </div>
-    </div>
+        <div style={FS_SECTION}>Assessor Details</div>
+        <FSInput label="Assessor Name" value={certData.engineerName} onChange={v => update("engineerName", v)}/>
+        <FSInput label="Company" value={certData.companyName} onChange={v => update("companyName", v)}/>
+        <FSInput label="Qualification / BAFE / IFE / IFSM No" value={certData.bafeNumber} onChange={v => update("bafeNumber", v)}/>
+        <FSSignature sigRef={sigCanvasRef} sigData={certData.signatureData} onUpdate={v => update("signatureData", v)}/>
+      </>}
+    </FireFormShell>
   );
 }
 
 function FireExtinguisherForm({ onBack, onSave, currentUser }) {
+  const [step, setStep] = useState(0);
+  const sigCanvasRef = useRef(null);
   const [certData, setCertData] = useState({
     certRef: "FES-" + Date.now().toString(36).toUpperCase(),
     date: new Date().toISOString().split("T")[0],
     siteName: "", siteAddr1: "", siteAddr2: "", sitePostcode: "",
     clientName: "", clientEmail: "", clientTel: "",
-    assetId: "", extinguisherType: "", manufacturer: "", model: "", capacity: "", location: "",
-    serviceType: "", workCarriedOut: "", condition: "Pass", serviceLabelAttached: "Yes",
-    nextServiceDate: "", notes: "", result: "Satisfactory",
+    serviceType: "", nextServiceDate: "", overallAdequacy: "Adequate", condemnedUnits: "",
+    extinguishers: [
+      { location: "", type: "", capacity: "", serialNo: "", mfgDate: "", lastExtService: "", body: "Yes", pinSeal: "Yes", hose: "Yes", nozzle: "Yes", gauge: "Yes", bracket: "Yes", signage: "Yes", visualCheck: "Yes", weightCheck: "Yes", pressureCheck: "Yes", dischargeTest: "No", partsReplaced: "", result: "Pass", nextDue: "", comments: "" },
+    ],
+    notes: "", result: "Satisfactory",
     engineerName: "", companyName: "", bafeNumber: "", companyBafeReg: "",
     signatureData: null,
   });
-  const [showPDF, setShowPDF] = useState(false);
-  const sigCanvasRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState(false);
 
   useEffect(() => {
     try {
@@ -23241,108 +25503,124 @@ function FireExtinguisherForm({ onBack, onSave, currentUser }) {
   }, [currentUser]);
 
   const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
-  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
-  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
-  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
-  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
-  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+  const updateExt = (idx, field, val) => setCertData(prev => { const exts = [...prev.extinguishers]; exts[idx] = { ...exts[idx], [field]: val }; return { ...prev, extinguishers: exts }; });
+  const addExt = () => setCertData(prev => ({ ...prev, extinguishers: [...prev.extinguishers, { location: "", type: "", capacity: "", serialNo: "", mfgDate: "", lastExtService: "", body: "Yes", pinSeal: "Yes", hose: "Yes", nozzle: "Yes", gauge: "Yes", bracket: "Yes", signage: "Yes", visualCheck: "Yes", weightCheck: "Yes", pressureCheck: "Yes", dischargeTest: "No", partsReplaced: "", result: "Pass", nextDue: "", comments: "" }] }));
+  const removeExt = (idx) => setCertData(prev => ({ ...prev, extinguishers: prev.extinguishers.filter((_, i) => i !== idx) }));
 
   const handleSave = () => {
-    const record = { ...certData, trade:"fire", type:"extinguisher_service", savedAt: new Date().toISOString() };
+    const record = { ...certData, trade: "fire", type: "extinguisher_service", savedAt: new Date().toISOString() };
     if (onSave) onSave(record);
     alert("Fire Extinguisher Service Record saved!");
     onBack();
   };
+  const handlePDF = () => generateFireSafetyPDF("extinguisher", certData);
 
-  if (showPDF) return <FireSafetyPDFPreview certData={certData} certType="extinguisher" certTitle="Fire Extinguisher Service — BS 5306" onClose={() => setShowPDF(false)} />;
-
-  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
-  const sectionTitleStyle = { color:"#ff6b35", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(255,107,53,0.3)", paddingBottom:6 };
-  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
-  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const stepLabels = ["Client & Site", "Service Details", "Extinguisher Schedule", "Sign-off"];
+  const totalSteps = stepLabels.length;
 
   return (
-    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
-        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
-        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>Fire Extinguisher Service</h2>
-      </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
-        <div style={sectionTitleStyle}>Client & Site Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Date of Service</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Name</div><input style={inputStyle} value={certData.siteName} onChange={e => update("siteName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Address</div><input style={inputStyle} value={certData.siteAddr1} onChange={e => update("siteAddr1", e.target.value)} placeholder="Address line 1"/></div>
-        <div style={{ marginBottom:10 }}><input style={inputStyle} value={certData.siteAddr2} onChange={e => update("siteAddr2", e.target.value)} placeholder="Address line 2"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.sitePostcode} onChange={e => update("sitePostcode", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Tel</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+    <FireFormShell title="Fire Extinguisher Service — BS 5306-3" step={step} totalSteps={totalSteps} stepLabels={stepLabels}
+      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF}>
 
-        <div style={sectionTitleStyle}>Extinguisher Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Asset ID / Serial Number</div><input style={inputStyle} value={certData.assetId} onChange={e => update("assetId", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Extinguisher Type</div><select style={selectStyle} value={certData.extinguisherType} onChange={e => update("extinguisherType", e.target.value)}><option value="">Select...</option><option>Water</option><option>CO₂</option><option>Powder</option><option>Foam</option><option>Wet Chemical</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Manufacturer</div><input style={inputStyle} value={certData.manufacturer} onChange={e => update("manufacturer", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Model</div><input style={inputStyle} value={certData.model} onChange={e => update("model", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Capacity</div><input style={inputStyle} value={certData.capacity} onChange={e => update("capacity", e.target.value)} placeholder="e.g. 6kg, 9L"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Location (Floor, Zone, Room)</div><input style={inputStyle} value={certData.location} onChange={e => update("location", e.target.value)}/></div>
+      {step === 0 && <>
+        <div style={FS_SECTION}>Client & Site Details</div>
+        <FSInput label="Certificate Reference" value={certData.certRef} onChange={v => update("certRef", v)}/>
+        <FSInput label="Date of Service" type="date" value={certData.date} onChange={v => update("date", v)}/>
+        <FSInput label="Client Name" value={certData.clientName} onChange={v => update("clientName", v)}/>
+        <FSInput label="Client Email" type="email" value={certData.clientEmail} onChange={v => update("clientEmail", v)}/>
+        <FSInput label="Client Tel" type="tel" value={certData.clientTel} onChange={v => update("clientTel", v)}/>
+        <FSInput label="Site Name" value={certData.siteName} onChange={v => update("siteName", v)}/>
+        <FSInput label="Site Address" value={certData.siteAddr1} onChange={v => update("siteAddr1", v)}/>
+        <FSInput label="Address Line 2" value={certData.siteAddr2} onChange={v => update("siteAddr2", v)}/>
+        <FSInput label="Postcode" value={certData.sitePostcode} onChange={v => update("sitePostcode", v)}/>
+      </>}
 
-        <div style={sectionTitleStyle}>Service Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Service Type</div><select style={selectStyle} value={certData.serviceType} onChange={e => update("serviceType", e.target.value)}><option value="">Select...</option><option>Visual Inspection</option><option>Basic Annual Service</option><option>Extended Service</option><option>Hydrostatic Test</option><option>Discharge Test</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Work Carried Out</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.workCarriedOut} onChange={e => update("workCarriedOut", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Condition</div>
+      {step === 1 && <>
+        <div style={FS_SECTION}>Service Details</div>
+        <FSSelect label="Type of Service" value={certData.serviceType} onChange={v => update("serviceType", v)} options={["Basic Service", "Extended Service", "Recharge", "Overhaul"]}/>
+        <FSInput label="Next Service Due" type="date" value={certData.nextServiceDate} onChange={v => update("nextServiceDate", v)}/>
+        <FSSelect label="Overall Adequacy of Provision" value={certData.overallAdequacy} onChange={v => update("overallAdequacy", v)} options={["Adequate", "Inadequate — additional units required", "Inadequate — replacement required"]}/>
+        <FSTextarea label="Condemned / Replaced Units" value={certData.condemnedUnits} onChange={v => update("condemnedUnits", v)} placeholder="List any condemned or replaced units"/>
+      </>}
+
+      {step === 2 && <>
+        <div style={FS_SECTION}>Schedule of Extinguishers</div>
+        {certData.extinguishers.map((ex, idx) => (
+          <div key={idx} style={{ background:"rgba(255,255,255,0.05)", borderRadius:10, padding:12, marginBottom:12, border:"1px solid rgba(255,255,255,0.1)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <span style={{ color:"#ff6b35", fontSize:12, fontWeight:700 }}>Extinguisher {idx + 1}</span>
+              {certData.extinguishers.length > 1 && <button onClick={() => removeExt(idx)} style={{ background:"rgba(239,68,68,0.2)", color:"#ef4444", border:"none", borderRadius:6, padding:"3px 8px", fontSize:10, fontWeight:700, cursor:"pointer" }}>Remove</button>}
+            </div>
+            <FSInput label="Location" value={ex.location} onChange={v => updateExt(idx, "location", v)} placeholder="Floor, Zone, Room"/>
+            <FSSelect label="Type" value={ex.type} onChange={v => updateExt(idx, "type", v)} options={["Water", "Foam", "CO2", "Powder", "Wet Chemical"]}/>
+            <FSInput label="Capacity" value={ex.capacity} onChange={v => updateExt(idx, "capacity", v)} placeholder="e.g. 6kg, 9L"/>
+            <FSInput label="Serial No" value={ex.serialNo} onChange={v => updateExt(idx, "serialNo", v)}/>
+            <FSInput label="Manufacture Date" type="date" value={ex.mfgDate} onChange={v => updateExt(idx, "mfgDate", v)}/>
+            <FSInput label="Last Extended Service Date" type="date" value={ex.lastExtService} onChange={v => updateExt(idx, "lastExtService", v)}/>
+            <div style={{ ...FS_SECTION, fontSize:12 }}>Condition Checks</div>
+            <FSToggle label="Body" value={ex.body} onChange={v => updateExt(idx, "body", v)} options={["Yes", "No", "N/A"]}/>
+            <FSToggle label="Pin & Seal" value={ex.pinSeal} onChange={v => updateExt(idx, "pinSeal", v)} options={["Yes", "No", "N/A"]}/>
+            <FSToggle label="Hose" value={ex.hose} onChange={v => updateExt(idx, "hose", v)} options={["Yes", "No", "N/A"]}/>
+            <FSToggle label="Nozzle" value={ex.nozzle} onChange={v => updateExt(idx, "nozzle", v)} options={["Yes", "No", "N/A"]}/>
+            <FSToggle label="Gauge" value={ex.gauge} onChange={v => updateExt(idx, "gauge", v)} options={["Yes", "No", "N/A"]}/>
+            <FSToggle label="Mounting Bracket" value={ex.bracket} onChange={v => updateExt(idx, "bracket", v)} options={["Yes", "No", "N/A"]}/>
+            <FSToggle label="Signage" value={ex.signage} onChange={v => updateExt(idx, "signage", v)} options={["Yes", "No", "N/A"]}/>
+            <div style={{ ...FS_SECTION, fontSize:12 }}>Service Performed</div>
+            <FSToggle label="Visual Check" value={ex.visualCheck} onChange={v => updateExt(idx, "visualCheck", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Weight Check" value={ex.weightCheck} onChange={v => updateExt(idx, "weightCheck", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Pressure Check" value={ex.pressureCheck} onChange={v => updateExt(idx, "pressureCheck", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Discharge Test" value={ex.dischargeTest} onChange={v => updateExt(idx, "dischargeTest", v)} options={["Yes", "No"]}/>
+            <FSInput label="Parts Replaced" value={ex.partsReplaced} onChange={v => updateExt(idx, "partsReplaced", v)} placeholder="List any parts replaced"/>
+            <FSSelect label="Result" value={ex.result} onChange={v => updateExt(idx, "result", v)} options={["Pass", "Fail", "Requires Attention"]}/>
+            <FSInput label="Next Service Due" type="date" value={ex.nextDue} onChange={v => updateExt(idx, "nextDue", v)}/>
+            <FSTextarea label="Comments" value={ex.comments} onChange={v => updateExt(idx, "comments", v)}/>
+          </div>
+        ))}
+        <button onClick={addExt} style={{ width:"100%", padding:10, borderRadius:10, border:"1px dashed rgba(255,255,255,0.3)", background:"transparent", color:"#ff6b35", fontWeight:700, fontSize:13, cursor:"pointer" }}>+ Add Extinguisher</button>
+      </>}
+
+      {step === 3 && <>
+        <div style={FS_SECTION}>Notes & Result</div>
+        <FSTextarea label="Notes" value={certData.notes} onChange={v => update("notes", v)}/>
+        <div style={{ marginBottom:10 }}><div style={FS_LABEL}>Result</div>
           <div style={{ display:"flex", gap:8 }}>
-            {["Pass","Fail","Advisory"].map(v => (
-              <button key={v} onClick={() => update("condition", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.condition === v ? (v==="Pass"?"#22c55e":v==="Fail"?"#ef4444":"#f59e0b") : "rgba(255,255,255,0.15)", background: certData.condition === v ? (v==="Pass"?"rgba(34,197,94,0.15)":v==="Fail"?"rgba(239,68,68,0.15)":"rgba(245,158,11,0.15)") : "transparent", color: certData.condition === v ? (v==="Pass"?"#22c55e":v==="Fail"?"#ef4444":"#f59e0b") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            {["Satisfactory", "Unsatisfactory"].map(v => (
+              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v === "Satisfactory" ? "#22c55e" : "#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v === "Satisfactory" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v === "Satisfactory" ? "#22c55e" : "#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
             ))}
           </div>
         </div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Service Label Attached</div><div style={{ display:"flex", gap:8 }}>
-          {["Yes","No"].map(v => (<button key={v} onClick={() => update("serviceLabelAttached", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.serviceLabelAttached===v?"#ff6b35":"rgba(255,255,255,0.15)", background: certData.serviceLabelAttached===v?"rgba(255,107,53,0.15)":"transparent", color: certData.serviceLabelAttached===v?"#ff6b35":"rgba(255,255,255,0.5)" }}>{v}</button>))}
-        </div></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Next Service Due</div><input type="date" style={inputStyle} value={certData.nextServiceDate} onChange={e => update("nextServiceDate", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Notes</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Engineer Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Engineer Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>BAFE SP101 ID Card Number</div><input style={inputStyle} value={certData.bafeNumber} onChange={e => update("bafeNumber", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Company BAFE SP101 Reg Number</div><input style={inputStyle} value={certData.companyBafeReg} onChange={e => update("companyBafeReg", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Signature</div>
-        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
-          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
-            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
-          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
-        </div>
-      </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
-        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
-        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
-      </div>
-    </div>
+        <div style={FS_SECTION}>Engineer Details</div>
+        <FSInput label="Engineer Name" value={certData.engineerName} onChange={v => update("engineerName", v)}/>
+        <FSInput label="Company Name" value={certData.companyName} onChange={v => update("companyName", v)}/>
+        <FSInput label="BAFE SP101 ID Card Number" value={certData.bafeNumber} onChange={v => update("bafeNumber", v)}/>
+        <FSInput label="Company BAFE SP101 Reg" value={certData.companyBafeReg} onChange={v => update("companyBafeReg", v)}/>
+        <FSSignature sigRef={sigCanvasRef} sigData={certData.signatureData} onUpdate={v => update("signatureData", v)}/>
+      </>}
+    </FireFormShell>
   );
 }
 
 function EmergencyLightingForm({ onBack, onSave, currentUser }) {
+  const [step, setStep] = useState(0);
+  const sigCanvasRef = useRef(null);
   const [certData, setCertData] = useState({
     certRef: "ELT-" + Date.now().toString(36).toUpperCase(),
     date: new Date().toISOString().split("T")[0],
     siteName: "", siteAddr1: "", siteAddr2: "", sitePostcode: "",
     clientName: "", clientEmail: "", clientTel: "",
-    testType: "", durationAchieved: "", allLuminairesOk: "Pass",
-    faultsNoted: "", repairs: "", luxReadings: "", bs5266Compliance: "Pass",
-    nextTestDate: "", notes: "", result: "Satisfactory",
+    installDescription: "", systemType: "", systemCategory: "", numLuminaires: "",
+    inspectionType: "", departures: "",
+    elSystem: "", systemDuration: "",
+    centralSupply: "N/A", chargingIndicators: "N/A", batteryCondition: "N/A", changeoverDevice: "N/A",
+    luminaireCondition: "Pass", illuminanceLevels: "Pass", exitSigns: "Pass", logBookMaintained: "Pass", monthlyTestRecords: "Pass",
+    durationTestDate: "", durationAchieved: "",
+    luminaires: [
+      { ref: "", description: "", location: "", batteryType: "", testDuration: "", date: "", lampOk: "Yes", operational: "Yes", comments: "" },
+    ],
+    eicrReference: "", notes: "", result: "Satisfactory",
     engineerName: "", companyName: "", bafeNumber: "",
     signatureData: null,
   });
-  const [showPDF, setShowPDF] = useState(false);
-  const sigCanvasRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState(false);
 
   useEffect(() => {
     try {
@@ -23352,117 +25630,131 @@ function EmergencyLightingForm({ onBack, onSave, currentUser }) {
   }, [currentUser]);
 
   const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
-  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
-  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
-  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
-  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
-  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+  const updateLum = (idx, field, val) => setCertData(prev => { const lums = [...prev.luminaires]; lums[idx] = { ...lums[idx], [field]: val }; return { ...prev, luminaires: lums }; });
+  const addLum = () => setCertData(prev => ({ ...prev, luminaires: [...prev.luminaires, { ref: "", description: "", location: "", batteryType: "", testDuration: "", date: "", lampOk: "Yes", operational: "Yes", comments: "" }] }));
+  const removeLum = (idx) => setCertData(prev => ({ ...prev, luminaires: prev.luminaires.filter((_, i) => i !== idx) }));
 
   const handleSave = () => {
-    const record = { ...certData, trade:"fire", type:"emergency_lighting", savedAt: new Date().toISOString() };
+    const record = { ...certData, trade: "fire", type: "emergency_lighting", savedAt: new Date().toISOString() };
     if (onSave) onSave(record);
-    alert("Emergency Lighting Test saved!");
+    alert("Emergency Lighting Certificate saved!");
     onBack();
   };
+  const handlePDF = () => generateFireSafetyPDF("emergencyLighting", certData);
 
-  if (showPDF) return <FireSafetyPDFPreview certData={certData} certType="emergencyLighting" certTitle="Emergency Lighting Test — BS 5266" onClose={() => setShowPDF(false)} />;
-
-  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
-  const sectionTitleStyle = { color:"#ff6b35", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(255,107,53,0.3)", paddingBottom:6 };
-  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
-  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
-  const toggleRow = (label, field) => (
-    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
-      <span style={{ color:"rgba(255,255,255,0.8)", fontSize:13 }}>{label}</span>
-      <div style={{ display:"flex", gap:4 }}>
-        {["Pass","Fail","N/A"].map(v => (
-          <button key={v} onClick={() => update(field, v)} style={{
-            padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", border:"none",
-            background: certData[field] === v ? (v==="Pass"?"#22c55e":v==="Fail"?"#ef4444":"#555") : "rgba(255,255,255,0.08)",
-            color: certData[field] === v ? "#fff" : "rgba(255,255,255,0.5)",
-          }}>{v}</button>
-        ))}
-      </div>
-    </div>
-  );
+  const stepLabels = ["Client & Site", "Installation", "Inspection & Test", "Luminaire Schedule", "Sign-off"];
+  const totalSteps = stepLabels.length;
 
   return (
-    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
-        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
-        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>Emergency Lighting Test</h2>
-      </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
-        <div style={sectionTitleStyle}>Client & Site Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Name</div><input style={inputStyle} value={certData.siteName} onChange={e => update("siteName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Address</div><input style={inputStyle} value={certData.siteAddr1} onChange={e => update("siteAddr1", e.target.value)} placeholder="Address line 1"/></div>
-        <div style={{ marginBottom:10 }}><input style={inputStyle} value={certData.siteAddr2} onChange={e => update("siteAddr2", e.target.value)} placeholder="Address line 2"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.sitePostcode} onChange={e => update("sitePostcode", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Tel</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+    <FireFormShell title="Emergency Lighting — BS 5266-1:2016" step={step} totalSteps={totalSteps} stepLabels={stepLabels}
+      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF}>
 
-        <div style={sectionTitleStyle}>Test Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Test Type</div><select style={selectStyle} value={certData.testType} onChange={e => update("testType", e.target.value)}><option value="">Select...</option><option>Monthly Functional Test</option><option>Annual Full Duration Test</option><option>3-Yearly Periodic Verification</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Duration Achieved</div><input style={inputStyle} value={certData.durationAchieved} onChange={e => update("durationAchieved", e.target.value)} placeholder="e.g. 3 hours"/></div>
-        {toggleRow("All Luminaires OK", "allLuminairesOk")}
-        <div style={{ marginBottom:10, marginTop:10 }}><div style={labelSt}>Faults Noted</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.faultsNoted} onChange={e => update("faultsNoted", e.target.value)} placeholder="Describe any faults found..."/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Repairs Carried Out</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.repairs} onChange={e => update("repairs", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Lux Level Readings</div><input style={inputStyle} value={certData.luxReadings} onChange={e => update("luxReadings", e.target.value)} placeholder="If applicable"/></div>
-        {toggleRow("BS 5266 Compliance", "bs5266Compliance")}
-        <div style={{ marginBottom:10, marginTop:10 }}><div style={labelSt}>Next Test Date</div><input type="date" style={inputStyle} value={certData.nextTestDate} onChange={e => update("nextTestDate", e.target.value)}/></div>
+      {step === 0 && <>
+        <div style={FS_SECTION}>Client & Site Details</div>
+        <FSInput label="Certificate Reference" value={certData.certRef} onChange={v => update("certRef", v)}/>
+        <FSInput label="Date" type="date" value={certData.date} onChange={v => update("date", v)}/>
+        <FSInput label="Client Name" value={certData.clientName} onChange={v => update("clientName", v)}/>
+        <FSInput label="Client Email" type="email" value={certData.clientEmail} onChange={v => update("clientEmail", v)}/>
+        <FSInput label="Client Tel" type="tel" value={certData.clientTel} onChange={v => update("clientTel", v)}/>
+        <FSInput label="Site Name" value={certData.siteName} onChange={v => update("siteName", v)}/>
+        <FSInput label="Site Address" value={certData.siteAddr1} onChange={v => update("siteAddr1", v)}/>
+        <FSInput label="Address Line 2" value={certData.siteAddr2} onChange={v => update("siteAddr2", v)}/>
+        <FSInput label="Postcode" value={certData.sitePostcode} onChange={v => update("sitePostcode", v)}/>
+      </>}
 
-        <div style={sectionTitleStyle}>Notes & Result</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Notes / Observations</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Result</div>
+      {step === 1 && <>
+        <div style={FS_SECTION}>Part 2: Details of Installation</div>
+        <FSTextarea label="Description & Extent of Installation" value={certData.installDescription} onChange={v => update("installDescription", v)} placeholder="Describe the emergency lighting installation and extent covered..."/>
+        <FSSelect label="System Type" value={certData.systemType} onChange={v => update("systemType", v)} options={["Maintained", "Non-maintained", "Combined (Maintained & Non-maintained)"]}/>
+        <FSSelect label="Category" value={certData.systemCategory} onChange={v => update("systemCategory", v)} options={["M (Maintained)", "NM (Non-maintained)"]}/>
+        <FSInput label="Number of Luminaires" type="number" value={certData.numLuminaires} onChange={v => update("numLuminaires", v)}/>
+        <FSSelect label="Inspection Type" value={certData.inspectionType} onChange={v => update("inspectionType", v)} options={["New Installation", "Periodic Inspection"]}/>
+        <FSTextarea label="Departures from Code of Practice" value={certData.departures} onChange={v => update("departures", v)} placeholder="None, or describe any departures..."/>
+      </>}
+
+      {step === 2 && <>
+        <div style={FS_SECTION}>Schedule of Items Inspected & Tested</div>
+        <FSSelect label="Emergency Lighting System" value={certData.elSystem} onChange={v => update("elSystem", v)} options={["Central Battery", "Self-contained", "Generator"]}/>
+        <FSSelect label="Duration of System" value={certData.systemDuration} onChange={v => update("systemDuration", v)} options={["1 hour", "3 hours"]}/>
+        <div style={{ ...FS_SECTION, fontSize:12 }}>Inspection Results</div>
+        <FSToggle label="Central Power Supply Condition" value={certData.centralSupply} onChange={v => update("centralSupply", v)} options={["Pass", "Fail", "LIM", "N/A", "N/V"]}/>
+        <FSToggle label="Charging Indicators" value={certData.chargingIndicators} onChange={v => update("chargingIndicators", v)} options={["Pass", "Fail", "LIM", "N/A", "N/V"]}/>
+        <FSToggle label="Battery Condition" value={certData.batteryCondition} onChange={v => update("batteryCondition", v)} options={["Pass", "Fail", "LIM", "N/A", "N/V"]}/>
+        <FSToggle label="Change-over Device Operation" value={certData.changeoverDevice} onChange={v => update("changeoverDevice", v)} options={["Pass", "Fail", "LIM", "N/A", "N/V"]}/>
+        <FSToggle label="Luminaire Condition" value={certData.luminaireCondition} onChange={v => update("luminaireCondition", v)} options={["Pass", "Fail", "LIM", "N/A", "N/V"]}/>
+        <FSToggle label="Illuminance Levels Adequate" value={certData.illuminanceLevels} onChange={v => update("illuminanceLevels", v)} options={["Pass", "Fail", "LIM", "N/A", "N/V"]}/>
+        <FSToggle label="Exit Signs Illuminated & Visible" value={certData.exitSigns} onChange={v => update("exitSigns", v)} options={["Pass", "Fail", "LIM", "N/A", "N/V"]}/>
+        <FSToggle label="Log Book Maintained" value={certData.logBookMaintained} onChange={v => update("logBookMaintained", v)} options={["Pass", "Fail", "LIM", "N/A", "N/V"]}/>
+        <FSToggle label="Monthly Function Test Records" value={certData.monthlyTestRecords} onChange={v => update("monthlyTestRecords", v)} options={["Pass", "Fail", "LIM", "N/A", "N/V"]}/>
+        <div style={{ ...FS_SECTION, fontSize:12 }}>Duration Test (Annual)</div>
+        <FSInput label="Duration Test Date" type="date" value={certData.durationTestDate} onChange={v => update("durationTestDate", v)}/>
+        <FSInput label="Duration Achieved" value={certData.durationAchieved} onChange={v => update("durationAchieved", v)} placeholder="e.g. 3 hours"/>
+      </>}
+
+      {step === 3 && <>
+        <div style={FS_SECTION}>Schedule of Luminaires Tested</div>
+        {certData.luminaires.map((l, idx) => (
+          <div key={idx} style={{ background:"rgba(255,255,255,0.05)", borderRadius:10, padding:12, marginBottom:12, border:"1px solid rgba(255,255,255,0.1)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <span style={{ color:"#ff6b35", fontSize:12, fontWeight:700 }}>Luminaire {idx + 1}</span>
+              {certData.luminaires.length > 1 && <button onClick={() => removeLum(idx)} style={{ background:"rgba(239,68,68,0.2)", color:"#ef4444", border:"none", borderRadius:6, padding:"3px 8px", fontSize:10, fontWeight:700, cursor:"pointer" }}>Remove</button>}
+            </div>
+            <FSInput label="Ref" value={l.ref} onChange={v => updateLum(idx, "ref", v)} placeholder="e.g. EL-01"/>
+            <FSInput label="Description" value={l.description} onChange={v => updateLum(idx, "description", v)} placeholder="e.g. Bulkhead, Exit sign"/>
+            <FSInput label="Location" value={l.location} onChange={v => updateLum(idx, "location", v)}/>
+            <FSInput label="Battery Type" value={l.batteryType} onChange={v => updateLum(idx, "batteryType", v)}/>
+            <FSInput label="Test Duration" value={l.testDuration} onChange={v => updateLum(idx, "testDuration", v)} placeholder="e.g. 3hrs"/>
+            <FSInput label="Date Tested" type="date" value={l.date} onChange={v => updateLum(idx, "date", v)}/>
+            <FSToggle label="Lamp OK" value={l.lampOk} onChange={v => updateLum(idx, "lampOk", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Operational" value={l.operational} onChange={v => updateLum(idx, "operational", v)} options={["Yes", "No"]}/>
+            <FSInput label="Comments" value={l.comments} onChange={v => updateLum(idx, "comments", v)}/>
+          </div>
+        ))}
+        <button onClick={addLum} style={{ width:"100%", padding:10, borderRadius:10, border:"1px dashed rgba(255,255,255,0.3)", background:"transparent", color:"#ff6b35", fontWeight:700, fontSize:13, cursor:"pointer" }}>+ Add Luminaire</button>
+      </>}
+
+      {step === 4 && <>
+        <div style={FS_SECTION}>Notes & Result</div>
+        <FSInput label="EICR Reference" value={certData.eicrReference} onChange={v => update("eicrReference", v)} placeholder="Reference to most recent EICR"/>
+        <FSTextarea label="Notes" value={certData.notes} onChange={v => update("notes", v)}/>
+        <div style={{ marginBottom:10 }}><div style={FS_LABEL}>Result</div>
           <div style={{ display:"flex", gap:8 }}>
-            {["Satisfactory","Unsatisfactory"].map(v => (
-              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v==="Satisfactory"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            {["Satisfactory", "Unsatisfactory"].map(v => (
+              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v === "Satisfactory" ? "#22c55e" : "#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v === "Satisfactory" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v === "Satisfactory" ? "#22c55e" : "#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
             ))}
           </div>
         </div>
-
-        <div style={sectionTitleStyle}>Engineer Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Engineer Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Signature</div>
-        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
-          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
-            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
-          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
-        </div>
-      </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
-        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
-        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
-      </div>
-    </div>
+        <div style={FS_SECTION}>Engineer Details</div>
+        <FSInput label="Engineer Name" value={certData.engineerName} onChange={v => update("engineerName", v)}/>
+        <FSInput label="Company Name" value={certData.companyName} onChange={v => update("companyName", v)}/>
+        <FSSignature sigRef={sigCanvasRef} sigData={certData.signatureData} onUpdate={v => update("signatureData", v)}/>
+      </>}
+    </FireFormShell>
   );
 }
 
 function FireAlarmServiceForm({ onBack, onSave, currentUser }) {
+  const [step, setStep] = useState(0);
+  const sigCanvasRef = useRef(null);
   const [certData, setCertData] = useState({
     certRef: "FAS-" + Date.now().toString(36).toUpperCase(),
     date: new Date().toISOString().split("T")[0],
     siteName: "", siteAddr1: "", siteAddr2: "", sitePostcode: "",
     clientName: "", clientEmail: "", clientTel: "",
-    systemType: "", panelManufacturer: "", serviceScope: "",
-    devicesTested: "", testResults: "Pass", batteryCondition: "Pass",
-    majorFindings: "", recommendations: "",
-    nextServiceDate: "", notes: "", result: "Satisfactory",
+    certType: "", systemCategory: "", systemGrade: "", areasProtected: "", variations: "",
+    commissionDate: "", soakTestPeriod: "",
+    panelMake: "", panelModel: "", panelLocation: "",
+    numZones: "", numDetectors: "", numCallPoints: "", numSounders: "", numBeacons: "",
+    batteryType: "", batteryCapacity: "", standbyDuration: "", remoteSignalling: "", arcDetails: "",
+    zoneTests: [
+      { zoneNo: "", deviceTested: "", deviceType: "", response: "" },
+    ],
+    sounderLevels: "", dbReading: "", callPointTest: "", batteryVoltage: "", faultTest: "", causeEffect: "",
+    falseAlarmCauses: "", followUpActions: "",
+    notes: "", result: "Satisfactory",
     engineerName: "", companyName: "", bafeNumber: "",
     signatureData: null,
   });
-  const [showPDF, setShowPDF] = useState(false);
-  const sigCanvasRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState(false);
 
   useEffect(() => {
     try {
@@ -23472,123 +25764,142 @@ function FireAlarmServiceForm({ onBack, onSave, currentUser }) {
   }, [currentUser]);
 
   const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
-  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
-  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
-  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
-  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
-  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+  const updateZone = (idx, field, val) => setCertData(prev => { const zones = [...prev.zoneTests]; zones[idx] = { ...zones[idx], [field]: val }; return { ...prev, zoneTests: zones }; });
+  const addZone = () => setCertData(prev => ({ ...prev, zoneTests: [...prev.zoneTests, { zoneNo: "", deviceTested: "", deviceType: "", response: "" }] }));
+  const removeZone = (idx) => setCertData(prev => ({ ...prev, zoneTests: prev.zoneTests.filter((_, i) => i !== idx) }));
 
   const handleSave = () => {
-    const record = { ...certData, trade:"fire", type:"fire_alarm", savedAt: new Date().toISOString() };
+    const record = { ...certData, trade: "fire", type: "fire_alarm", savedAt: new Date().toISOString() };
     if (onSave) onSave(record);
-    alert("Fire Alarm Service Report saved!");
+    alert("Fire Alarm Certificate saved!");
     onBack();
   };
+  const handlePDF = () => generateFireSafetyPDF("fireAlarm", certData);
 
-  if (showPDF) return <FireSafetyPDFPreview certData={certData} certType="fireAlarm" certTitle="Fire Alarm Service Report — BS 5839" onClose={() => setShowPDF(false)} />;
-
-  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
-  const sectionTitleStyle = { color:"#ff6b35", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(255,107,53,0.3)", paddingBottom:6 };
-  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
-  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
-  const toggleRow = (label, field) => (
-    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
-      <span style={{ color:"rgba(255,255,255,0.8)", fontSize:13 }}>{label}</span>
-      <div style={{ display:"flex", gap:4 }}>
-        {["Pass","Fail","N/A"].map(v => (
-          <button key={v} onClick={() => update(field, v)} style={{
-            padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", border:"none",
-            background: certData[field] === v ? (v==="Pass"?"#22c55e":v==="Fail"?"#ef4444":"#555") : "rgba(255,255,255,0.08)",
-            color: certData[field] === v ? "#fff" : "rgba(255,255,255,0.5)",
-          }}>{v}</button>
-        ))}
-      </div>
-    </div>
-  );
+  const stepLabels = ["Client & Site", "System Details", "Panel & Devices", "Zone Testing", "Test Results", "Sign-off"];
+  const totalSteps = stepLabels.length;
 
   return (
-    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
-        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
-        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>Fire Alarm Service</h2>
-      </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
-        <div style={sectionTitleStyle}>Client & Site Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Name</div><input style={inputStyle} value={certData.siteName} onChange={e => update("siteName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Site Address</div><input style={inputStyle} value={certData.siteAddr1} onChange={e => update("siteAddr1", e.target.value)} placeholder="Address line 1"/></div>
-        <div style={{ marginBottom:10 }}><input style={inputStyle} value={certData.siteAddr2} onChange={e => update("siteAddr2", e.target.value)} placeholder="Address line 2"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.sitePostcode} onChange={e => update("sitePostcode", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Tel</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+    <FireFormShell title="Fire Alarm — BS 5839-1:2017" step={step} totalSteps={totalSteps} stepLabels={stepLabels}
+      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF}>
 
-        <div style={sectionTitleStyle}>System Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>System Type</div><select style={selectStyle} value={certData.systemType} onChange={e => update("systemType", e.target.value)}><option value="">Select...</option><option>Conventional</option><option>Addressable</option><option>Wireless</option><option>Hybrid</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Panel Manufacturer</div><input style={inputStyle} value={certData.panelManufacturer} onChange={e => update("panelManufacturer", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Service Scope</div><select style={selectStyle} value={certData.serviceScope} onChange={e => update("serviceScope", e.target.value)}><option value="">Select...</option><option>Weekly Test</option><option>6-Monthly Service</option><option>Annual Service</option></select></div>
+      {step === 0 && <>
+        <div style={FS_SECTION}>Client & Site Details</div>
+        <FSInput label="Certificate Reference" value={certData.certRef} onChange={v => update("certRef", v)}/>
+        <FSInput label="Date" type="date" value={certData.date} onChange={v => update("date", v)}/>
+        <FSInput label="Client Name" value={certData.clientName} onChange={v => update("clientName", v)}/>
+        <FSInput label="Client Email" type="email" value={certData.clientEmail} onChange={v => update("clientEmail", v)}/>
+        <FSInput label="Client Tel" type="tel" value={certData.clientTel} onChange={v => update("clientTel", v)}/>
+        <FSInput label="Site Name" value={certData.siteName} onChange={v => update("siteName", v)}/>
+        <FSInput label="Site Address" value={certData.siteAddr1} onChange={v => update("siteAddr1", v)}/>
+        <FSInput label="Address Line 2" value={certData.siteAddr2} onChange={v => update("siteAddr2", v)}/>
+        <FSInput label="Postcode" value={certData.sitePostcode} onChange={v => update("sitePostcode", v)}/>
+      </>}
 
-        <div style={sectionTitleStyle}>Test Results</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Devices Tested (Summary)</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.devicesTested} onChange={e => update("devicesTested", e.target.value)} placeholder="List zones/devices tested..."/></div>
-        {toggleRow("Test Results", "testResults")}
-        {toggleRow("Battery Condition", "batteryCondition")}
-        <div style={{ marginBottom:10, marginTop:10 }}><div style={labelSt}>Major Findings</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.majorFindings} onChange={e => update("majorFindings", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Recommendations</div><textarea style={{ ...inputStyle, minHeight:60 }} value={certData.recommendations} onChange={e => update("recommendations", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Next Service Date</div><input type="date" style={inputStyle} value={certData.nextServiceDate} onChange={e => update("nextServiceDate", e.target.value)}/></div>
+      {step === 1 && <>
+        <div style={FS_SECTION}>System Details</div>
+        <FSSelect label="Certificate Type" value={certData.certType} onChange={v => update("certType", v)} options={["Completion Certificate", "Periodic Inspection Certificate"]}/>
+        <FSSelect label="System Category" value={certData.systemCategory} onChange={v => update("systemCategory", v)} options={["L1", "L2", "L3", "L4", "L5", "LD1", "LD2", "LD3", "P1", "P2", "M"]}/>
+        <FSSelect label="System Grade" value={certData.systemGrade} onChange={v => update("systemGrade", v)} options={["A", "B", "C", "D", "E", "F"]}/>
+        <FSTextarea label="Description / Areas Protected" value={certData.areasProtected} onChange={v => update("areasProtected", v)} placeholder="Describe system coverage and areas protected"/>
+        <FSTextarea label="Variations from BS 5839" value={certData.variations} onChange={v => update("variations", v)} placeholder="None, or describe variations"/>
+        <FSInput label="Date Commissioned" type="date" value={certData.commissionDate} onChange={v => update("commissionDate", v)}/>
+        <FSInput label="Soak Test Period" value={certData.soakTestPeriod} onChange={v => update("soakTestPeriod", v)} placeholder="e.g. 7 days"/>
+      </>}
 
-        <div style={sectionTitleStyle}>Notes & Result</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Notes / Observations</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Result</div>
+      {step === 2 && <>
+        <div style={FS_SECTION}>Control Panel & Devices</div>
+        <FSInput label="Panel Make" value={certData.panelMake} onChange={v => update("panelMake", v)}/>
+        <FSInput label="Panel Model" value={certData.panelModel} onChange={v => update("panelModel", v)}/>
+        <FSInput label="Panel Location" value={certData.panelLocation} onChange={v => update("panelLocation", v)}/>
+        <FSInput label="Number of Zones" type="number" value={certData.numZones} onChange={v => update("numZones", v)}/>
+        <FSInput label="Detection Devices" type="number" value={certData.numDetectors} onChange={v => update("numDetectors", v)}/>
+        <FSInput label="Call Points" type="number" value={certData.numCallPoints} onChange={v => update("numCallPoints", v)}/>
+        <FSInput label="Sounders" type="number" value={certData.numSounders} onChange={v => update("numSounders", v)}/>
+        <FSInput label="Beacons" type="number" value={certData.numBeacons} onChange={v => update("numBeacons", v)}/>
+        <div style={FS_SECTION}>Backup Power</div>
+        <FSInput label="Battery Type" value={certData.batteryType} onChange={v => update("batteryType", v)}/>
+        <FSInput label="Battery Capacity" value={certData.batteryCapacity} onChange={v => update("batteryCapacity", v)} placeholder="e.g. 7Ah"/>
+        <FSInput label="Standby Duration" value={certData.standbyDuration} onChange={v => update("standbyDuration", v)} placeholder="e.g. 24 hours"/>
+        <FSSelect label="Remote Signalling" value={certData.remoteSignalling} onChange={v => update("remoteSignalling", v)} options={["Yes", "No"]}/>
+        <FSInput label="ARC Details" value={certData.arcDetails} onChange={v => update("arcDetails", v)} placeholder="Alarm Receiving Centre details"/>
+      </>}
+
+      {step === 3 && <>
+        <div style={FS_SECTION}>Zone Testing</div>
+        {certData.zoneTests.map((z, idx) => (
+          <div key={idx} style={{ background:"rgba(255,255,255,0.05)", borderRadius:10, padding:12, marginBottom:10, border:"1px solid rgba(255,255,255,0.1)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <span style={{ color:"#ff6b35", fontSize:12, fontWeight:700 }}>Zone Test {idx + 1}</span>
+              {certData.zoneTests.length > 1 && <button onClick={() => removeZone(idx)} style={{ background:"rgba(239,68,68,0.2)", color:"#ef4444", border:"none", borderRadius:6, padding:"3px 8px", fontSize:10, fontWeight:700, cursor:"pointer" }}>Remove</button>}
+            </div>
+            <FSInput label="Zone No" value={z.zoneNo} onChange={v => updateZone(idx, "zoneNo", v)}/>
+            <FSInput label="Device Tested" value={z.deviceTested} onChange={v => updateZone(idx, "deviceTested", v)} placeholder="Device ID or location"/>
+            <FSSelect label="Device Type" value={z.deviceType} onChange={v => updateZone(idx, "deviceType", v)} options={["Smoke Detector", "Heat Detector", "Call Point", "Sounder", "Beacon", "Multi-sensor", "Beam Detector", "Aspirating Detector"]}/>
+            <FSSelect label="Response" value={z.response} onChange={v => updateZone(idx, "response", v)} options={["Satisfactory", "Unsatisfactory", "N/A"]}/>
+          </div>
+        ))}
+        <button onClick={addZone} style={{ width:"100%", padding:10, borderRadius:10, border:"1px dashed rgba(255,255,255,0.3)", background:"transparent", color:"#ff6b35", fontWeight:700, fontSize:13, cursor:"pointer" }}>+ Add Zone Test</button>
+      </>}
+
+      {step === 4 && <>
+        <div style={FS_SECTION}>Test Results</div>
+        <FSToggle label="Sounder Levels Adequate" value={certData.sounderLevels} onChange={v => update("sounderLevels", v)} options={["Yes", "No"]}/>
+        <FSInput label="dB Reading (if measured)" value={certData.dbReading} onChange={v => update("dbReading", v)} placeholder="e.g. 75 dB"/>
+        <FSToggle label="Call Point Test" value={certData.callPointTest} onChange={v => update("callPointTest", v)} options={["Pass", "Fail"]}/>
+        <FSInput label="Battery Condition / Voltage" value={certData.batteryVoltage} onChange={v => update("batteryVoltage", v)} placeholder="e.g. 26.4V, Good"/>
+        <FSToggle label="Fault Indication Test" value={certData.faultTest} onChange={v => update("faultTest", v)} options={["Pass", "Fail"]}/>
+        <FSToggle label="Cause & Effect Verified" value={certData.causeEffect} onChange={v => update("causeEffect", v)} options={["Yes", "No", "N/A"]}/>
+        <FSTextarea label="Potential False Alarm Causes" value={certData.falseAlarmCauses} onChange={v => update("falseAlarmCauses", v)} placeholder="Note any potential causes of false alarms..."/>
+        <FSTextarea label="Follow-up Actions Required" value={certData.followUpActions} onChange={v => update("followUpActions", v)}/>
+      </>}
+
+      {step === 5 && <>
+        <div style={FS_SECTION}>Notes & Result</div>
+        <FSTextarea label="Notes / Observations" value={certData.notes} onChange={v => update("notes", v)}/>
+        <div style={{ marginBottom:10 }}><div style={FS_LABEL}>Result</div>
           <div style={{ display:"flex", gap:8 }}>
-            {["Satisfactory","Unsatisfactory"].map(v => (
-              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v==="Satisfactory"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            {["Satisfactory", "Unsatisfactory"].map(v => (
+              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v === "Satisfactory" ? "#22c55e" : "#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v === "Satisfactory" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v === "Satisfactory" ? "#22c55e" : "#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
             ))}
           </div>
         </div>
-
-        <div style={sectionTitleStyle}>Engineer Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Engineer Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>BAFE SP203-1 Number</div><input style={inputStyle} value={certData.bafeNumber} onChange={e => update("bafeNumber", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Signature</div>
-        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
-          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
-            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
-          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
-        </div>
-      </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
-        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
-        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
-      </div>
-    </div>
+        <div style={FS_SECTION}>Engineer Details</div>
+        <FSInput label="Engineer Name" value={certData.engineerName} onChange={v => update("engineerName", v)}/>
+        <FSInput label="Company Name" value={certData.companyName} onChange={v => update("companyName", v)}/>
+        <FSInput label="BAFE SP203-1 Number" value={certData.bafeNumber} onChange={v => update("bafeNumber", v)}/>
+        <FSSignature sigRef={sigCanvasRef} sigData={certData.signatureData} onUpdate={v => update("signatureData", v)}/>
+      </>}
+    </FireFormShell>
   );
 }
 
 function FireDoorInspectionForm({ onBack, onSave, currentUser }) {
+  const [step, setStep] = useState(0);
+  const sigCanvasRef = useRef(null);
   const [certData, setCertData] = useState({
     certRef: "FDI-" + Date.now().toString(36).toUpperCase(),
     date: new Date().toISOString().split("T")[0],
     siteName: "", siteAddr1: "", siteAddr2: "", sitePostcode: "",
     clientName: "", clientEmail: "", clientTel: "",
-    doorId: "", doorLocation: "", doorType: "", fireRating: "", quarterlyInspection: "No",
-    doorLeaf: "Pass", frameCondition: "Pass", seals: "Pass", hinges: "Pass",
-    latchLock: "Pass", doorCloser: "Pass", signage: "Pass", visionPanel: "N/A",
-    thresholdGap: "Pass", sideHeadGaps: "Pass",
-    overallCondition: "Satisfactory", nextInspectionDate: "",
+    inspectionType: "", qualificationNo: "",
+    doors: [
+      {
+        doorId: "", doorLocation: "", fireRating: "", fdSRated: "No",
+        certLabel: "Yes", labelLegible: "Yes", doorSignage: "Yes",
+        leafCondition: "Yes", frameCondition: "Yes", noModifications: "Yes", glazingOk: "N/A",
+        headGap: "", latchGap: "", hingeGap: "", bottomGap: "", gapsWithinTolerance: "Yes",
+        stripsContinuous: "Yes", stripsUndamaged: "Yes", smokeSeal: "N/A",
+        hingesOk: "Yes", hingesSecure: "Yes", closerOk: "Yes", latchOk: "Yes", lockOk: "Yes", holdOpen: "N/A",
+        frameFireStop: "Yes", constructionIntact: "Yes", servicePenetrations: "N/A",
+        closesUnassisted: "Yes", operatesSmoothly: "Yes", fitForPurpose: "Yes",
+        defectsSummary: "", remedialActions: "",
+      },
+    ],
     notes: "", result: "Satisfactory",
     engineerName: "", companyName: "",
     signatureData: null,
   });
-  const [showPDF, setShowPDF] = useState(false);
-  const sigCanvasRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState(false);
 
   useEffect(() => {
     try {
@@ -23598,110 +25909,128 @@ function FireDoorInspectionForm({ onBack, onSave, currentUser }) {
   }, [currentUser]);
 
   const update = (k, v) => setCertData(prev => ({ ...prev, [k]: v }));
-  const initSig = (canvas) => { if (!canvas) return; sigCanvasRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
-  const startDraw = (e) => { setIsDrawing(true); const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
-  const draw = (e) => { if (!isDrawing) return; const c = sigCanvasRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
-  const endDraw = () => { setIsDrawing(false); if (sigCanvasRef.current) update("signatureData", sigCanvasRef.current.toDataURL()); };
-  const clearSig = () => { if (sigCanvasRef.current) { const ctx = sigCanvasRef.current.getContext("2d"); ctx.clearRect(0, 0, sigCanvasRef.current.width, sigCanvasRef.current.height); } update("signatureData", null); };
+  const updateDoor = (idx, field, val) => setCertData(prev => { const doors = [...prev.doors]; doors[idx] = { ...doors[idx], [field]: val }; return { ...prev, doors: doors }; });
+  const addDoor = () => setCertData(prev => ({
+    ...prev, doors: [...prev.doors, {
+      doorId: "", doorLocation: "", fireRating: "", fdSRated: "No",
+      certLabel: "Yes", labelLegible: "Yes", doorSignage: "Yes",
+      leafCondition: "Yes", frameCondition: "Yes", noModifications: "Yes", glazingOk: "N/A",
+      headGap: "", latchGap: "", hingeGap: "", bottomGap: "", gapsWithinTolerance: "Yes",
+      stripsContinuous: "Yes", stripsUndamaged: "Yes", smokeSeal: "N/A",
+      hingesOk: "Yes", hingesSecure: "Yes", closerOk: "Yes", latchOk: "Yes", lockOk: "Yes", holdOpen: "N/A",
+      frameFireStop: "Yes", constructionIntact: "Yes", servicePenetrations: "N/A",
+      closesUnassisted: "Yes", operatesSmoothly: "Yes", fitForPurpose: "Yes",
+      defectsSummary: "", remedialActions: "",
+    }]
+  }));
+  const removeDoor = (idx) => setCertData(prev => ({ ...prev, doors: prev.doors.filter((_, i) => i !== idx) }));
 
   const handleSave = () => {
-    const record = { ...certData, trade:"fire", type:"fire_door", savedAt: new Date().toISOString() };
+    const record = { ...certData, trade: "fire", type: "fire_door", savedAt: new Date().toISOString() };
     if (onSave) onSave(record);
     alert("Fire Door Inspection saved!");
     onBack();
   };
+  const handlePDF = () => generateFireSafetyPDF("fireDoor", certData);
 
-  if (showPDF) return <FireSafetyPDFPreview certData={certData} certType="fireDoor" certTitle="Fire Door Inspection — BS 8214" onClose={() => setShowPDF(false)} />;
-
-  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
-  const sectionTitleStyle = { color:"#ff6b35", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(255,107,53,0.3)", paddingBottom:6 };
-  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
-  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
-  const toggleRow = (label, field) => (
-    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
-      <span style={{ color:"rgba(255,255,255,0.8)", fontSize:13 }}>{label}</span>
-      <div style={{ display:"flex", gap:4 }}>
-        {["Pass","Fail","Advisory","N/A"].map(v => (
-          <button key={v} onClick={() => update(field, v)} style={{
-            padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", border:"none",
-            background: certData[field] === v ? (v==="Pass"?"#22c55e":v==="Fail"?"#ef4444":v==="Advisory"?"#f59e0b":"#555") : "rgba(255,255,255,0.08)",
-            color: certData[field] === v ? "#fff" : "rgba(255,255,255,0.5)",
-          }}>{v}</button>
-        ))}
-      </div>
-    </div>
-  );
+  const stepLabels = ["Client & Site", "Door Inspections", "Sign-off"];
+  const totalSteps = stepLabels.length;
 
   return (
-    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
-        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
-        <h2 style={{ fontSize:16, fontWeight:700, color:"#e8edf2", flex:1 }}>Fire Door Inspection</h2>
-      </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 100px" }}>
-        <div style={sectionTitleStyle}>Client & Site Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Certificate Reference</div><input style={inputStyle} value={certData.certRef} onChange={e => update("certRef", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Inspection Date</div><input type="date" style={inputStyle} value={certData.date} onChange={e => update("date", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Building Name</div><input style={inputStyle} value={certData.siteName} onChange={e => update("siteName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Building Address</div><input style={inputStyle} value={certData.siteAddr1} onChange={e => update("siteAddr1", e.target.value)} placeholder="Address line 1"/></div>
-        <div style={{ marginBottom:10 }}><input style={inputStyle} value={certData.siteAddr2} onChange={e => update("siteAddr2", e.target.value)} placeholder="Address line 2"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Postcode</div><input style={inputStyle} value={certData.sitePostcode} onChange={e => update("sitePostcode", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Name</div><input style={inputStyle} value={certData.clientName} onChange={e => update("clientName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Email</div><input type="email" style={inputStyle} value={certData.clientEmail} onChange={e => update("clientEmail", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Client Tel</div><input type="tel" style={inputStyle} value={certData.clientTel} onChange={e => update("clientTel", e.target.value)}/></div>
+    <FireFormShell title="Fire Door Inspection — BS 8214:2016" step={step} totalSteps={totalSteps} stepLabels={stepLabels}
+      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF}>
 
-        <div style={sectionTitleStyle}>Door Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Door Unique ID</div><input style={inputStyle} value={certData.doorId} onChange={e => update("doorId", e.target.value)} placeholder="e.g. FD-001"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Door Location (Floor, Zone)</div><input style={inputStyle} value={certData.doorLocation} onChange={e => update("doorLocation", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Door Type</div><input style={inputStyle} value={certData.doorType} onChange={e => update("doorType", e.target.value)} placeholder="e.g. Single leaf, double leaf"/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Fire Rating</div><select style={selectStyle} value={certData.fireRating} onChange={e => update("fireRating", e.target.value)}><option value="">Select...</option><option>FD30</option><option>FD60</option><option>FD90</option><option>FD120</option></select></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Quarterly Inspection (Communal 11m+ Building)</div><div style={{ display:"flex", gap:8 }}>
-          {["Yes","No"].map(v => (<button key={v} onClick={() => update("quarterlyInspection", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.quarterlyInspection===v?"#ff6b35":"rgba(255,255,255,0.15)", background: certData.quarterlyInspection===v?"rgba(255,107,53,0.15)":"transparent", color: certData.quarterlyInspection===v?"#ff6b35":"rgba(255,255,255,0.5)" }}>{v}</button>))}
-        </div></div>
+      {step === 0 && <>
+        <div style={FS_SECTION}>Client & Site Details</div>
+        <FSInput label="Certificate Reference" value={certData.certRef} onChange={v => update("certRef", v)}/>
+        <FSInput label="Inspection Date" type="date" value={certData.date} onChange={v => update("date", v)}/>
+        <FSInput label="Client Name" value={certData.clientName} onChange={v => update("clientName", v)}/>
+        <FSInput label="Client Email" type="email" value={certData.clientEmail} onChange={v => update("clientEmail", v)}/>
+        <FSInput label="Client Tel" type="tel" value={certData.clientTel} onChange={v => update("clientTel", v)}/>
+        <FSInput label="Building Name" value={certData.siteName} onChange={v => update("siteName", v)}/>
+        <FSInput label="Building Address" value={certData.siteAddr1} onChange={v => update("siteAddr1", v)}/>
+        <FSInput label="Address Line 2" value={certData.siteAddr2} onChange={v => update("siteAddr2", v)}/>
+        <FSInput label="Postcode" value={certData.sitePostcode} onChange={v => update("sitePostcode", v)}/>
+        <FSSelect label="Inspection Type" value={certData.inspectionType} onChange={v => update("inspectionType", v)} options={["6-Monthly", "Annual", "Post-remedial"]}/>
+        <FSInput label="Inspector Qualification / Certification No" value={certData.qualificationNo} onChange={v => update("qualificationNo", v)}/>
+      </>}
 
-        <div style={sectionTitleStyle}>Inspection Checklist</div>
-        {toggleRow("Door Leaf Condition", "doorLeaf")}
-        {toggleRow("Frame / Architrave Condition", "frameCondition")}
-        {toggleRow("Seals (Smoke/Intumescent)", "seals")}
-        {toggleRow("Hinges (Type, Qty, Fixings)", "hinges")}
-        {toggleRow("Latch / Lock", "latchLock")}
-        {toggleRow("Door Closer (Type, Operation)", "doorCloser")}
-        {toggleRow("Signage", "signage")}
-        {toggleRow("Vision Panel", "visionPanel")}
-        {toggleRow("Threshold Gap", "thresholdGap")}
-        {toggleRow("Side / Head Gaps", "sideHeadGaps")}
+      {step === 1 && <>
+        <div style={FS_SECTION}>Door Inspections</div>
+        {certData.doors.map((door, idx) => (
+          <div key={idx} style={{ background:"rgba(255,255,255,0.05)", borderRadius:10, padding:12, marginBottom:12, border:"1px solid rgba(255,255,255,0.1)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <span style={{ color:"#ff6b35", fontSize:14, fontWeight:700 }}>Door {idx + 1}</span>
+              {certData.doors.length > 1 && <button onClick={() => removeDoor(idx)} style={{ background:"rgba(239,68,68,0.2)", color:"#ef4444", border:"none", borderRadius:6, padding:"3px 8px", fontSize:10, fontWeight:700, cursor:"pointer" }}>Remove</button>}
+            </div>
+            <FSInput label="Door Reference / ID" value={door.doorId} onChange={v => updateDoor(idx, "doorId", v)} placeholder="e.g. FD-001"/>
+            <FSInput label="Location" value={door.doorLocation} onChange={v => updateDoor(idx, "doorLocation", v)} placeholder="Floor, corridor, room"/>
+            <FSSelect label="Fire Rating" value={door.fireRating} onChange={v => updateDoor(idx, "fireRating", v)} options={["FD30", "FD60", "FD90", "FD120"]}/>
+            <FSToggle label="FD-S Rated (Smoke Seal)" value={door.fdSRated} onChange={v => updateDoor(idx, "fdSRated", v)} options={["Yes", "No"]}/>
 
-        <div style={sectionTitleStyle}>Overall Assessment</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Overall Condition</div>
+            <div style={{ ...FS_SECTION, fontSize:12 }}>Certification & Labelling</div>
+            <FSToggle label="Certification Label Present" value={door.certLabel} onChange={v => updateDoor(idx, "certLabel", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Label Legible & Permanent" value={door.labelLegible} onChange={v => updateDoor(idx, "labelLegible", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Fire Door Signage Present" value={door.doorSignage} onChange={v => updateDoor(idx, "doorSignage", v)} options={["Yes", "No"]}/>
+
+            <div style={{ ...FS_SECTION, fontSize:12 }}>Door Leaf & Frame</div>
+            <FSToggle label="Leaf Free from Damage/Warping" value={door.leafCondition} onChange={v => updateDoor(idx, "leafCondition", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Frame Securely Fixed, No Gaps" value={door.frameCondition} onChange={v => updateDoor(idx, "frameCondition", v)} options={["Yes", "No"]}/>
+            <FSToggle label="No Unauthorised Modifications" value={door.noModifications} onChange={v => updateDoor(idx, "noModifications", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Fire-rated Glazing OK" value={door.glazingOk} onChange={v => updateDoor(idx, "glazingOk", v)} options={["Yes", "No", "N/A"]}/>
+
+            <div style={{ ...FS_SECTION, fontSize:12 }}>Gaps & Clearances (mm)</div>
+            <FSInput label="Head Gap (mm)" value={door.headGap} onChange={v => updateDoor(idx, "headGap", v)} placeholder="2-4mm"/>
+            <FSInput label="Latch Side Gap (mm)" value={door.latchGap} onChange={v => updateDoor(idx, "latchGap", v)} placeholder="2-4mm"/>
+            <FSInput label="Hinge Side Gap (mm)" value={door.hingeGap} onChange={v => updateDoor(idx, "hingeGap", v)}/>
+            <FSInput label="Bottom Gap (mm)" value={door.bottomGap} onChange={v => updateDoor(idx, "bottomGap", v)} placeholder="3-8mm"/>
+            <FSToggle label="All Gaps Within Tolerance" value={door.gapsWithinTolerance} onChange={v => updateDoor(idx, "gapsWithinTolerance", v)} options={["Yes", "No"]}/>
+
+            <div style={{ ...FS_SECTION, fontSize:12 }}>Intumescent Strips & Smoke Seals</div>
+            <FSToggle label="Strips Present & Continuous" value={door.stripsContinuous} onChange={v => updateDoor(idx, "stripsContinuous", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Strips Undamaged" value={door.stripsUndamaged} onChange={v => updateDoor(idx, "stripsUndamaged", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Cold Smoke Seal" value={door.smokeSeal} onChange={v => updateDoor(idx, "smokeSeal", v)} options={["Yes", "No", "N/A"]}/>
+
+            <div style={{ ...FS_SECTION, fontSize:12 }}>Hardware</div>
+            <FSToggle label="Min 3 CE-marked Hinges" value={door.hingesOk} onChange={v => updateDoor(idx, "hingesOk", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Hinges Secure & Undamaged" value={door.hingesSecure} onChange={v => updateDoor(idx, "hingesSecure", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Closer Fitted & Functional" value={door.closerOk} onChange={v => updateDoor(idx, "closerOk", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Latch Engages Correctly" value={door.latchOk} onChange={v => updateDoor(idx, "latchOk", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Lock/Furniture Compliant" value={door.lockOk} onChange={v => updateDoor(idx, "lockOk", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Hold-open Device Linked to Alarm" value={door.holdOpen} onChange={v => updateDoor(idx, "holdOpen", v)} options={["Yes", "No", "N/A"]}/>
+
+            <div style={{ ...FS_SECTION, fontSize:12 }}>Fire Stopping</div>
+            <FSToggle label="Frame-to-wall Fire Stopped" value={door.frameFireStop} onChange={v => updateDoor(idx, "frameFireStop", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Surrounding Construction Intact" value={door.constructionIntact} onChange={v => updateDoor(idx, "constructionIntact", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Service Penetrations Fire-stopped" value={door.servicePenetrations} onChange={v => updateDoor(idx, "servicePenetrations", v)} options={["Yes", "No", "N/A"]}/>
+
+            <div style={{ ...FS_SECTION, fontSize:12 }}>Overall Assessment</div>
+            <FSToggle label="Door Closes Fully Unassisted" value={door.closesUnassisted} onChange={v => updateDoor(idx, "closesUnassisted", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Operates Smoothly" value={door.operatesSmoothly} onChange={v => updateDoor(idx, "operatesSmoothly", v)} options={["Yes", "No"]}/>
+            <FSToggle label="Fit for Purpose / Remain in Service" value={door.fitForPurpose} onChange={v => updateDoor(idx, "fitForPurpose", v)} options={["Yes", "No"]}/>
+            <FSTextarea label="Defects Summary" value={door.defectsSummary} onChange={v => updateDoor(idx, "defectsSummary", v)}/>
+            <FSTextarea label="Recommended Remedial Actions" value={door.remedialActions} onChange={v => updateDoor(idx, "remedialActions", v)}/>
+          </div>
+        ))}
+        <button onClick={addDoor} style={{ width:"100%", padding:10, borderRadius:10, border:"1px dashed rgba(255,255,255,0.3)", background:"transparent", color:"#ff6b35", fontWeight:700, fontSize:13, cursor:"pointer" }}>+ Add Door</button>
+      </>}
+
+      {step === 2 && <>
+        <div style={FS_SECTION}>Notes & Result</div>
+        <FSTextarea label="Notes / Observations" value={certData.notes} onChange={v => update("notes", v)}/>
+        <div style={{ marginBottom:10 }}><div style={FS_LABEL}>Overall Result</div>
           <div style={{ display:"flex", gap:8 }}>
-            {["Satisfactory","Unsatisfactory"].map(v => (
-              <button key={v} onClick={() => { update("overallCondition", v); update("result", v); }} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.overallCondition === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.15)", background: certData.overallCondition === v ? (v==="Satisfactory"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)") : "transparent", color: certData.overallCondition === v ? (v==="Satisfactory"?"#22c55e":"#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
+            {["Satisfactory", "Unsatisfactory"].map(v => (
+              <button key={v} onClick={() => update("result", v)} style={{ flex:1, padding:"10px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"2px solid", borderColor: certData.result === v ? (v === "Satisfactory" ? "#22c55e" : "#ef4444") : "rgba(255,255,255,0.15)", background: certData.result === v ? (v === "Satisfactory" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)") : "transparent", color: certData.result === v ? (v === "Satisfactory" ? "#22c55e" : "#ef4444") : "rgba(255,255,255,0.5)" }}>{v}</button>
             ))}
           </div>
         </div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Next Inspection Due</div><input type="date" style={inputStyle} value={certData.nextInspectionDate} onChange={e => update("nextInspectionDate", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Notes / Observations</div><textarea style={{ ...inputStyle, minHeight:80 }} value={certData.notes} onChange={e => update("notes", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Inspector Details</div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Inspector Name</div><input style={inputStyle} value={certData.engineerName} onChange={e => update("engineerName", e.target.value)}/></div>
-        <div style={{ marginBottom:10 }}><div style={labelSt}>Company Name</div><input style={inputStyle} value={certData.companyName} onChange={e => update("companyName", e.target.value)}/></div>
-
-        <div style={sectionTitleStyle}>Signature</div>
-        <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
-          <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
-            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
-            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
-          <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
-        </div>
-      </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:10 }}>
-        <button onClick={handleSave} style={{ flex:1, padding:"14px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Save Certificate</button>
-        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"14px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:15, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
-      </div>
-    </div>
+        <div style={FS_SECTION}>Inspector Details</div>
+        <FSInput label="Inspector Name" value={certData.engineerName} onChange={v => update("engineerName", v)}/>
+        <FSInput label="Company Name" value={certData.companyName} onChange={v => update("companyName", v)}/>
+        <FSSignature sigRef={sigCanvasRef} sigData={certData.signatureData} onUpdate={v => update("signatureData", v)}/>
+      </>}
+    </FireFormShell>
   );
 }
 
@@ -23879,106 +26208,579 @@ function FireSafetyDashboard({ onBack, currentUser, onSaveCert, records, invoice
 // ─── PLUMBING & LEGIONELLA COMPONENTS ───────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// ── Plumbing PDF Preview (shared by all plumbing cert types) ────────────────
-function PlumbingPDFPreview({ title, form, fields, onClose }) {
-  const pdfRef = useRef(null);
-  const [downloading, setDownloading] = useState(false);
+// ── Plumbing PDF Generation (jsPDF direct drawing — matches electrical pattern) ──
+function generatePlumbingPDF(certData, certType, certTitle) {
+  const canvas = document.createElement("canvas");
+  const W = 800, pageH = 1132;
+  canvas.width = W;
+  const ctx = canvas.getContext("2d");
+  const pages = [];
+  let y = 0;
+  let pageNum = 0;
+  const certRef = certData.certRef || "";
 
-  const fmtDate = (d) => {
-    if (!d) return "";
-    const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
-    return d;
+  const startPage = () => {
+    pageNum++;
+    canvas.height = pageH;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, W, pageH);
+    y = 30;
+    // Page header on continuation pages
+    if (pageNum > 1) {
+      ctx.fillStyle = "#4A7CFF";
+      ctx.fillRect(0, 0, W, 36);
+      ctx.font = "bold 11px 'Segoe UI', sans-serif";
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "left";
+      ctx.fillText(certTitle + " — " + certRef, 30, 24);
+      ctx.textAlign = "right";
+      ctx.fillText("Page " + pageNum, W - 30, 24);
+      ctx.textAlign = "left";
+      y = 50;
+    }
   };
 
-  const sigImage = form.sigImage || (() => { try { return localStorage.getItem(sk("gsc_engineer_sig")) || ""; } catch(e) { return ""; } })();
+  const checkPage = (need) => {
+    if (y + need > pageH - 50) {
+      // Footer on current page
+      ctx.font = "9px 'Segoe UI', sans-serif";
+      ctx.fillStyle = "#999";
+      ctx.textAlign = "center";
+      ctx.fillText("Page " + pageNum + " — " + certRef + " — Generated by Gas Safety App", W / 2, pageH - 15);
+      ctx.textAlign = "left";
+      pages.push(canvas.toDataURL("image/png"));
+      startPage();
+    }
+  };
 
-  const downloadPDF = async () => {
-    setDownloading(true);
+  const drawText = (text, x, _y, opts = {}) => {
+    ctx.font = (opts.bold ? "bold " : "") + (opts.size || 13) + "px 'Segoe UI', sans-serif";
+    ctx.fillStyle = opts.color || "#222";
+    ctx.textAlign = opts.align || "left";
+    ctx.fillText(text || "", x, _y);
+    ctx.textAlign = "left";
+  };
+
+  const drawLine = (_y) => { ctx.strokeStyle = "#ddd"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(30, _y); ctx.lineTo(W - 30, _y); ctx.stroke(); };
+
+  const drawSection = (title) => {
+    checkPage(40);
+    ctx.fillStyle = "#333";
+    ctx.fillRect(30, y, W - 60, 28);
+    drawText(title, 42, y + 19, { bold: true, size: 13, color: "#fff" });
+    y += 38;
+  };
+
+  const drawField = (label, value) => {
+    checkPage(24);
+    drawText(label + ":", 40, y, { bold: true, size: 11, color: "#555" });
+    drawText(String(value || "N/A"), 250, y, { size: 11 });
+    y += 22;
+  };
+
+  const drawCheckbox = (label, checked) => {
+    checkPage(22);
+    drawText((checked ? "\u2611" : "\u2610") + "  " + label, 40, y, { size: 11 });
+    y += 20;
+  };
+
+  // Alternating row table
+  const drawTable = (headers, rows, colWidths) => {
+    const tableW = W - 60;
+    const totalCols = headers.length;
+    const defaultW = tableW / totalCols;
+    const widths = colWidths || headers.map(() => defaultW);
+
+    // Header row
+    checkPage(26);
+    let xOff = 30;
+    ctx.fillStyle = "#4A7CFF";
+    ctx.fillRect(30, y, tableW, 24);
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 0.5;
+    headers.forEach((h, i) => {
+      ctx.strokeRect(xOff, y, widths[i], 24);
+      ctx.font = "bold 10px 'Segoe UI', sans-serif";
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "left";
+      ctx.fillText(h, xOff + 4, y + 16);
+      xOff += widths[i];
+    });
+    y += 24;
+
+    // Data rows
+    rows.forEach((row, ri) => {
+      checkPage(22);
+      xOff = 30;
+      ctx.fillStyle = ri % 2 === 0 ? "#f5f5f5" : "#fff";
+      ctx.fillRect(30, y, tableW, 20);
+      ctx.strokeStyle = "#ddd";
+      ctx.lineWidth = 0.5;
+      row.forEach((cell, ci) => {
+        ctx.strokeRect(xOff, y, widths[ci], 20);
+        ctx.font = "10px 'Segoe UI', sans-serif";
+        ctx.fillStyle = "#333";
+        ctx.textAlign = "left";
+        ctx.fillText(String(cell || ""), xOff + 4, y + 14);
+        xOff += widths[ci];
+      });
+      y += 20;
+    });
+    y += 8;
+  };
+
+  const drawWrappedText = (text, x, maxW, opts = {}) => {
+    if (!text) return;
+    ctx.font = (opts.bold ? "bold " : "") + (opts.size || 11) + "px 'Segoe UI', sans-serif";
+    const words = String(text).split(" ");
+    let line = "";
+    const lineH = (opts.size || 11) + 5;
+    words.forEach(w => {
+      const test = line + (line ? " " : "") + w;
+      if (ctx.measureText(test).width > maxW && line) {
+        checkPage(lineH);
+        ctx.fillStyle = opts.color || "#333";
+        ctx.fillText(line, x, y);
+        y += lineH;
+        line = w;
+      } else {
+        line = test;
+      }
+    });
+    if (line) {
+      checkPage(lineH);
+      ctx.fillStyle = opts.color || "#333";
+      ctx.fillText(line, x, y);
+      y += lineH;
+    }
+  };
+
+  startPage();
+
+  // === HEADER ===
+  ctx.fillStyle = "#4A7CFF";
+  ctx.fillRect(0, 0, W, 80);
+  drawText("Plumbing & Legionella", 40, 35, { bold: true, size: 22, color: "#fff" });
+  drawText(certTitle, 40, 60, { size: 14, color: "rgba(255,255,255,0.85)" });
+  drawText("Ref: " + certRef, W - 40, 35, { align: "right", size: 12, color: "rgba(255,255,255,0.8)" });
+  drawText("Date: " + (certData.date || new Date().toLocaleDateString()), W - 40, 55, { align: "right", size: 11, color: "rgba(255,255,255,0.7)" });
+  y = 100;
+
+  // === LRA — Legionella Risk Assessment ===
+  if (certType === "lra") {
+    // Executive Summary
+    drawSection("Executive Summary");
+    drawField("Report Reference", certData.certRef);
+    drawField("Date of Assessment", certData.date);
+    drawField("Previous Assessment", certData.previousAssessmentDate);
+    drawField("Next Recommended Assessment", certData.reviewDate);
+    drawField("Overall Risk Level", certData.overallRiskLevel);
+    if (certData.executiveSummary) {
+      checkPage(20);
+      drawText("Summary:", 40, y, { bold: true, size: 11, color: "#555" });
+      y += 16;
+      drawWrappedText(certData.executiveSummary, 40, W - 80);
+    }
+
+    // Assessor Details
+    drawSection("Assessor Details");
+    drawField("Assessor Name", certData.assessorName);
+    drawField("Company", certData.assessorCompany);
+    drawField("Qualifications", certData.assessorQualifications);
+    drawField("Contact", certData.assessorContact);
+
+    // Client / Responsible Person
+    drawSection("Client / Responsible Person");
+    drawField("Responsible Person", certData.responsiblePerson);
+    drawField("Contact", certData.responsiblePersonContact);
+    drawField("Position", certData.responsiblePersonPosition);
+
+    // Site Details
+    drawSection("Section 1: Site Details");
+    drawField("Site Name", certData.siteName);
+    drawField("Address", certData.siteAddress);
+    drawField("Postcode", certData.sitePostcode);
+    drawField("Description of Premises", certData.premisesDescription);
+    drawField("Number of Floors", certData.numFloors);
+    drawField("Approximate Occupancy", certData.approxOccupancy);
+    drawField("Water Supplier", certData.waterSupplier);
+    drawField("Water Source", certData.waterSource);
+    drawField("Water Treatment in Place", certData.waterTreatment);
+    if (certData.waterTreatmentDetails) drawField("Treatment Details", certData.waterTreatmentDetails);
+
+    // System Description
+    drawSection("Section 2: System Description");
+    drawText("Cold Water Storage", 40, y, { bold: true, size: 12, color: "#333" }); y += 18;
+    drawField("Type", certData.coldStorageType);
+    drawField("Location", certData.coldStorageLocation);
+    drawField("Capacity (litres)", certData.coldStorageCapacity);
+    drawField("Material", certData.coldStorageMaterial);
+    drawCheckbox("Lid Fitted", certData.coldStorageLid);
+    drawCheckbox("Insulated", certData.coldStorageInsulated);
+    drawField("Temperature Recorded", certData.coldStorageTemp);
+
+    drawText("Hot Water System", 40, y, { bold: true, size: 12, color: "#333" }); y += 18;
+    drawField("Type", certData.hotWaterType);
+    drawField("Make/Model", certData.hotWaterMakeModel);
+    drawField("Capacity (litres)", certData.hotWaterCapacity);
+    drawField("Thermostat Setting (°C)", certData.hotWaterThermostat);
+    drawField("Actual Temp at Calorifier (°C)", certData.hotWaterActualTemp);
+
+    drawText("Distribution System", 40, y, { bold: true, size: 12, color: "#333" }); y += 18;
+    drawField("Pipe Material", certData.pipeMaterial);
+    drawCheckbox("Insulated", certData.pipeInsulated);
+    drawCheckbox("Dead Legs Identified", certData.deadLegs);
+    if (certData.deadLegDetails) drawField("Dead Leg Details", certData.deadLegDetails);
+
+    drawText("Outlets", 40, y, { bold: true, size: 12, color: "#333" }); y += 18;
+    drawField("Sentinel Taps (Nearest)", certData.sentinelNearest);
+    drawField("Sentinel Taps (Furthest)", certData.sentinelFurthest);
+    drawField("Infrequently Used Outlets", certData.infrequentOutlets);
+
+    drawText("Other Water Systems", 40, y, { bold: true, size: 12, color: "#333" }); y += 18;
+    drawCheckbox("Showers", certData.hasShowers);
+    drawCheckbox("TMVs", certData.hasTMVs);
+    drawCheckbox("Water Features", certData.hasWaterFeatures);
+    drawCheckbox("Cooling Towers", certData.hasCoolingTowers);
+    drawCheckbox("Evaporative Condensers", certData.hasEvapCondensers);
+    if (certData.otherSystems) drawField("Other", certData.otherSystems);
+
+    // Temperature Monitoring
+    drawSection("Section 3: Temperature Monitoring");
+    if (certData.tempReadings && certData.tempReadings.length > 0) {
+      drawTable(
+        ["Location", "Type", "Temp °C", "Compliant", "Comments"],
+        certData.tempReadings.map(r => [r.location, r.type, r.temp, r.compliant, r.comments]),
+        [180, 80, 70, 80, 330]
+      );
+    }
+    drawCheckbox("Hot water stored > 60°C", certData.hotStored60);
+    drawCheckbox("Hot water delivered > 50°C within 1 min", certData.hotDelivered50);
+    drawCheckbox("Cold water < 20°C", certData.coldBelow20);
+
+    // Identified Risks
+    drawSection("Section 4: Identified Risks");
+    if (certData.risks && certData.risks.length > 0) {
+      drawTable(
+        ["#", "Location", "Description", "Sev", "Like", "Risk", "Action", "Priority"],
+        certData.risks.map((r, i) => [i + 1, r.location, r.description, r.severity, r.likelihood, r.riskLevel, r.action, r.priority]),
+        [30, 90, 140, 40, 40, 50, 200, 150]
+      );
+    }
+
+    // Schematic
+    drawSection("Section 5: System Schematic");
+    if (certData.schematicDescription) {
+      drawWrappedText(certData.schematicDescription, 40, W - 80);
+    } else {
+      drawText("No schematic description provided", 40, y, { size: 11, color: "#999" }); y += 18;
+    }
+
+    // Control Measures
+    drawSection("Section 6: Control Measures & Recommendations");
+    if (certData.controlMeasuresInPlace) {
+      drawText("Existing Controls:", 40, y, { bold: true, size: 11, color: "#555" }); y += 16;
+      drawWrappedText(certData.controlMeasuresInPlace, 40, W - 80);
+    }
+    if (certData.controlMeasuresRecommended) {
+      drawText("Recommended Controls:", 40, y, { bold: true, size: 11, color: "#555" }); y += 16;
+      drawWrappedText(certData.controlMeasuresRecommended, 40, W - 80);
+    }
+    drawField("Monitoring Frequency", certData.monitoringFrequency);
+    drawField("Flushing Requirements", certData.flushingRequirements);
+  }
+
+  // === WATER TEMPERATURE LOG ===
+  if (certType === "tempLog") {
+    drawSection("Site Details");
+    drawField("Site Name", certData.siteName);
+    drawField("Address", certData.siteAddress);
+    drawField("Month / Year", certData.monthYear);
+    drawField("Responsible Person", certData.responsiblePerson);
+
+    drawSection("Temperature Records");
+    drawText("Compliance: Hot water > 50°C | Cold water < 20°C", 40, y, { size: 10, color: "#4A7CFF", bold: true }); y += 18;
+    if (certData.readings && certData.readings.length > 0) {
+      drawTable(
+        ["Date", "Outlet Location", "Type", "Temp °C", "Recorded By", "Comments"],
+        certData.readings.map(r => [r.date, r.location, r.type, r.temp, r.recordedBy, r.comments]),
+        [80, 160, 70, 70, 120, 240]
+      );
+    }
+
+    drawSection("Actions Required");
+    if (certData.actionsRequired) {
+      drawWrappedText(certData.actionsRequired, 40, W - 80);
+    } else {
+      drawText("No non-compliant readings", 40, y, { size: 11, color: "#666" }); y += 18;
+    }
+  }
+
+  // === G3 UNVENTED ===
+  if (certType === "g3") {
+    drawSection("Installer Details");
+    drawField("Engineer Name", certData.engineerName);
+    drawField("Company", certData.company);
+    drawField("G3 Qualification No.", certData.g3QualNo);
+    drawField("Qualification Expiry", certData.g3QualExpiry);
+    drawField("Competent Person Scheme", certData.competentPersonScheme);
+    drawField("CPS Membership No.", certData.cpsMembershipNo);
+
+    drawSection("Client Details");
+    drawField("Client Name", certData.clientName);
+    drawField("Installation Address", certData.siteAddress);
+    drawField("Postcode", certData.sitePostcode);
+
+    drawSection("Cylinder Specification");
+    drawField("Make", certData.cylMake);
+    drawField("Model", certData.cylModel);
+    drawField("Serial No.", certData.cylSerial);
+    drawField("Capacity (litres)", certData.cylCapacity);
+    drawField("Direct / Indirect", certData.cylType);
+    drawField("Max Working Pressure (bar)", certData.cylMaxPressure);
+
+    drawSection("Safety Devices");
+    drawText("Temperature & Pressure Relief Valve", 40, y, { bold: true, size: 11, color: "#333" }); y += 16;
+    drawField("Make / Model", certData.tpValveMakeModel);
+    drawField("Setting (°C / bar)", certData.tpValveSetting);
+    drawCheckbox("Discharge pipework to tundish", certData.tpValveDischarge);
+    y += 4;
+    drawText("Tundish", 40, y, { bold: true, size: 11, color: "#333" }); y += 16;
+    drawCheckbox("Installed and visible", certData.tundishInstalled);
+    drawField("Size", certData.tundishSize);
+    y += 4;
+    drawText("Discharge Pipework", 40, y, { bold: true, size: 11, color: "#333" }); y += 16;
+    drawCheckbox("Terminates safely externally", certData.dischargeExternal);
+    drawField("Material", certData.dischargeMaterial);
+    drawField("Size", certData.dischargeSize);
+    drawField("Route Description", certData.dischargeRoute);
+    y += 4;
+    drawText("Expansion Vessel", 40, y, { bold: true, size: 11, color: "#333" }); y += 16;
+    drawField("Make / Model", certData.expansionMakeModel);
+    drawField("Capacity (litres)", certData.expansionCapacity);
+    drawField("Charge Pressure (bar)", certData.expansionCharge);
+    y += 4;
+    drawText("Pressure Reducing Valve", 40, y, { bold: true, size: 11, color: "#333" }); y += 16;
+    drawField("Make", certData.prvMake);
+    drawField("Set Pressure (bar)", certData.prvSetPressure);
+    y += 4;
+    drawCheckbox("Line Strainer Fitted", certData.lineStrainer);
+    drawCheckbox("Check Valve / Combined Unit Fitted", certData.checkValve);
+
+    drawSection("Commissioning Measurements");
+    drawField("Cold Water Supply Pressure (bar)", certData.coldPressure);
+    drawField("Hot Water Temp at Outlet (°C)", certData.hotTempOutlet);
+    drawField("Hot Water Temp at Cylinder Stat (°C)", certData.hotTempCylinder);
+    drawField("Expansion Vessel Pre-charge Pressure (bar)", certData.expansionPrecharge);
+    drawCheckbox("T&P Valve Lift Test Performed", certData.tpLiftTest);
+    drawCheckbox("Tundish Discharge Observed", certData.tundishDischarge);
+
+    drawSection("Building Control Notification");
+    drawField("Method", certData.buildingControlMethod);
+    drawField("Reference", certData.buildingControlRef);
+    drawCheckbox("Operating Instructions Given to Customer", certData.instructionsGiven);
+  }
+
+  // === TMV SERVICE RECORD ===
+  if (certType === "tmv") {
+    drawSection("Service Details");
+    drawField("Service Report No.", certData.certRef);
+    drawField("Date", certData.date);
+    drawField("Engineer Name", certData.engineerName);
+    drawField("Company", certData.company);
+
+    drawSection("Client / Site Details");
+    drawField("Client Name", certData.clientName);
+    drawField("Site / Building", certData.siteName);
+    drawField("Address", certData.siteAddress);
+
+    drawSection("TMV Service Records");
+    if (certData.valves && certData.valves.length > 0) {
+      certData.valves.forEach((v, vi) => {
+        checkPage(200);
+        drawText("Valve " + (vi + 1), 40, y, { bold: true, size: 12, color: "#4A7CFF" }); y += 18;
+        drawField("Location", v.location);
+        drawField("TMV Make / Model", v.makeModel);
+        drawField("Serial No.", v.serialNo);
+        drawField("TMV Approval", v.approval);
+        drawField("Hot Inlet Temp (°C)", v.hotInlet);
+        drawField("Cold Inlet Temp (°C)", v.coldInlet);
+        drawField("Mixed Outlet Temp (°C)", v.mixedOutlet);
+        drawField("Specified Range", v.specifiedRange);
+        drawField("Within Range", v.withinRange);
+        drawCheckbox("Strainer Present", v.strainerPresent);
+        drawCheckbox("Strainer Cleaned", v.strainerCleaned);
+        drawText("Failsafe Tests:", 40, y, { bold: true, size: 11, color: "#555" }); y += 16;
+        drawCheckbox("Cold supply isolation — outlet temp drops/shuts off", v.failsafeCold);
+        drawCheckbox("Hot supply isolation — outlet temp drops/shuts off", v.failsafeHot);
+        drawField("Service/Calibration Performed", v.servicePerformed);
+        drawField("Comments / Remedial Actions", v.comments);
+        y += 8;
+        drawLine(y); y += 8;
+      });
+    }
+
+    // Summary table
+    if (certData.valves && certData.valves.length > 0) {
+      drawSection("Summary Table");
+      drawTable(
+        ["Location", "Make/Model", "Outlet °C", "In Range", "Strainer", "Failsafe"],
+        certData.valves.map(v => [v.location, v.makeModel, v.mixedOutlet, v.withinRange, v.strainerCleaned ? "Yes" : "No", (v.failsafeCold && v.failsafeHot) ? "Pass" : "Fail"]),
+        [150, 140, 80, 80, 80, 210]
+      );
+    }
+  }
+
+  // === RPZ VALVE TEST ===
+  if (certType === "rpz") {
+    drawSection("Tester Details");
+    drawField("Tester Name", certData.testerName);
+    drawField("Company", certData.testerCompany);
+    drawField("WRAS-Approved Tester No.", certData.wrasApprovedNo);
+
+    drawSection("Client / Site Details");
+    drawField("Client Name", certData.clientName);
+    drawField("Site Address", certData.siteAddress);
+    drawField("Postcode", certData.sitePostcode);
+
+    drawSection("Device Details");
+    drawField("Make", certData.deviceMake);
+    drawField("Model", certData.deviceModel);
+    drawField("Serial No.", certData.deviceSerial);
+    drawField("Size", certData.deviceSize);
+    drawField("Location", certData.deviceLocation);
+    drawField("Date of Installation", certData.installDate);
+    drawField("Date of Last Test", certData.lastTestDate);
+
+    drawSection("Pre-Test Checks");
+    drawCheckbox("Isolating Valve No.1 Tight", certData.isoValve1Tight);
+    drawCheckbox("Isolating Valve No.2 Tight", certData.isoValve2Tight);
+    drawCheckbox("Strainer Present", certData.strainerPresent);
+    drawCheckbox("Strainer Cleaned", certData.strainerCleaned);
+    drawCheckbox("Accessibility Acceptable", certData.accessibility);
+
+    drawSection("Test Results");
+    drawText("First (Upstream) Check Valve", 40, y, { bold: true, size: 11, color: "#333" }); y += 16;
+    drawField("Differential Pressure (PSID)", certData.cv1Pressure);
+    drawField("Must be >= 5 PSID", certData.cv1Pressure ? (parseFloat(certData.cv1Pressure) >= 5 ? "PASS" : "FAIL") : "N/A");
+    y += 4;
+    drawText("Second (Downstream) Check Valve", 40, y, { bold: true, size: 11, color: "#333" }); y += 16;
+    drawCheckbox("Holds Tight", certData.cv2HoldsTight);
+    drawField("Result", certData.cv2Result);
+    y += 4;
+    drawText("Relief Valve", 40, y, { bold: true, size: 11, color: "#333" }); y += 16;
+    drawField("Opens at Differential (PSID)", certData.reliefValvePSID);
+    drawField("Must be <= 2 PSID below CV1", certData.reliefValveResult);
+    y += 4;
+    drawText("Downstream Isolation Valve", 40, y, { bold: true, size: 11, color: "#333" }); y += 16;
+    drawCheckbox("Tight", certData.downstreamIsoTight);
+
+    // Overall result box
+    checkPage(50);
+    const isPass = certData.overallResult === "PASS";
+    ctx.fillStyle = isPass ? "#d4edda" : "#f8d7da";
+    ctx.fillRect(30, y, W - 60, 36);
+    ctx.strokeStyle = isPass ? "#28a745" : "#dc3545";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(30, y, W - 60, 36);
+    drawText("OVERALL RESULT: " + (certData.overallResult || "N/A"), W / 2, y + 24, { bold: true, size: 16, color: isPass ? "#155724" : "#721c24", align: "center" });
+    y += 50;
+
+    drawSection("Test Equipment");
+    drawField("Make", certData.testEquipMake);
+    drawField("Model", certData.testEquipModel);
+    drawField("Serial No.", certData.testEquipSerial);
+    drawField("Calibration Date", certData.testEquipCalDate);
+
+    if (certData.remedialWork) {
+      drawSection("Remedial Work Performed");
+      drawWrappedText(certData.remedialWork, 40, W - 80);
+    }
+
+    drawSection("Permissions");
+    drawField("Permission to Turn Off Supply — Name", certData.permOffName);
+    drawField("Permission to Turn On Supply — Name", certData.permOnName);
+    drawField("Copy To", certData.copyTo);
+  }
+
+  // === NOTES (all types) ===
+  if (certData.notes) {
+    drawSection("Notes / Observations");
+    drawWrappedText(certData.notes, 40, W - 80);
+  }
+
+  // === RESULT (all types) ===
+  if (certType !== "rpz" && certData.result) {
+    drawSection("Result");
+    drawField("Overall Result", certData.result);
+    if (certData.reviewDate) drawField("Review / Next Inspection Date", certData.reviewDate);
+    if (certData.nextServiceDue) drawField("Next Service Due", certData.nextServiceDue);
+    if (certData.nextTestDue) drawField("Next Test Due", certData.nextTestDue);
+  }
+
+  // === DECLARATION ===
+  drawSection("Declaration");
+  drawText("I declare that the information in this certificate is accurate to the best of my knowledge", 40, y, { size: 10, color: "#333" });
+  y += 14;
+  drawText("and the work described has been carried out in accordance with the relevant standards.", 40, y, { size: 10, color: "#333" });
+  y += 20;
+  drawField("Name", certData.engineerName || certData.assessorName || certData.testerName);
+  drawField("Date", certData.date);
+
+  // Signature
+  if (certData.signatureData) {
+    checkPage(80);
+    drawText("Signature:", 40, y, { bold: true, size: 11, color: "#555" }); y += 6;
     try {
-      await Promise.all([
-        new Promise((res,rej)=>{ if(window.html2canvas) return res(); const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); }),
-        new Promise((res,rej)=>{ if(window.jspdf) return res(); const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); }),
-      ]);
-      const el = pdfRef.current;
-      const RENDER_WIDTH = 1200;
-      const prevWidth = el.style.width, prevMax = el.style.maxWidth, prevMin = el.style.minWidth;
-      el.style.width = RENDER_WIDTH+"px"; el.style.maxWidth = RENDER_WIDTH+"px"; el.style.minWidth = RENDER_WIDTH+"px";
-      await new Promise(r=>setTimeout(r,500));
-      const canvas = await window.html2canvas(el,{scale:2,useCORS:true,logging:false,width:RENDER_WIDTH,height:el.scrollHeight,windowWidth:RENDER_WIDTH,scrollX:0,scrollY:0});
-      el.style.width = prevWidth; el.style.maxWidth = prevMax; el.style.minWidth = prevMin;
-      const {jsPDF} = window.jspdf;
-      const pdf = new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
-      const pdfW=210, pdfH=297;
-      const imgAspect=canvas.width/canvas.height, pageAspect=pdfW/pdfH;
-      let drawW,drawH,drawX,drawY;
-      if(imgAspect>pageAspect){drawW=pdfW;drawH=pdfW/imgAspect;drawX=0;drawY=(pdfH-drawH)/2;}
-      else{drawH=pdfH;drawW=pdfH*imgAspect;drawX=(pdfW-drawW)/2;drawY=0;}
-      pdf.addImage(canvas.toDataURL("image/jpeg",0.97),"JPEG",drawX,drawY,drawW,drawH);
-      const filename = (form.siteAddress||form.siteName||"plumbing-cert").replace(/[^a-zA-Z0-9 \-_]/g,"").trim().replace(/\s+/g,"_") + "_" + title.replace(/\s+/g,"_") + ".pdf";
-      pdf.save(filename);
-    } catch(e) { alert("Could not generate PDF: "+e.message); }
-    setDownloading(false);
-  };
+      const sigImg = new Image();
+      sigImg.src = certData.signatureData;
+      ctx.drawImage(sigImg, 40, y, 200, 60);
+      y += 70;
+    } catch (e) { drawText("[Signature captured]", 40, y, { size: 11 }); y += 20; }
+  }
 
-  const cellStyle = { border:"1px solid #ccc", padding:"6px 10px", fontSize:12 };
-  const thStyle = { ...cellStyle, background:"#00b4d8", color:"#fff", fontWeight:700, fontSize:11 };
-  const sectionTitleStyle = { background:"#0d1f2d", color:"#fff", padding:"8px 12px", fontWeight:700, fontSize:13, margin:"16px 0 0" };
+  // === FOOTER ===
+  checkPage(40);
+  drawLine(y); y += 15;
+  ctx.font = "9px 'Segoe UI', sans-serif";
+  ctx.fillStyle = "#999";
+  ctx.textAlign = "center";
+  ctx.fillText("Page " + pageNum + " — " + certRef + " — Generated by Gas Safety App — Plumbing & Legionella Module", W / 2, y);
+  ctx.textAlign = "left";
 
+  pages.push(canvas.toDataURL("image/png"));
+
+  // Open PDF in new window
+  const w = window.open("", "_blank");
+  if (w) {
+    w.document.write("<html><head><title>" + certTitle + " — " + certRef + "</title><style>@media print{@page{margin:0}body{margin:0}img{page-break-after:always}}</style></head><body style='margin:0;background:#333;text-align:center'>");
+    pages.forEach((p, i) => { w.document.write("<img src='" + p + "' style='width:100%;max-width:800px;" + (i > 0 ? "margin-top:10px;" : "") + "display:block;margin-left:auto;margin-right:auto'/>"); });
+    w.document.write("</body></html>");
+    w.document.close();
+  }
+}
+
+// ── Plumbing PDF Preview (wrapper component — uses generatePlumbingPDF) ─────
+function PlumbingPDFPreview({ certType, certTitle, certData, onClose }) {
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:"#1a1a2e", fontFamily:"'Segoe UI',sans-serif" }}>
       <div style={{ background:"#0d1f2d", padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:8, padding:"6px 14px", color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer" }}>← Back</button>
-        <span style={{ color:"#fff", fontWeight:700, fontSize:15 }}>{title}</span>
-        <button onClick={downloadPDF} disabled={downloading} style={{ background:"#00b4d8", color:"#fff", border:"none", borderRadius:20, padding:"8px 18px", fontWeight:700, fontSize:13, cursor:"pointer" }}>
-          {downloading?"...":"⬇ Download"}
+        <span style={{ color:"#fff", fontWeight:700, fontSize:15 }}>{certTitle}</span>
+        <button onClick={() => generatePlumbingPDF(certData, certType, certTitle)} style={{ background:"#4A7CFF", color:"#fff", border:"none", borderRadius:20, padding:"8px 18px", fontWeight:700, fontSize:13, cursor:"pointer" }}>
+          Download PDF
         </button>
       </div>
-      <div style={{ flex:1, overflowY:"auto", overflowX:"hidden", padding:16, paddingBottom:80 }}>
-        <div ref={pdfRef} style={{ background:"#fff", padding:24, width:"100%", maxWidth:"min(760px, calc(100vw - 32px))", margin:"0 auto", fontFamily:"Arial, sans-serif", fontSize:13, boxSizing:"border-box" }}>
-          {/* Header */}
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:"3px solid #00b4d8", paddingBottom:12, marginBottom:16 }}>
-            <div>
-              <img src={APP_LOGO_SVG} style={{ height:40, objectFit:"contain" }} alt="Gas Safety App"/>
-              <div style={{ fontSize:10, color:"#666", marginTop:4 }}>Plumbing & Legionella</div>
-            </div>
-            <div style={{ textAlign:"right" }}>
-              <div style={{ fontSize:18, fontWeight:800, color:"#0d1f2d" }}>{title}</div>
-              <div style={{ fontSize:11, color:"#666" }}>Ref: {form.certRef || "—"}</div>
-              <div style={{ fontSize:11, color:"#666" }}>Date: {fmtDate(form.date) || fmtDate(form.inspectionDate) || "—"}</div>
-            </div>
-          </div>
-
-          {/* Dynamic field sections */}
-          {fields.map((section, si) => (
-            <div key={si}>
-              <div style={sectionTitleStyle}>{section.title}</div>
-              <table style={{ width:"100%", borderCollapse:"collapse" }}>
-                <tbody>
-                  {section.rows.map((row, ri) => (
-                    <tr key={ri}>
-                      <td style={{ ...thStyle, width:"35%" }}>{row.label}</td>
-                      <td style={cellStyle}>{row.value || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
-
-          {/* Signature */}
-          {sigImage && (
-            <div style={{ marginTop:20, borderTop:"1px solid #ddd", paddingTop:12 }}>
-              <div style={{ fontSize:11, color:"#666", marginBottom:6 }}>Engineer Signature:</div>
-              <img src={sigImage} style={{ maxWidth:200, height:60, objectFit:"contain" }} alt="Signature"/>
-            </div>
-          )}
-
-          {/* Footer */}
-          <div style={{ marginTop:20, borderTop:"2px solid #00b4d8", paddingTop:8, textAlign:"center" }}>
-            <div style={{ fontSize:10, color:"#888" }}>Generated by Gas Safety App — Plumbing & Legionella Module</div>
-            <div style={{ fontSize:10, color:"#888" }}>Certificate Reference: {form.certRef || "—"}</div>
-          </div>
+      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+        <div style={{ background:"#fff", borderRadius:16, padding:32, maxWidth:500, textAlign:"center" }}>
+          <div style={{ fontSize:48, marginBottom:16 }}>📄</div>
+          <div style={{ fontSize:18, fontWeight:700, color:"#333", marginBottom:8 }}>{certTitle}</div>
+          <div style={{ fontSize:13, color:"#666", marginBottom:4 }}>Ref: {certData.certRef || "N/A"}</div>
+          <div style={{ fontSize:13, color:"#666", marginBottom:20 }}>Date: {certData.date || "N/A"}</div>
+          <button onClick={() => generatePlumbingPDF(certData, certType, certTitle)} style={{ background:"#4A7CFF", color:"#fff", border:"none", borderRadius:12, padding:"14px 32px", fontWeight:700, fontSize:15, cursor:"pointer" }}>
+            Generate & Download PDF
+          </button>
+          <div style={{ marginTop:16, fontSize:11, color:"#999" }}>PDF will open in a new tab for printing/saving</div>
         </div>
       </div>
     </div>
@@ -24012,850 +26814,1185 @@ function PlumbingSigPad({ onSign }) {
   );
 }
 
-// ── Legionella Risk Assessment Form ─────────────────────────────────────────
+// ── Legionella Risk Assessment Form (ACOP L8 / HSG274) — Multi-Step Wizard ──
 function PlumbingLRAForm({ onBack, onSave, currentUser }) {
+  const [step, setStep] = useState(1);
+  const totalSteps = 8;
   const [form, setForm] = useState({
     certRef: "LRA-" + Date.now().toString(36).toUpperCase(),
-    date: new Date().toISOString().slice(0,10),
-    assessorName: "", assessorQualifications: "",
-    responsiblePerson: "", responsiblePersonContact: "",
+    date: new Date().toISOString().slice(0, 10),
+    previousAssessmentDate: "", reviewDate: "",
+    // Assessor
+    assessorName: "", assessorCompany: "", assessorQualifications: "", assessorContact: "",
+    // Responsible person
+    responsiblePerson: "", responsiblePersonContact: "", responsiblePersonPosition: "",
+    // Site
     siteName: "", siteAddress: "", sitePostcode: "",
-    waterSystemsHot: false, waterSystemsCold: false, waterSystemsShowers: false,
-    waterSystemsCoolingTowers: false, waterSystemsSpa: false, waterSystemsOther: "",
-    assetRegister: "",
-    riskBacterialGrowth: "Low", riskExposure: "Low", atRiskGroups: "",
-    riskRatingHotWater: "Low", riskRatingColdWater: "Low", riskRatingShowers: "Low",
-    controlMeasuresInPlace: "", controlMeasuresRecommended: "",
-    tempReadings: "",
-    correctiveActions: "", correctivePriority: "Routine",
-    overallRiskLevel: "Low",
-    reviewDate: "",
-    notes: "", result: "Satisfactory", sigImage: ""
+    premisesDescription: "", numFloors: "", approxOccupancy: "",
+    waterSupplier: "", waterSource: "Mains", waterTreatment: "No", waterTreatmentDetails: "",
+    // Cold water storage
+    coldStorageType: "", coldStorageLocation: "", coldStorageCapacity: "", coldStorageMaterial: "",
+    coldStorageLid: false, coldStorageInsulated: false, coldStorageTemp: "",
+    // Hot water system
+    hotWaterType: "Indirect", hotWaterMakeModel: "", hotWaterCapacity: "", hotWaterThermostat: "", hotWaterActualTemp: "",
+    // Distribution
+    pipeMaterial: "", pipeInsulated: false, deadLegs: false, deadLegDetails: "",
+    // Outlets
+    sentinelNearest: "", sentinelFurthest: "", infrequentOutlets: "",
+    // Other systems
+    hasShowers: false, hasTMVs: false, hasWaterFeatures: false, hasCoolingTowers: false, hasEvapCondensers: false, otherSystems: "",
+    // Temperatures
+    tempReadings: [{ location: "", type: "Hot", temp: "", compliant: "Yes", comments: "" }],
+    hotStored60: false, hotDelivered50: false, coldBelow20: false,
+    // Risks
+    risks: [{ location: "", description: "", severity: "1", likelihood: "1", riskLevel: "1", action: "", priority: "Medium term" }],
+    // Schematic
+    schematicDescription: "",
+    // Control measures
+    controlMeasuresInPlace: "", controlMeasuresRecommended: "", monitoringFrequency: "", flushingRequirements: "",
+    // Outcome
+    overallRiskLevel: "Minimal", executiveSummary: "",
+    notes: "", result: "Satisfactory", signatureData: ""
   });
   const [showPDF, setShowPDF] = useState(false);
-  const s = (k,v) => setForm(f=>({...f,[k]:v}));
-  const labelStyle = { display:"block", fontSize:12, fontWeight:600, color:"#334", marginBottom:4 };
-  const inputStyle = { width:"100%", padding:"10px 12px", border:"1px solid #d0d5dd", borderRadius:8, fontSize:14, boxSizing:"border-box", marginBottom:12 };
-  const sectionStyle = { background:"#fff", borderRadius:14, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" };
-  const sectionTitleStyle = { fontSize:15, fontWeight:700, color:"#0d1f2d", marginBottom:12, display:"flex", alignItems:"center", gap:8 };
-  const checkStyle = { display:"flex", alignItems:"center", gap:8, marginBottom:8, fontSize:13 };
-  const selectStyle = { ...inputStyle, background:"#fff" };
+  const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: "#334", marginBottom: 4 };
+  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #d0d5dd", borderRadius: 8, fontSize: 14, boxSizing: "border-box", marginBottom: 12 };
+  const sectionStyle = { background: "#fff", borderRadius: 14, padding: 16, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" };
+  const sectionTitleStyle = { fontSize: 15, fontWeight: 700, color: "#0d1f2d", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 };
+  const checkStyle = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13 };
+  const selectStyle = { ...inputStyle, background: "#fff" };
 
   if (showPDF) {
-    const fields = [
-      { title: "Assessment Details", rows: [
-        { label: "Reference", value: form.certRef },
-        { label: "Date", value: form.date },
-        { label: "Assessor", value: form.assessorName },
-        { label: "Qualifications", value: form.assessorQualifications },
-        { label: "Responsible Person", value: form.responsiblePerson },
-        { label: "Contact", value: form.responsiblePersonContact },
-      ]},
-      { title: "Site Details", rows: [
-        { label: "Site Name", value: form.siteName },
-        { label: "Address", value: form.siteAddress },
-        { label: "Postcode", value: form.sitePostcode },
-      ]},
-      { title: "Water Systems Present", rows: [
-        { label: "Hot Water", value: form.waterSystemsHot ? "Yes" : "No" },
-        { label: "Cold Water", value: form.waterSystemsCold ? "Yes" : "No" },
-        { label: "Showers", value: form.waterSystemsShowers ? "Yes" : "No" },
-        { label: "Cooling Towers", value: form.waterSystemsCoolingTowers ? "Yes" : "No" },
-        { label: "Spa/Pool", value: form.waterSystemsSpa ? "Yes" : "No" },
-        { label: "Other", value: form.waterSystemsOther },
-      ]},
-      { title: "Asset Register", rows: [
-        { label: "Assets (tanks, calorifiers, outlets, TMVs)", value: form.assetRegister },
-      ]},
-      { title: "Risk Assessment", rows: [
-        { label: "Bacterial Growth Likelihood", value: form.riskBacterialGrowth },
-        { label: "Exposure Risk", value: form.riskExposure },
-        { label: "At-Risk Groups", value: form.atRiskGroups },
-        { label: "Hot Water Risk Rating", value: form.riskRatingHotWater },
-        { label: "Cold Water Risk Rating", value: form.riskRatingColdWater },
-        { label: "Showers Risk Rating", value: form.riskRatingShowers },
-      ]},
-      { title: "Control Measures", rows: [
-        { label: "In Place", value: form.controlMeasuresInPlace },
-        { label: "Recommended", value: form.controlMeasuresRecommended },
-      ]},
-      { title: "Temperature Readings", rows: [
-        { label: "Readings at Key Outlets", value: form.tempReadings },
-      ]},
-      { title: "Corrective Actions", rows: [
-        { label: "Actions Required", value: form.correctiveActions },
-        { label: "Priority", value: form.correctivePriority },
-      ]},
-      { title: "Outcome", rows: [
-        { label: "Overall Risk Level", value: form.overallRiskLevel },
-        { label: "Result", value: form.result },
-        { label: "Review Date", value: form.reviewDate },
-        { label: "Notes", value: form.notes },
-      ]},
-    ];
-    return <PlumbingPDFPreview title="Legionella Risk Assessment" form={form} fields={fields} onClose={()=>setShowPDF(false)} />;
+    return <PlumbingPDFPreview certType="lra" certTitle="Legionella Risk Assessment (ACOP L8)" certData={form} onClose={() => setShowPDF(false)} />;
   }
 
   const handleSave = () => {
-    const rec = { ...form, trade:"plumbing", type:"lra", savedAt:new Date().toISOString() };
+    const rec = { ...form, trade: "plumbing", type: "lra", savedAt: new Date().toISOString() };
     if (onSave) onSave(rec);
     alert("Legionella Risk Assessment saved!");
   };
 
+  // Dynamic row helpers
+  const addTempReading = () => s("tempReadings", [...form.tempReadings, { location: "", type: "Hot", temp: "", compliant: "Yes", comments: "" }]);
+  const updateTemp = (i, k, v) => { const a = [...form.tempReadings]; a[i] = { ...a[i], [k]: v }; s("tempReadings", a); };
+  const removeTemp = (i) => { const a = [...form.tempReadings]; a.splice(i, 1); s("tempReadings", a); };
+
+  const addRisk = () => s("risks", [...form.risks, { location: "", description: "", severity: "1", likelihood: "1", riskLevel: "1", action: "", priority: "Medium term" }]);
+  const updateRisk = (i, k, v) => {
+    const a = [...form.risks]; a[i] = { ...a[i], [k]: v };
+    if (k === "severity" || k === "likelihood") {
+      a[i].riskLevel = String(parseInt(a[i].severity || "1") * parseInt(a[i].likelihood || "1"));
+    }
+    s("risks", a);
+  };
+  const removeRisk = (i) => { const a = [...form.risks]; a.splice(i, 1); s("risks", a); };
+
+  const riskColor = (level) => {
+    const n = parseInt(level);
+    if (n <= 3) return "#28a745";
+    if (n <= 9) return "#ffc107";
+    if (n <= 16) return "#fd7e14";
+    return "#dc3545";
+  };
+
+  const progressBar = (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
+      {Array.from({ length: totalSteps }, (_, i) => (
+        <div key={i} style={{ flex: 1, height: 6, borderRadius: 3, background: i + 1 <= step ? "#4A7CFF" : "#e0e0e0", transition: "background 0.2s" }} />
+      ))}
+      <span style={{ fontSize: 11, color: "#666", fontWeight: 600, flexShrink: 0 }}>Step {step}/{totalSteps}</span>
+    </div>
+  );
+
+  const navButtons = (
+    <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+      {step > 1 && <button onClick={() => setStep(step - 1)} style={{ flex: 1, padding: "14px 0", background: "#e0e0e0", color: "#333", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Back</button>}
+      {step < totalSteps && <button onClick={() => setStep(step + 1)} style={{ flex: 1, padding: "14px 0", background: "#4A7CFF", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Next</button>}
+      {step === totalSteps && (
+        <>
+          <button onClick={handleSave} style={{ flex: 1, padding: "14px 0", background: "#00b4d8", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Save</button>
+          <button onClick={() => setShowPDF(true)} style={{ flex: 1, padding: "14px 0", background: "#0d1f2d", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Generate PDF</button>
+        </>
+      )}
+    </div>
+  );
+
   return (
-    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ background:"linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
-        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+    <div style={{ minHeight: "100dvh", background: "#f0f2f5", fontFamily: "'Segoe UI',sans-serif" }}>
+      <div style={{ background: "linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+        <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 10, background: "#1e3044", border: "1px solid #2a4058", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#8b9db0", flexShrink: 0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
-        <div style={{ flex:1 }}>
-          <div style={{ color:"#fff", fontWeight:800, fontSize:16 }}>Legionella Risk Assessment</div>
-          <div style={{ color:"rgba(255,255,255,0.6)", fontSize:11 }}>ACOP L8 / BS 8580-1:2019</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>Legionella Risk Assessment</div>
+          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>ACOP L8 / HSG274</div>
         </div>
       </div>
 
-      <div style={{ padding:"12px 16px 100px", maxWidth:600, margin:"0 auto" }}>
-        {/* Assessment Details */}
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>📋 Assessment Details</div>
-          <label style={labelStyle}>Reference</label>
-          <input value={form.certRef} onChange={e=>s("certRef",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Date</label>
-          <input type="date" value={form.date} onChange={e=>s("date",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Assessor Name</label>
-          <input value={form.assessorName} onChange={e=>s("assessorName",e.target.value)} style={inputStyle} placeholder="Full name"/>
-          <label style={labelStyle}>Qualifications</label>
-          <input value={form.assessorQualifications} onChange={e=>s("assessorQualifications",e.target.value)} style={inputStyle} placeholder="e.g. Legionella Risk Assessor, City & Guilds"/>
-          <label style={labelStyle}>Responsible Person</label>
-          <input value={form.responsiblePerson} onChange={e=>s("responsiblePerson",e.target.value)} style={inputStyle} placeholder="Name"/>
-          <label style={labelStyle}>Contact Details</label>
-          <input value={form.responsiblePersonContact} onChange={e=>s("responsiblePersonContact",e.target.value)} style={inputStyle} placeholder="Phone / Email"/>
-        </div>
+      <div style={{ padding: "12px 16px 100px", maxWidth: 600, margin: "0 auto" }}>
+        {progressBar}
 
-        {/* Site Details */}
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>🏢 Site Details</div>
-          <label style={labelStyle}>Site Name</label>
-          <input value={form.siteName} onChange={e=>s("siteName",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Address</label>
-          <input value={form.siteAddress} onChange={e=>s("siteAddress",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Postcode</label>
-          <input value={form.sitePostcode} onChange={e=>s("sitePostcode",e.target.value)} style={inputStyle}/>
-        </div>
+        {/* Step 1: Executive Summary & Assessor */}
+        {step === 1 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Executive Summary</div>
+            <label style={labelStyle}>Report Reference</label>
+            <input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Date of Assessment</label>
+            <input type="date" value={form.date} onChange={e => s("date", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Date of Previous Assessment</label>
+            <input type="date" value={form.previousAssessmentDate} onChange={e => s("previousAssessmentDate", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Next Recommended Assessment Date</label>
+            <input type="date" value={form.reviewDate} onChange={e => s("reviewDate", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Overall Risk Level</label>
+            <select value={form.overallRiskLevel} onChange={e => s("overallRiskLevel", e.target.value)} style={selectStyle}>
+              <option>Minimal</option><option>Slight</option><option>Possible</option><option>Probable</option><option>Imminent</option>
+            </select>
+            <label style={labelStyle}>Executive Summary</label>
+            <textarea value={form.executiveSummary} onChange={e => s("executiveSummary", e.target.value)} style={{ ...inputStyle, minHeight: 80 }} placeholder="Brief overview of findings and key risks..." />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Assessor Details</div>
+            <label style={labelStyle}>Assessor Name</label>
+            <input value={form.assessorName} onChange={e => s("assessorName", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Company</label>
+            <input value={form.assessorCompany} onChange={e => s("assessorCompany", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Qualifications</label>
+            <input value={form.assessorQualifications} onChange={e => s("assessorQualifications", e.target.value)} style={inputStyle} placeholder="e.g. Legionella Risk Assessor, City & Guilds" />
+            <label style={labelStyle}>Contact</label>
+            <input value={form.assessorContact} onChange={e => s("assessorContact", e.target.value)} style={inputStyle} placeholder="Phone / Email" />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Responsible Person</div>
+            <label style={labelStyle}>Name</label>
+            <input value={form.responsiblePerson} onChange={e => s("responsiblePerson", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Position</label>
+            <input value={form.responsiblePersonPosition} onChange={e => s("responsiblePersonPosition", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Contact</label>
+            <input value={form.responsiblePersonContact} onChange={e => s("responsiblePersonContact", e.target.value)} style={inputStyle} />
+          </div>
+        </>}
 
-        {/* Water Systems */}
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>🚿 Water Systems Present</div>
-          <div style={checkStyle}><input type="checkbox" checked={form.waterSystemsHot} onChange={e=>s("waterSystemsHot",e.target.checked)}/><span>Hot Water System</span></div>
-          <div style={checkStyle}><input type="checkbox" checked={form.waterSystemsCold} onChange={e=>s("waterSystemsCold",e.target.checked)}/><span>Cold Water System</span></div>
-          <div style={checkStyle}><input type="checkbox" checked={form.waterSystemsShowers} onChange={e=>s("waterSystemsShowers",e.target.checked)}/><span>Showers</span></div>
-          <div style={checkStyle}><input type="checkbox" checked={form.waterSystemsCoolingTowers} onChange={e=>s("waterSystemsCoolingTowers",e.target.checked)}/><span>Cooling Towers</span></div>
-          <div style={checkStyle}><input type="checkbox" checked={form.waterSystemsSpa} onChange={e=>s("waterSystemsSpa",e.target.checked)}/><span>Spa / Pool</span></div>
-          <label style={labelStyle}>Other Systems</label>
-          <input value={form.waterSystemsOther} onChange={e=>s("waterSystemsOther",e.target.value)} style={inputStyle} placeholder="Describe other water systems"/>
-        </div>
+        {/* Step 2: Site Details */}
+        {step === 2 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Section 1: Site Details</div>
+            <label style={labelStyle}>Site Name</label>
+            <input value={form.siteName} onChange={e => s("siteName", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Address</label>
+            <input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Postcode</label>
+            <input value={form.sitePostcode} onChange={e => s("sitePostcode", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Description of Premises</label>
+            <textarea value={form.premisesDescription} onChange={e => s("premisesDescription", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} placeholder="Type and use of building..." />
+            <label style={labelStyle}>Number of Floors</label>
+            <input type="number" value={form.numFloors} onChange={e => s("numFloors", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Approximate Occupancy</label>
+            <input value={form.approxOccupancy} onChange={e => s("approxOccupancy", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Water Supplier</label>
+            <input value={form.waterSupplier} onChange={e => s("waterSupplier", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Water Source</label>
+            <select value={form.waterSource} onChange={e => s("waterSource", e.target.value)} style={selectStyle}>
+              <option>Mains</option><option>Borehole</option><option>Other</option>
+            </select>
+            <label style={labelStyle}>Water Treatment in Place</label>
+            <select value={form.waterTreatment} onChange={e => s("waterTreatment", e.target.value)} style={selectStyle}>
+              <option>Yes</option><option>No</option>
+            </select>
+            {form.waterTreatment === "Yes" && <>
+              <label style={labelStyle}>Treatment Details</label>
+              <textarea value={form.waterTreatmentDetails} onChange={e => s("waterTreatmentDetails", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
+            </>}
+          </div>
+        </>}
 
-        {/* Asset Register */}
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>📦 Asset Register</div>
-          <label style={labelStyle}>Assets (tanks, calorifiers, outlets, TMVs)</label>
-          <textarea value={form.assetRegister} onChange={e=>s("assetRegister",e.target.value)} style={{...inputStyle, minHeight:80}} placeholder="List water system assets..."/>
-        </div>
+        {/* Step 3: System Description — Cold & Hot Water */}
+        {step === 3 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Section 2: Cold Water Storage</div>
+            <label style={labelStyle}>Type</label>
+            <input value={form.coldStorageType} onChange={e => s("coldStorageType", e.target.value)} style={inputStyle} placeholder="e.g. MDPE tank, GRP cistern" />
+            <label style={labelStyle}>Location</label>
+            <input value={form.coldStorageLocation} onChange={e => s("coldStorageLocation", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Capacity (litres)</label>
+            <input value={form.coldStorageCapacity} onChange={e => s("coldStorageCapacity", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Material</label>
+            <input value={form.coldStorageMaterial} onChange={e => s("coldStorageMaterial", e.target.value)} style={inputStyle} />
+            <div style={checkStyle}><input type="checkbox" checked={form.coldStorageLid} onChange={e => s("coldStorageLid", e.target.checked)} /><span>Lid Fitted</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.coldStorageInsulated} onChange={e => s("coldStorageInsulated", e.target.checked)} /><span>Insulated</span></div>
+            <label style={labelStyle}>Temperature Recorded (°C)</label>
+            <input value={form.coldStorageTemp} onChange={e => s("coldStorageTemp", e.target.value)} style={inputStyle} />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Hot Water System</div>
+            <label style={labelStyle}>Type</label>
+            <select value={form.hotWaterType} onChange={e => s("hotWaterType", e.target.value)} style={selectStyle}>
+              <option>Direct</option><option>Indirect</option><option>Unvented</option><option>Combination Boiler</option>
+            </select>
+            <label style={labelStyle}>Calorifier/Cylinder Make & Model</label>
+            <input value={form.hotWaterMakeModel} onChange={e => s("hotWaterMakeModel", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Capacity (litres)</label>
+            <input value={form.hotWaterCapacity} onChange={e => s("hotWaterCapacity", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Thermostat Setting (°C)</label>
+            <input value={form.hotWaterThermostat} onChange={e => s("hotWaterThermostat", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Actual Temp at Calorifier (°C)</label>
+            <input value={form.hotWaterActualTemp} onChange={e => s("hotWaterActualTemp", e.target.value)} style={inputStyle} />
+          </div>
+        </>}
 
-        {/* Risk Assessment */}
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>⚠️ Risk Assessment</div>
-          <label style={labelStyle}>Likelihood of Bacterial Growth</label>
-          <select value={form.riskBacterialGrowth} onChange={e=>s("riskBacterialGrowth",e.target.value)} style={selectStyle}>
-            <option>Low</option><option>Medium</option><option>High</option><option>Very High</option>
-          </select>
-          <label style={labelStyle}>Exposure Risk</label>
-          <select value={form.riskExposure} onChange={e=>s("riskExposure",e.target.value)} style={selectStyle}>
-            <option>Low</option><option>Medium</option><option>High</option><option>Very High</option>
-          </select>
-          <label style={labelStyle}>At-Risk Groups</label>
-          <input value={form.atRiskGroups} onChange={e=>s("atRiskGroups",e.target.value)} style={inputStyle} placeholder="e.g. Elderly, immunocompromised"/>
-          <label style={labelStyle}>Hot Water Risk Rating</label>
-          <select value={form.riskRatingHotWater} onChange={e=>s("riskRatingHotWater",e.target.value)} style={selectStyle}>
-            <option>Low</option><option>Medium</option><option>High</option><option>Very High</option>
-          </select>
-          <label style={labelStyle}>Cold Water Risk Rating</label>
-          <select value={form.riskRatingColdWater} onChange={e=>s("riskRatingColdWater",e.target.value)} style={selectStyle}>
-            <option>Low</option><option>Medium</option><option>High</option><option>Very High</option>
-          </select>
-          <label style={labelStyle}>Showers Risk Rating</label>
-          <select value={form.riskRatingShowers} onChange={e=>s("riskRatingShowers",e.target.value)} style={selectStyle}>
-            <option>Low</option><option>Medium</option><option>High</option><option>Very High</option>
-          </select>
-        </div>
+        {/* Step 4: Distribution & Outlets */}
+        {step === 4 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Distribution System</div>
+            <label style={labelStyle}>Pipe Material</label>
+            <input value={form.pipeMaterial} onChange={e => s("pipeMaterial", e.target.value)} style={inputStyle} placeholder="e.g. Copper, MDPE, Plastic" />
+            <div style={checkStyle}><input type="checkbox" checked={form.pipeInsulated} onChange={e => s("pipeInsulated", e.target.checked)} /><span>Pipes Insulated</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.deadLegs} onChange={e => s("deadLegs", e.target.checked)} /><span>Dead Legs Identified</span></div>
+            {form.deadLegs && <>
+              <label style={labelStyle}>Dead Leg Details</label>
+              <textarea value={form.deadLegDetails} onChange={e => s("deadLegDetails", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
+            </>}
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Outlets</div>
+            <label style={labelStyle}>Sentinel Taps — Nearest to Source</label>
+            <input value={form.sentinelNearest} onChange={e => s("sentinelNearest", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Sentinel Taps — Furthest from Source</label>
+            <input value={form.sentinelFurthest} onChange={e => s("sentinelFurthest", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Infrequently Used Outlets</label>
+            <textarea value={form.infrequentOutlets} onChange={e => s("infrequentOutlets", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} placeholder="List outlets used less than weekly..." />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Other Water Systems</div>
+            <div style={checkStyle}><input type="checkbox" checked={form.hasShowers} onChange={e => s("hasShowers", e.target.checked)} /><span>Showers</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.hasTMVs} onChange={e => s("hasTMVs", e.target.checked)} /><span>TMVs</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.hasWaterFeatures} onChange={e => s("hasWaterFeatures", e.target.checked)} /><span>Water Features / Fountains</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.hasCoolingTowers} onChange={e => s("hasCoolingTowers", e.target.checked)} /><span>Cooling Towers</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.hasEvapCondensers} onChange={e => s("hasEvapCondensers", e.target.checked)} /><span>Evaporative Condensers</span></div>
+            <label style={labelStyle}>Other</label>
+            <input value={form.otherSystems} onChange={e => s("otherSystems", e.target.value)} style={inputStyle} />
+          </div>
+        </>}
 
-        {/* Control Measures */}
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>🛡️ Control Measures</div>
-          <label style={labelStyle}>Control Measures In Place</label>
-          <textarea value={form.controlMeasuresInPlace} onChange={e=>s("controlMeasuresInPlace",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Describe existing controls..."/>
-          <label style={labelStyle}>Recommended Control Measures</label>
-          <textarea value={form.controlMeasuresRecommended} onChange={e=>s("controlMeasuresRecommended",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Recommended additional controls..."/>
-        </div>
+        {/* Step 5: Temperature Monitoring */}
+        {step === 5 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Section 3: Temperature Monitoring</div>
+            <div style={{ fontSize: 12, color: "#4A7CFF", fontWeight: 600, marginBottom: 12 }}>Hot water: stored &gt;60°C, delivered &gt;50°C within 1 min | Cold water: &lt;20°C</div>
+            {form.tempReadings.map((r, i) => (
+              <div key={i} style={{ background: "#f8f9fa", borderRadius: 10, padding: 12, marginBottom: 10, border: "1px solid #e0e0e0" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>Reading {i + 1}</span>
+                  {form.tempReadings.length > 1 && <button onClick={() => removeTemp(i)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Remove</button>}
+                </div>
+                <label style={labelStyle}>Location</label>
+                <input value={r.location} onChange={e => updateTemp(i, "location", e.target.value)} style={inputStyle} placeholder="e.g. Kitchen hot tap" />
+                <label style={labelStyle}>Type</label>
+                <select value={r.type} onChange={e => updateTemp(i, "type", e.target.value)} style={selectStyle}>
+                  <option>Hot</option><option>Cold</option>
+                </select>
+                <label style={labelStyle}>Temperature (°C)</label>
+                <input type="number" step="0.1" value={r.temp} onChange={e => updateTemp(i, "temp", e.target.value)} style={inputStyle} />
+                <label style={labelStyle}>Compliant</label>
+                <select value={r.compliant} onChange={e => updateTemp(i, "compliant", e.target.value)} style={selectStyle}>
+                  <option>Yes</option><option>No</option>
+                </select>
+                <label style={labelStyle}>Comments</label>
+                <input value={r.comments} onChange={e => updateTemp(i, "comments", e.target.value)} style={inputStyle} />
+              </div>
+            ))}
+            <button onClick={addTempReading} style={{ background: "#4A7CFF", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>+ Add Temperature Reading</button>
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Compliance Checks</div>
+            <div style={checkStyle}><input type="checkbox" checked={form.hotStored60} onChange={e => s("hotStored60", e.target.checked)} /><span>Hot water stored &gt; 60°C</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.hotDelivered50} onChange={e => s("hotDelivered50", e.target.checked)} /><span>Hot water delivered &gt; 50°C within 1 minute</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.coldBelow20} onChange={e => s("coldBelow20", e.target.checked)} /><span>Cold water &lt; 20°C</span></div>
+          </div>
+        </>}
 
-        {/* Temperature Readings */}
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>🌡️ Temperature Readings</div>
-          <label style={labelStyle}>Readings at Key Outlets</label>
-          <textarea value={form.tempReadings} onChange={e=>s("tempReadings",e.target.value)} style={{...inputStyle, minHeight:80}} placeholder="Outlet ID — Location — Temp °C — Pass/Fail"/>
-        </div>
+        {/* Step 6: Identified Risks */}
+        {step === 6 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Section 4: Identified Risks</div>
+            <div style={{ fontSize: 11, color: "#666", marginBottom: 12 }}>Severity (1-5) × Likelihood (1-5) = Risk Level. 1-3 Low, 4-9 Medium, 10-16 High, 17-25 Very High</div>
+            {form.risks.map((r, i) => (
+              <div key={i} style={{ background: "#f8f9fa", borderRadius: 10, padding: 12, marginBottom: 10, border: "1px solid #e0e0e0" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>Risk {i + 1}</span>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <span style={{ background: riskColor(r.riskLevel), color: "#fff", padding: "2px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>Level: {r.riskLevel}</span>
+                    {form.risks.length > 1 && <button onClick={() => removeRisk(i)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Remove</button>}
+                  </div>
+                </div>
+                <label style={labelStyle}>Location</label>
+                <input value={r.location} onChange={e => updateRisk(i, "location", e.target.value)} style={inputStyle} />
+                <label style={labelStyle}>Description</label>
+                <textarea value={r.description} onChange={e => updateRisk(i, "description", e.target.value)} style={{ ...inputStyle, minHeight: 50 }} />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Severity (1-5)</label>
+                    <select value={r.severity} onChange={e => updateRisk(i, "severity", e.target.value)} style={selectStyle}>
+                      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Likelihood (1-5)</label>
+                    <select value={r.likelihood} onChange={e => updateRisk(i, "likelihood", e.target.value)} style={selectStyle}>
+                      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                    </select>
+                  </div>
+                </div>
+                <label style={labelStyle}>Recommended Action</label>
+                <textarea value={r.action} onChange={e => updateRisk(i, "action", e.target.value)} style={{ ...inputStyle, minHeight: 50 }} />
+                <label style={labelStyle}>Priority</label>
+                <select value={r.priority} onChange={e => updateRisk(i, "priority", e.target.value)} style={selectStyle}>
+                  <option>Immediate</option><option>Short term</option><option>Medium term</option>
+                </select>
+              </div>
+            ))}
+            <button onClick={addRisk} style={{ background: "#4A7CFF", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>+ Add Risk</button>
+          </div>
+        </>}
 
-        {/* Corrective Actions */}
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>🔧 Corrective Actions</div>
-          <label style={labelStyle}>Actions Required</label>
-          <textarea value={form.correctiveActions} onChange={e=>s("correctiveActions",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="List corrective actions..."/>
-          <label style={labelStyle}>Priority</label>
-          <select value={form.correctivePriority} onChange={e=>s("correctivePriority",e.target.value)} style={selectStyle}>
-            <option>Immediate</option><option>1 Month</option><option>3 Months</option><option>Routine</option>
-          </select>
-        </div>
+        {/* Step 7: Schematic & Control Measures */}
+        {step === 7 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Section 5: System Schematic</div>
+            <label style={labelStyle}>System Schematic Description</label>
+            <textarea value={form.schematicDescription} onChange={e => s("schematicDescription", e.target.value)} style={{ ...inputStyle, minHeight: 100 }} placeholder="Describe the water system layout, pipe runs, tanks, calorifiers..." />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Section 6: Control Measures & Recommendations</div>
+            <label style={labelStyle}>Existing Control Measures</label>
+            <textarea value={form.controlMeasuresInPlace} onChange={e => s("controlMeasuresInPlace", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
+            <label style={labelStyle}>Recommended Control Measures</label>
+            <textarea value={form.controlMeasuresRecommended} onChange={e => s("controlMeasuresRecommended", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
+            <label style={labelStyle}>Monitoring Frequency</label>
+            <input value={form.monitoringFrequency} onChange={e => s("monitoringFrequency", e.target.value)} style={inputStyle} placeholder="e.g. Monthly temperature checks" />
+            <label style={labelStyle}>Flushing Requirements</label>
+            <input value={form.flushingRequirements} onChange={e => s("flushingRequirements", e.target.value)} style={inputStyle} placeholder="e.g. Weekly flush of infrequently used outlets" />
+          </div>
+        </>}
 
-        {/* Outcome */}
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>✅ Outcome</div>
-          <label style={labelStyle}>Overall Risk Level</label>
-          <select value={form.overallRiskLevel} onChange={e=>s("overallRiskLevel",e.target.value)} style={selectStyle}>
-            <option>Low</option><option>Medium</option><option>High</option><option>Very High</option>
-          </select>
-          <label style={labelStyle}>Result</label>
-          <select value={form.result} onChange={e=>s("result",e.target.value)} style={selectStyle}>
-            <option>Satisfactory</option><option>Unsatisfactory</option>
-          </select>
-          <label style={labelStyle}>Review Date</label>
-          <input type="date" value={form.reviewDate} onChange={e=>s("reviewDate",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Notes / Observations</label>
-          <textarea value={form.notes} onChange={e=>s("notes",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Additional notes..."/>
-        </div>
+        {/* Step 8: Declaration & Sign-off */}
+        {step === 8 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Result & Notes</div>
+            <label style={labelStyle}>Result</label>
+            <select value={form.result} onChange={e => s("result", e.target.value)} style={selectStyle}>
+              <option>Satisfactory</option><option>Unsatisfactory</option>
+            </select>
+            <label style={labelStyle}>Notes / Observations</label>
+            <textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Declaration & Signature</div>
+            <p style={{ fontSize: 12, color: "#666", lineHeight: 1.5, marginBottom: 12 }}>I confirm that this Legionella Risk Assessment has been carried out in accordance with ACOP L8 and HSG274, and the information recorded is accurate to the best of my knowledge.</p>
+            <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
+          </div>
+        </>}
 
-        {/* Signature */}
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>✍️ Signature</div>
-          <PlumbingSigPad onSign={dataUrl=>s("sigImage",dataUrl)}/>
-        </div>
-
-        {/* Action Buttons */}
-        <div style={{ display:"flex", gap:10, marginTop:8 }}>
-          <button onClick={handleSave} style={{ flex:1, padding:"14px 0", background:"#00b4d8", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>💾 Save Certificate</button>
-          <button onClick={()=>setShowPDF(true)} style={{ flex:1, padding:"14px 0", background:"#0d1f2d", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>📄 Generate PDF</button>
-        </div>
+        {navButtons}
       </div>
     </div>
   );
 }
 
-// ── Water Temperature Log Form ──────────────────────────────────────────────
+// ── Water Temperature Log Form (HSG274 Part 2) — Monthly Record Sheet ───────
 function PlumbingTempLogForm({ onBack, onSave, currentUser }) {
   const [form, setForm] = useState({
     certRef: "WTL-" + Date.now().toString(36).toUpperCase(),
-    date: new Date().toISOString().slice(0,10),
-    time: "",
+    date: new Date().toISOString().slice(0, 10),
     siteName: "", siteAddress: "",
-    outletId: "", outletLocation: "",
-    measurementType: "Hot",
-    temperatureReading: "",
-    passFail: "",
-    correctiveAction: "",
-    engineerName: "",
-    notes: "", sigImage: ""
+    monthYear: new Date().toISOString().slice(0, 7),
+    responsiblePerson: "",
+    readings: [{ date: new Date().toISOString().slice(0, 10), location: "", type: "Hot", temp: "", recordedBy: "", comments: "" }],
+    actionsRequired: "",
+    notes: "", result: "Satisfactory", signatureData: ""
   });
   const [showPDF, setShowPDF] = useState(false);
-  const s = (k,v) => {
-    const updated = { ...form, [k]: v };
-    // Auto pass/fail
-    if (k === "temperatureReading" || k === "measurementType") {
-      const temp = parseFloat(k === "temperatureReading" ? v : updated.temperatureReading);
-      const type = k === "measurementType" ? v : updated.measurementType;
-      if (!isNaN(temp)) {
-        if (type === "Hot" || type === "TMV" || type === "Calorifier") {
-          updated.passFail = temp >= 50 ? "Pass" : "Fail";
-        } else if (type === "Cold" || type === "Tank") {
-          updated.passFail = temp <= 20 ? "Pass" : "Fail";
-        }
-      }
-    }
-    setForm(updated);
-  };
-  const labelStyle = { display:"block", fontSize:12, fontWeight:600, color:"#334", marginBottom:4 };
-  const inputStyle = { width:"100%", padding:"10px 12px", border:"1px solid #d0d5dd", borderRadius:8, fontSize:14, boxSizing:"border-box", marginBottom:12 };
-  const sectionStyle = { background:"#fff", borderRadius:14, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" };
-  const sectionTitleStyle = { fontSize:15, fontWeight:700, color:"#0d1f2d", marginBottom:12, display:"flex", alignItems:"center", gap:8 };
-  const selectStyle = { ...inputStyle, background:"#fff" };
+  const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: "#334", marginBottom: 4 };
+  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #d0d5dd", borderRadius: 8, fontSize: 14, boxSizing: "border-box", marginBottom: 12 };
+  const sectionStyle = { background: "#fff", borderRadius: 14, padding: 16, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" };
+  const sectionTitleStyle = { fontSize: 15, fontWeight: 700, color: "#0d1f2d", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 };
+  const selectStyle = { ...inputStyle, background: "#fff" };
 
   if (showPDF) {
-    const fields = [
-      { title: "Log Details", rows: [
-        { label: "Reference", value: form.certRef },
-        { label: "Date", value: form.date },
-        { label: "Time", value: form.time },
-        { label: "Engineer", value: form.engineerName },
-      ]},
-      { title: "Site", rows: [
-        { label: "Site Name", value: form.siteName },
-        { label: "Address", value: form.siteAddress },
-      ]},
-      { title: "Measurement", rows: [
-        { label: "Outlet ID", value: form.outletId },
-        { label: "Location", value: form.outletLocation },
-        { label: "Type", value: form.measurementType },
-        { label: "Temperature (°C)", value: form.temperatureReading },
-        { label: "Result", value: form.passFail },
-      ]},
-      { title: "Actions", rows: [
-        { label: "Corrective Action", value: form.correctiveAction },
-        { label: "Notes", value: form.notes },
-      ]},
-    ];
-    return <PlumbingPDFPreview title="Water Temperature Log" form={form} fields={fields} onClose={()=>setShowPDF(false)} />;
+    return <PlumbingPDFPreview certType="tempLog" certTitle="Water Temperature Log (HSG274)" certData={form} onClose={() => setShowPDF(false)} />;
   }
 
   const handleSave = () => {
-    const rec = { ...form, trade:"plumbing", type:"tempLog", savedAt:new Date().toISOString() };
+    const rec = { ...form, trade: "plumbing", type: "tempLog", savedAt: new Date().toISOString() };
     if (onSave) onSave(rec);
     alert("Water Temperature Log saved!");
   };
 
-  return (
-    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ background:"linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
-        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-        <div style={{ flex:1 }}>
-          <div style={{ color:"#fff", fontWeight:800, fontSize:16 }}>Water Temperature Log</div>
-          <div style={{ color:"rgba(255,255,255,0.6)", fontSize:11 }}>Monthly Monitoring Record</div>
-        </div>
-      </div>
+  const addReading = () => s("readings", [...form.readings, { date: new Date().toISOString().slice(0, 10), location: "", type: "Hot", temp: "", recordedBy: "", comments: "" }]);
+  const updateReading = (i, k, v) => { const a = [...form.readings]; a[i] = { ...a[i], [k]: v }; s("readings", a); };
+  const removeReading = (i) => { const a = [...form.readings]; a.splice(i, 1); s("readings", a); };
 
-      <div style={{ padding:"12px 16px 100px", maxWidth:600, margin:"0 auto" }}>
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>📋 Log Details</div>
-          <label style={labelStyle}>Reference</label>
-          <input value={form.certRef} onChange={e=>s("certRef",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Date</label>
-          <input type="date" value={form.date} onChange={e=>s("date",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Time</label>
-          <input type="time" value={form.time} onChange={e=>s("time",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Engineer Name</label>
-          <input value={form.engineerName} onChange={e=>s("engineerName",e.target.value)} style={inputStyle}/>
-        </div>
-
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>🏢 Site Details</div>
-          <label style={labelStyle}>Site Name / Reference</label>
-          <input value={form.siteName} onChange={e=>s("siteName",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Address</label>
-          <input value={form.siteAddress} onChange={e=>s("siteAddress",e.target.value)} style={inputStyle}/>
-        </div>
-
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>🌡️ Temperature Measurement</div>
-          <label style={labelStyle}>Outlet ID</label>
-          <input value={form.outletId} onChange={e=>s("outletId",e.target.value)} style={inputStyle} placeholder="e.g. WHB-01"/>
-          <label style={labelStyle}>Outlet Location</label>
-          <input value={form.outletLocation} onChange={e=>s("outletLocation",e.target.value)} style={inputStyle} placeholder="e.g. Kitchen sink"/>
-          <label style={labelStyle}>Measurement Type</label>
-          <select value={form.measurementType} onChange={e=>s("measurementType",e.target.value)} style={selectStyle}>
-            <option>Hot</option><option>Cold</option><option>TMV</option><option>Calorifier</option><option>Tank</option>
-          </select>
-          <label style={labelStyle}>Temperature Reading (°C)</label>
-          <input type="number" step="0.1" value={form.temperatureReading} onChange={e=>s("temperatureReading",e.target.value)} style={inputStyle} placeholder="e.g. 55.2"/>
-          {form.passFail && (
-            <div style={{ padding:"8px 14px", borderRadius:8, background: form.passFail === "Pass" ? "#d1fae5" : "#fee2e2", color: form.passFail === "Pass" ? "#065f46" : "#991b1b", fontWeight:700, fontSize:14, marginBottom:12, textAlign:"center" }}>
-              {form.passFail === "Pass" ? "✅ PASS" : "❌ FAIL"} — {form.measurementType === "Hot" || form.measurementType === "TMV" || form.measurementType === "Calorifier" ? "Hot ≥50°C at 1 min" : "Cold ≤20°C at 2 min"}
-            </div>
-          )}
-          <label style={labelStyle}>Corrective Action (if out of range)</label>
-          <textarea value={form.correctiveAction} onChange={e=>s("correctiveAction",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Action taken if temperature out of range..."/>
-        </div>
-
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>📝 Notes</div>
-          <textarea value={form.notes} onChange={e=>s("notes",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Additional notes..."/>
-        </div>
-
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>✍️ Signature</div>
-          <PlumbingSigPad onSign={dataUrl=>s("sigImage",dataUrl)}/>
-        </div>
-
-        <div style={{ display:"flex", gap:10, marginTop:8 }}>
-          <button onClick={handleSave} style={{ flex:1, padding:"14px 0", background:"#00b4d8", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>💾 Save Log</button>
-          <button onClick={()=>setShowPDF(true)} style={{ flex:1, padding:"14px 0", background:"#0d1f2d", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>📄 Generate PDF</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── G3 Unvented Cylinder Commissioning Form ─────────────────────────────────
-function PlumbingG3Form({ onBack, onSave, currentUser }) {
-  const [form, setForm] = useState({
-    certRef: "G3-" + Date.now().toString(36).toUpperCase(),
-    date: new Date().toISOString().slice(0,10),
-    engineerName: "", g3QualNo: "", wrasNumber: "",
-    siteAddress: "", sitePostcode: "",
-    cylManufacturer: "", cylModel: "", cylSerial: "", cylCapacity: "", cylMaxPressure: "",
-    tpValve: "Pass", expansionVessel: "Pass", prv: "Pass", tundishDetails: "",
-    thermostatCutout: "Pass", dischargeTest: "Pass", flowRates: "", pressures: "",
-    competentPersonScheme: "",
-    operatingInstructionsGiven: "Yes",
-    notes: "", result: "Satisfactory", sigImage: ""
-  });
-  const [showPDF, setShowPDF] = useState(false);
-  const s = (k,v) => setForm(f=>({...f,[k]:v}));
-  const labelStyle = { display:"block", fontSize:12, fontWeight:600, color:"#334", marginBottom:4 };
-  const inputStyle = { width:"100%", padding:"10px 12px", border:"1px solid #d0d5dd", borderRadius:8, fontSize:14, boxSizing:"border-box", marginBottom:12 };
-  const sectionStyle = { background:"#fff", borderRadius:14, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" };
-  const sectionTitleStyle = { fontSize:15, fontWeight:700, color:"#0d1f2d", marginBottom:12, display:"flex", alignItems:"center", gap:8 };
-  const selectStyle = { ...inputStyle, background:"#fff" };
-
-  if (showPDF) {
-    const fields = [
-      { title: "Engineer Details", rows: [
-        { label: "Reference", value: form.certRef },
-        { label: "Date", value: form.date },
-        { label: "Engineer Name", value: form.engineerName },
-        { label: "G3 Qualification No.", value: form.g3QualNo },
-        { label: "WRAS Number", value: form.wrasNumber },
-      ]},
-      { title: "Site", rows: [
-        { label: "Address", value: form.siteAddress },
-        { label: "Postcode", value: form.sitePostcode },
-      ]},
-      { title: "Cylinder Details", rows: [
-        { label: "Manufacturer", value: form.cylManufacturer },
-        { label: "Model", value: form.cylModel },
-        { label: "Serial No.", value: form.cylSerial },
-        { label: "Capacity (litres)", value: form.cylCapacity },
-        { label: "Max Pressure (bar)", value: form.cylMaxPressure },
-      ]},
-      { title: "Safety Devices", rows: [
-        { label: "T&P Valve", value: form.tpValve },
-        { label: "Expansion Vessel", value: form.expansionVessel },
-        { label: "PRV", value: form.prv },
-        { label: "Tundish Details", value: form.tundishDetails },
-      ]},
-      { title: "Commissioning Checks", rows: [
-        { label: "Thermostat Cutout", value: form.thermostatCutout },
-        { label: "Discharge Test", value: form.dischargeTest },
-        { label: "Flow Rates", value: form.flowRates },
-        { label: "Pressures", value: form.pressures },
-      ]},
-      { title: "Compliance", rows: [
-        { label: "Competent Person Scheme", value: form.competentPersonScheme },
-        { label: "Operating Instructions Given", value: form.operatingInstructionsGiven },
-        { label: "Result", value: form.result },
-        { label: "Notes", value: form.notes },
-      ]},
-    ];
-    return <PlumbingPDFPreview title="G3 Unvented Cylinder Commissioning" form={form} fields={fields} onClose={()=>setShowPDF(false)} />;
-  }
-
-  const handleSave = () => {
-    const rec = { ...form, trade:"plumbing", type:"g3", savedAt:new Date().toISOString() };
-    if (onSave) onSave(rec);
-    alert("G3 Unvented Cylinder Commissioning saved!");
+  const getCompliance = (type, temp) => {
+    const t = parseFloat(temp);
+    if (isNaN(t)) return null;
+    if (type === "Hot") return t >= 50 ? "Pass" : "Fail";
+    if (type === "Cold") return t <= 20 ? "Pass" : "Fail";
+    return null;
   };
 
   return (
-    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ background:"linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
-        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+    <div style={{ minHeight: "100dvh", background: "#f0f2f5", fontFamily: "'Segoe UI',sans-serif" }}>
+      <div style={{ background: "linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+        <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 10, background: "#1e3044", border: "1px solid #2a4058", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#8b9db0", flexShrink: 0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
-        <div style={{ flex:1 }}>
-          <div style={{ color:"#fff", fontWeight:800, fontSize:16 }}>G3 Unvented Cylinder</div>
-          <div style={{ color:"rgba(255,255,255,0.6)", fontSize:11 }}>Building Regs Part G3</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>Water Temperature Log</div>
+          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>HSG274 Part 2 — Monthly Record</div>
         </div>
       </div>
 
-      <div style={{ padding:"12px 16px 100px", maxWidth:600, margin:"0 auto" }}>
+      <div style={{ padding: "12px 16px 100px", maxWidth: 600, margin: "0 auto" }}>
         <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>👷 Engineer Details</div>
+          <div style={sectionTitleStyle}>Site Details</div>
           <label style={labelStyle}>Reference</label>
-          <input value={form.certRef} onChange={e=>s("certRef",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Date</label>
-          <input type="date" value={form.date} onChange={e=>s("date",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Engineer Name</label>
-          <input value={form.engineerName} onChange={e=>s("engineerName",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>G3 Qualification Number</label>
-          <input value={form.g3QualNo} onChange={e=>s("g3QualNo",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>WRAS Number</label>
-          <input value={form.wrasNumber} onChange={e=>s("wrasNumber",e.target.value)} style={inputStyle}/>
-        </div>
-
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>📍 Site Details</div>
+          <input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} />
+          <label style={labelStyle}>Site Name</label>
+          <input value={form.siteName} onChange={e => s("siteName", e.target.value)} style={inputStyle} />
           <label style={labelStyle}>Address</label>
-          <input value={form.siteAddress} onChange={e=>s("siteAddress",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Postcode</label>
-          <input value={form.sitePostcode} onChange={e=>s("sitePostcode",e.target.value)} style={inputStyle}/>
+          <input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} />
+          <label style={labelStyle}>Month / Year</label>
+          <input type="month" value={form.monthYear} onChange={e => s("monthYear", e.target.value)} style={inputStyle} />
+          <label style={labelStyle}>Responsible Person</label>
+          <input value={form.responsiblePerson} onChange={e => s("responsiblePerson", e.target.value)} style={inputStyle} />
         </div>
 
         <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>🔵 Cylinder Details</div>
-          <label style={labelStyle}>Manufacturer</label>
-          <input value={form.cylManufacturer} onChange={e=>s("cylManufacturer",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Model</label>
-          <input value={form.cylModel} onChange={e=>s("cylModel",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Serial Number</label>
-          <input value={form.cylSerial} onChange={e=>s("cylSerial",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Capacity (litres)</label>
-          <input value={form.cylCapacity} onChange={e=>s("cylCapacity",e.target.value)} style={inputStyle} placeholder="e.g. 210"/>
-          <label style={labelStyle}>Max Pressure (bar)</label>
-          <input value={form.cylMaxPressure} onChange={e=>s("cylMaxPressure",e.target.value)} style={inputStyle} placeholder="e.g. 6"/>
+          <div style={sectionTitleStyle}>Temperature Records</div>
+          <div style={{ fontSize: 12, color: "#4A7CFF", fontWeight: 600, marginBottom: 12 }}>Hot water &gt; 50°C | Cold water &lt; 20°C</div>
+          {form.readings.map((r, i) => {
+            const compliance = getCompliance(r.type, r.temp);
+            return (
+              <div key={i} style={{ background: "#f8f9fa", borderRadius: 10, padding: 12, marginBottom: 10, border: "1px solid #e0e0e0" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>Reading {i + 1}</span>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    {compliance && <span style={{ background: compliance === "Pass" ? "#d1fae5" : "#fee2e2", color: compliance === "Pass" ? "#065f46" : "#991b1b", padding: "2px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>{compliance}</span>}
+                    {form.readings.length > 1 && <button onClick={() => removeReading(i)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Remove</button>}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Date</label>
+                    <input type="date" value={r.date} onChange={e => updateReading(i, "date", e.target.value)} style={inputStyle} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Type</label>
+                    <select value={r.type} onChange={e => updateReading(i, "type", e.target.value)} style={selectStyle}>
+                      <option>Hot</option><option>Cold</option>
+                    </select>
+                  </div>
+                </div>
+                <label style={labelStyle}>Outlet Location</label>
+                <input value={r.location} onChange={e => updateReading(i, "location", e.target.value)} style={inputStyle} placeholder="e.g. Kitchen hot tap" />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Temperature °C</label>
+                    <input type="number" step="0.1" value={r.temp} onChange={e => updateReading(i, "temp", e.target.value)} style={inputStyle} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Recorded By</label>
+                    <input value={r.recordedBy} onChange={e => updateReading(i, "recordedBy", e.target.value)} style={inputStyle} />
+                  </div>
+                </div>
+                <label style={labelStyle}>Comments</label>
+                <input value={r.comments} onChange={e => updateReading(i, "comments", e.target.value)} style={inputStyle} />
+              </div>
+            );
+          })}
+          <button onClick={addReading} style={{ background: "#4A7CFF", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>+ Add Reading</button>
         </div>
 
         <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>🛡️ Safety Devices</div>
-          <label style={labelStyle}>T&P Valve</label>
-          <select value={form.tpValve} onChange={e=>s("tpValve",e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select>
-          <label style={labelStyle}>Expansion Vessel</label>
-          <select value={form.expansionVessel} onChange={e=>s("expansionVessel",e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select>
-          <label style={labelStyle}>PRV</label>
-          <select value={form.prv} onChange={e=>s("prv",e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select>
-          <label style={labelStyle}>Tundish Details</label>
-          <input value={form.tundishDetails} onChange={e=>s("tundishDetails",e.target.value)} style={inputStyle} placeholder="Size, location, discharge pipe details"/>
-        </div>
-
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>🔍 Commissioning Checks</div>
-          <label style={labelStyle}>Thermostat Cutout Test</label>
-          <select value={form.thermostatCutout} onChange={e=>s("thermostatCutout",e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select>
-          <label style={labelStyle}>Discharge Test</label>
-          <select value={form.dischargeTest} onChange={e=>s("dischargeTest",e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select>
-          <label style={labelStyle}>Flow Rates</label>
-          <input value={form.flowRates} onChange={e=>s("flowRates",e.target.value)} style={inputStyle} placeholder="l/min at outlets"/>
-          <label style={labelStyle}>Pressures</label>
-          <input value={form.pressures} onChange={e=>s("pressures",e.target.value)} style={inputStyle} placeholder="Static/dynamic pressure readings (bar)"/>
-        </div>
-
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>✅ Compliance</div>
-          <label style={labelStyle}>Competent Person Scheme Reference</label>
-          <input value={form.competentPersonScheme} onChange={e=>s("competentPersonScheme",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Operating Instructions Given to Customer</label>
-          <select value={form.operatingInstructionsGiven} onChange={e=>s("operatingInstructionsGiven",e.target.value)} style={selectStyle}><option>Yes</option><option>No</option></select>
-          <label style={labelStyle}>Result</label>
-          <select value={form.result} onChange={e=>s("result",e.target.value)} style={selectStyle}><option>Satisfactory</option><option>Unsatisfactory</option></select>
+          <div style={sectionTitleStyle}>Actions & Notes</div>
+          <label style={labelStyle}>Actions Required for Non-Compliant Readings</label>
+          <textarea value={form.actionsRequired} onChange={e => s("actionsRequired", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} placeholder="Describe corrective actions taken..." />
           <label style={labelStyle}>Notes</label>
-          <textarea value={form.notes} onChange={e=>s("notes",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Additional notes..."/>
+          <textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
         </div>
 
         <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>✍️ Signature</div>
-          <PlumbingSigPad onSign={dataUrl=>s("sigImage",dataUrl)}/>
+          <div style={sectionTitleStyle}>Signature</div>
+          <p style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>Signed by responsible person</p>
+          <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
         </div>
 
-        <div style={{ display:"flex", gap:10, marginTop:8 }}>
-          <button onClick={handleSave} style={{ flex:1, padding:"14px 0", background:"#00b4d8", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>💾 Save Certificate</button>
-          <button onClick={()=>setShowPDF(true)} style={{ flex:1, padding:"14px 0", background:"#0d1f2d", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>📄 Generate PDF</button>
+        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+          <button onClick={handleSave} style={{ flex: 1, padding: "14px 0", background: "#00b4d8", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Save Log</button>
+          <button onClick={() => setShowPDF(true)} style={{ flex: 1, padding: "14px 0", background: "#0d1f2d", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Generate PDF</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ── TMV Service Record Form ─────────────────────────────────────────────────
-function PlumbingTMVForm({ onBack, onSave, currentUser }) {
+// ── G3 Unvented Hot Water Certificate (Building Regs G3) — Multi-Step Wizard ─
+function PlumbingG3Form({ onBack, onSave, currentUser }) {
+  const [step, setStep] = useState(1);
+  const totalSteps = 5;
   const [form, setForm] = useState({
-    certRef: "TMV-" + Date.now().toString(36).toUpperCase(),
-    date: new Date().toISOString().slice(0,10),
-    siteName: "", siteAddress: "",
-    tmvId: "", tmvLocation: "",
-    tmvType: "TMV2", manufacturer: "", model: "", serialNo: "",
-    mixedOutletTemp: "", hotSupplyTemp: "", coldSupplyTemp: "",
-    failSafeTest: "Pass",
-    actionTaken: "",
-    nextServiceDue: "",
-    recommendations: "",
-    engineerName: "",
-    notes: "", result: "Satisfactory", sigImage: ""
+    certRef: "G3-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().slice(0, 10),
+    // Installer
+    engineerName: "", company: "", g3QualNo: "", g3QualExpiry: "",
+    competentPersonScheme: "", cpsMembershipNo: "",
+    // Client
+    clientName: "", siteAddress: "", sitePostcode: "",
+    // Cylinder
+    cylMake: "", cylModel: "", cylSerial: "", cylCapacity: "", cylType: "Indirect", cylMaxPressure: "",
+    // Safety devices — T&P valve
+    tpValveMakeModel: "", tpValveSetting: "", tpValveDischarge: false,
+    // Tundish
+    tundishInstalled: false, tundishSize: "",
+    // Discharge
+    dischargeExternal: false, dischargeMaterial: "", dischargeSize: "", dischargeRoute: "",
+    // Expansion vessel
+    expansionMakeModel: "", expansionCapacity: "", expansionCharge: "",
+    // PRV
+    prvMake: "", prvSetPressure: "",
+    // Strainer / check valve
+    lineStrainer: false, checkValve: false,
+    // Commissioning
+    coldPressure: "", hotTempOutlet: "", hotTempCylinder: "", expansionPrecharge: "",
+    tpLiftTest: false, tundishDischarge: false,
+    // Building control
+    buildingControlMethod: "Self-certification via CPS", buildingControlRef: "", instructionsGiven: false,
+    notes: "", result: "Satisfactory", signatureData: ""
   });
   const [showPDF, setShowPDF] = useState(false);
-  const s = (k,v) => setForm(f=>({...f,[k]:v}));
-  const labelStyle = { display:"block", fontSize:12, fontWeight:600, color:"#334", marginBottom:4 };
-  const inputStyle = { width:"100%", padding:"10px 12px", border:"1px solid #d0d5dd", borderRadius:8, fontSize:14, boxSizing:"border-box", marginBottom:12 };
-  const sectionStyle = { background:"#fff", borderRadius:14, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" };
-  const sectionTitleStyle = { fontSize:15, fontWeight:700, color:"#0d1f2d", marginBottom:12, display:"flex", alignItems:"center", gap:8 };
-  const selectStyle = { ...inputStyle, background:"#fff" };
+  const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: "#334", marginBottom: 4 };
+  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #d0d5dd", borderRadius: 8, fontSize: 14, boxSizing: "border-box", marginBottom: 12 };
+  const sectionStyle = { background: "#fff", borderRadius: 14, padding: 16, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" };
+  const sectionTitleStyle = { fontSize: 15, fontWeight: 700, color: "#0d1f2d", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 };
+  const checkStyle = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13 };
+  const selectStyle = { ...inputStyle, background: "#fff" };
 
   if (showPDF) {
-    const fields = [
-      { title: "Service Details", rows: [
-        { label: "Reference", value: form.certRef },
-        { label: "Date", value: form.date },
-        { label: "Engineer", value: form.engineerName },
-      ]},
-      { title: "Site", rows: [
-        { label: "Site Name", value: form.siteName },
-        { label: "Address", value: form.siteAddress },
-      ]},
-      { title: "TMV Details", rows: [
-        { label: "TMV ID", value: form.tmvId },
-        { label: "Location", value: form.tmvLocation },
-        { label: "Type", value: form.tmvType },
-        { label: "Manufacturer", value: form.manufacturer },
-        { label: "Model", value: form.model },
-        { label: "Serial No.", value: form.serialNo },
-      ]},
-      { title: "Temperature Readings", rows: [
-        { label: "Mixed Outlet Temp (°C)", value: form.mixedOutletTemp },
-        { label: "Hot Supply Temp (°C)", value: form.hotSupplyTemp },
-        { label: "Cold Supply Temp (°C)", value: form.coldSupplyTemp },
-      ]},
-      { title: "Test Results", rows: [
-        { label: "Fail-Safe Test", value: form.failSafeTest },
-        { label: "Action Taken", value: form.actionTaken },
-        { label: "Result", value: form.result },
-        { label: "Next Service Due", value: form.nextServiceDue },
-        { label: "Recommendations", value: form.recommendations },
-        { label: "Notes", value: form.notes },
-      ]},
-    ];
-    return <PlumbingPDFPreview title="TMV Service Record" form={form} fields={fields} onClose={()=>setShowPDF(false)} />;
+    return <PlumbingPDFPreview certType="g3" certTitle="G3 Unvented Hot Water Certificate" certData={form} onClose={() => setShowPDF(false)} />;
   }
 
   const handleSave = () => {
-    const rec = { ...form, trade:"plumbing", type:"tmv", savedAt:new Date().toISOString() };
+    const rec = { ...form, trade: "plumbing", type: "g3", savedAt: new Date().toISOString() };
+    if (onSave) onSave(rec);
+    alert("G3 Unvented Certificate saved!");
+  };
+
+  const progressBar = (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
+      {Array.from({ length: totalSteps }, (_, i) => (
+        <div key={i} style={{ flex: 1, height: 6, borderRadius: 3, background: i + 1 <= step ? "#4A7CFF" : "#e0e0e0", transition: "background 0.2s" }} />
+      ))}
+      <span style={{ fontSize: 11, color: "#666", fontWeight: 600, flexShrink: 0 }}>Step {step}/{totalSteps}</span>
+    </div>
+  );
+
+  const navButtons = (
+    <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+      {step > 1 && <button onClick={() => setStep(step - 1)} style={{ flex: 1, padding: "14px 0", background: "#e0e0e0", color: "#333", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Back</button>}
+      {step < totalSteps && <button onClick={() => setStep(step + 1)} style={{ flex: 1, padding: "14px 0", background: "#4A7CFF", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Next</button>}
+      {step === totalSteps && (
+        <>
+          <button onClick={handleSave} style={{ flex: 1, padding: "14px 0", background: "#00b4d8", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Save</button>
+          <button onClick={() => setShowPDF(true)} style={{ flex: 1, padding: "14px 0", background: "#0d1f2d", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Generate PDF</button>
+        </>
+      )}
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight: "100dvh", background: "#f0f2f5", fontFamily: "'Segoe UI',sans-serif" }}>
+      <div style={{ background: "linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+        <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 10, background: "#1e3044", border: "1px solid #2a4058", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#8b9db0", flexShrink: 0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>G3 Unvented Cylinder</div>
+          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>Building Regs G3 / BS EN 12897</div>
+        </div>
+      </div>
+
+      <div style={{ padding: "12px 16px 100px", maxWidth: 600, margin: "0 auto" }}>
+        {progressBar}
+
+        {/* Step 1: Installer & Client */}
+        {step === 1 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Installer Details</div>
+            <label style={labelStyle}>Certificate Reference</label>
+            <input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Date</label>
+            <input type="date" value={form.date} onChange={e => s("date", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Engineer Name</label>
+            <input value={form.engineerName} onChange={e => s("engineerName", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Company</label>
+            <input value={form.company} onChange={e => s("company", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>G3 Qualification No.</label>
+            <input value={form.g3QualNo} onChange={e => s("g3QualNo", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Qualification Expiry Date</label>
+            <input type="date" value={form.g3QualExpiry} onChange={e => s("g3QualExpiry", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Competent Person Scheme</label>
+            <input value={form.competentPersonScheme} onChange={e => s("competentPersonScheme", e.target.value)} style={inputStyle} placeholder="e.g. APHC, CIPHE, SNIPEF" />
+            <label style={labelStyle}>CPS Membership No.</label>
+            <input value={form.cpsMembershipNo} onChange={e => s("cpsMembershipNo", e.target.value)} style={inputStyle} />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Client Details</div>
+            <label style={labelStyle}>Client Name</label>
+            <input value={form.clientName} onChange={e => s("clientName", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Installation Address</label>
+            <input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Postcode</label>
+            <input value={form.sitePostcode} onChange={e => s("sitePostcode", e.target.value)} style={inputStyle} />
+          </div>
+        </>}
+
+        {/* Step 2: Cylinder Specification */}
+        {step === 2 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Cylinder Specification</div>
+            <label style={labelStyle}>Make</label>
+            <input value={form.cylMake} onChange={e => s("cylMake", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Model</label>
+            <input value={form.cylModel} onChange={e => s("cylModel", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Serial No.</label>
+            <input value={form.cylSerial} onChange={e => s("cylSerial", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Capacity (litres)</label>
+            <input value={form.cylCapacity} onChange={e => s("cylCapacity", e.target.value)} style={inputStyle} placeholder="e.g. 210" />
+            <label style={labelStyle}>Direct / Indirect</label>
+            <select value={form.cylType} onChange={e => s("cylType", e.target.value)} style={selectStyle}>
+              <option>Direct</option><option>Indirect</option>
+            </select>
+            <label style={labelStyle}>Maximum Working Pressure (bar)</label>
+            <input value={form.cylMaxPressure} onChange={e => s("cylMaxPressure", e.target.value)} style={inputStyle} placeholder="e.g. 6" />
+          </div>
+        </>}
+
+        {/* Step 3: Safety Devices */}
+        {step === 3 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Temperature & Pressure Relief Valve</div>
+            <label style={labelStyle}>Make / Model</label>
+            <input value={form.tpValveMakeModel} onChange={e => s("tpValveMakeModel", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Setting (°C / bar)</label>
+            <input value={form.tpValveSetting} onChange={e => s("tpValveSetting", e.target.value)} style={inputStyle} placeholder="e.g. 90°C / 7 bar" />
+            <div style={checkStyle}><input type="checkbox" checked={form.tpValveDischarge} onChange={e => s("tpValveDischarge", e.target.checked)} /><span>Discharge pipework to tundish fitted</span></div>
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Tundish</div>
+            <div style={checkStyle}><input type="checkbox" checked={form.tundishInstalled} onChange={e => s("tundishInstalled", e.target.checked)} /><span>Installed and visible</span></div>
+            <label style={labelStyle}>Size</label>
+            <input value={form.tundishSize} onChange={e => s("tundishSize", e.target.value)} style={inputStyle} placeholder="e.g. 15mm / 22mm" />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Discharge Pipework</div>
+            <div style={checkStyle}><input type="checkbox" checked={form.dischargeExternal} onChange={e => s("dischargeExternal", e.target.checked)} /><span>Terminates safely externally</span></div>
+            <label style={labelStyle}>Material</label>
+            <input value={form.dischargeMaterial} onChange={e => s("dischargeMaterial", e.target.value)} style={inputStyle} placeholder="e.g. Copper, plastic" />
+            <label style={labelStyle}>Size</label>
+            <input value={form.dischargeSize} onChange={e => s("dischargeSize", e.target.value)} style={inputStyle} placeholder="e.g. 22mm to 28mm" />
+            <label style={labelStyle}>Route Description</label>
+            <textarea value={form.dischargeRoute} onChange={e => s("dischargeRoute", e.target.value)} style={{ ...inputStyle, minHeight: 50 }} placeholder="Describe discharge route..." />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Expansion Vessel</div>
+            <label style={labelStyle}>Make / Model</label>
+            <input value={form.expansionMakeModel} onChange={e => s("expansionMakeModel", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Capacity (litres)</label>
+            <input value={form.expansionCapacity} onChange={e => s("expansionCapacity", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Charge Pressure (bar)</label>
+            <input value={form.expansionCharge} onChange={e => s("expansionCharge", e.target.value)} style={inputStyle} />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>PRV, Strainer & Check Valve</div>
+            <label style={labelStyle}>Pressure Reducing Valve Make</label>
+            <input value={form.prvMake} onChange={e => s("prvMake", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Set Pressure (bar)</label>
+            <input value={form.prvSetPressure} onChange={e => s("prvSetPressure", e.target.value)} style={inputStyle} />
+            <div style={checkStyle}><input type="checkbox" checked={form.lineStrainer} onChange={e => s("lineStrainer", e.target.checked)} /><span>Line Strainer Fitted</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.checkValve} onChange={e => s("checkValve", e.target.checked)} /><span>Check Valve / Combined Unit Fitted</span></div>
+          </div>
+        </>}
+
+        {/* Step 4: Commissioning Measurements */}
+        {step === 4 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Commissioning Measurements</div>
+            <label style={labelStyle}>Cold Water Supply Pressure (bar)</label>
+            <input type="number" step="0.1" value={form.coldPressure} onChange={e => s("coldPressure", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Hot Water Temperature at Outlet (°C)</label>
+            <input type="number" step="0.1" value={form.hotTempOutlet} onChange={e => s("hotTempOutlet", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Hot Water Temperature at Cylinder Stat (°C)</label>
+            <input type="number" step="0.1" value={form.hotTempCylinder} onChange={e => s("hotTempCylinder", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Expansion Vessel Pre-charge Pressure (bar)</label>
+            <input type="number" step="0.1" value={form.expansionPrecharge} onChange={e => s("expansionPrecharge", e.target.value)} style={inputStyle} />
+            <div style={checkStyle}><input type="checkbox" checked={form.tpLiftTest} onChange={e => s("tpLiftTest", e.target.checked)} /><span>T&P Valve Lift Test Performed</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.tundishDischarge} onChange={e => s("tundishDischarge", e.target.checked)} /><span>Tundish Discharge Observed</span></div>
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Building Control Notification</div>
+            <label style={labelStyle}>Method</label>
+            <select value={form.buildingControlMethod} onChange={e => s("buildingControlMethod", e.target.value)} style={selectStyle}>
+              <option>Self-certification via CPS</option><option>Building Notice submitted</option>
+            </select>
+            <label style={labelStyle}>Reference Number</label>
+            <input value={form.buildingControlRef} onChange={e => s("buildingControlRef", e.target.value)} style={inputStyle} />
+            <div style={checkStyle}><input type="checkbox" checked={form.instructionsGiven} onChange={e => s("instructionsGiven", e.target.checked)} /><span>Operating Instructions Given to Customer</span></div>
+          </div>
+        </>}
+
+        {/* Step 5: Result & Declaration */}
+        {step === 5 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Result</div>
+            <label style={labelStyle}>Overall Result</label>
+            <select value={form.result} onChange={e => s("result", e.target.value)} style={selectStyle}>
+              <option>Satisfactory</option><option>Unsatisfactory</option>
+            </select>
+            <label style={labelStyle}>Notes</label>
+            <textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Declaration & Signature</div>
+            <p style={{ fontSize: 12, color: "#666", lineHeight: 1.5, marginBottom: 12 }}>I confirm that this unvented hot water system has been installed and commissioned in accordance with Building Regulations Approved Document G3 and BS EN 12897.</p>
+            <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
+          </div>
+        </>}
+
+        {navButtons}
+      </div>
+    </div>
+  );
+}
+
+// ── TMV Service Record Form (NHS HTM 04-01) — Dynamic Multi-Valve ───────────
+function PlumbingTMVForm({ onBack, onSave, currentUser }) {
+  const [form, setForm] = useState({
+    certRef: "TMV-" + Date.now().toString(36).toUpperCase(),
+    date: new Date().toISOString().slice(0, 10),
+    engineerName: "", company: "",
+    clientName: "", siteName: "", siteAddress: "",
+    valves: [{
+      location: "", makeModel: "", serialNo: "", approval: "TMV2",
+      hotInlet: "", coldInlet: "", mixedOutlet: "", specifiedRange: "38-44°C",
+      withinRange: "Yes", strainerPresent: false, strainerCleaned: false,
+      failsafeCold: false, failsafeHot: false, servicePerformed: "Yes", comments: ""
+    }],
+    nextServiceDue: "",
+    notes: "", result: "Satisfactory", signatureData: ""
+  });
+  const [showPDF, setShowPDF] = useState(false);
+  const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: "#334", marginBottom: 4 };
+  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #d0d5dd", borderRadius: 8, fontSize: 14, boxSizing: "border-box", marginBottom: 12 };
+  const sectionStyle = { background: "#fff", borderRadius: 14, padding: 16, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" };
+  const sectionTitleStyle = { fontSize: 15, fontWeight: 700, color: "#0d1f2d", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 };
+  const checkStyle = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13 };
+  const selectStyle = { ...inputStyle, background: "#fff" };
+
+  if (showPDF) {
+    return <PlumbingPDFPreview certType="tmv" certTitle="TMV Service Record (HTM 04-01)" certData={form} onClose={() => setShowPDF(false)} />;
+  }
+
+  const handleSave = () => {
+    const rec = { ...form, trade: "plumbing", type: "tmv", savedAt: new Date().toISOString() };
     if (onSave) onSave(rec);
     alert("TMV Service Record saved!");
   };
 
+  const addValve = () => s("valves", [...form.valves, {
+    location: "", makeModel: "", serialNo: "", approval: "TMV2",
+    hotInlet: "", coldInlet: "", mixedOutlet: "", specifiedRange: "38-44°C",
+    withinRange: "Yes", strainerPresent: false, strainerCleaned: false,
+    failsafeCold: false, failsafeHot: false, servicePerformed: "Yes", comments: ""
+  }]);
+  const updateValve = (i, k, v) => { const a = [...form.valves]; a[i] = { ...a[i], [k]: v }; s("valves", a); };
+  const removeValve = (i) => { const a = [...form.valves]; a.splice(i, 1); s("valves", a); };
+
   return (
-    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ background:"linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
-        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+    <div style={{ minHeight: "100dvh", background: "#f0f2f5", fontFamily: "'Segoe UI',sans-serif" }}>
+      <div style={{ background: "linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+        <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 10, background: "#1e3044", border: "1px solid #2a4058", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#8b9db0", flexShrink: 0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
-        <div style={{ flex:1 }}>
-          <div style={{ color:"#fff", fontWeight:800, fontSize:16 }}>TMV Service Record</div>
-          <div style={{ color:"rgba(255,255,255,0.6)", fontSize:11 }}>TMV2 / TMV3 Service</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>TMV Service Record</div>
+          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>NHS HTM 04-01 / TMV2 / TMV3</div>
         </div>
       </div>
 
-      <div style={{ padding:"12px 16px 100px", maxWidth:600, margin:"0 auto" }}>
+      <div style={{ padding: "12px 16px 100px", maxWidth: 600, margin: "0 auto" }}>
         <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>📋 Service Details</div>
-          <label style={labelStyle}>Reference</label>
-          <input value={form.certRef} onChange={e=>s("certRef",e.target.value)} style={inputStyle}/>
+          <div style={sectionTitleStyle}>Service Details</div>
+          <label style={labelStyle}>Service Report No.</label>
+          <input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} />
           <label style={labelStyle}>Date</label>
-          <input type="date" value={form.date} onChange={e=>s("date",e.target.value)} style={inputStyle}/>
+          <input type="date" value={form.date} onChange={e => s("date", e.target.value)} style={inputStyle} />
           <label style={labelStyle}>Engineer Name</label>
-          <input value={form.engineerName} onChange={e=>s("engineerName",e.target.value)} style={inputStyle}/>
+          <input value={form.engineerName} onChange={e => s("engineerName", e.target.value)} style={inputStyle} />
+          <label style={labelStyle}>Company</label>
+          <input value={form.company} onChange={e => s("company", e.target.value)} style={inputStyle} />
         </div>
 
         <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>🏢 Site Details</div>
-          <label style={labelStyle}>Site Name</label>
-          <input value={form.siteName} onChange={e=>s("siteName",e.target.value)} style={inputStyle}/>
+          <div style={sectionTitleStyle}>Client / Site Details</div>
+          <label style={labelStyle}>Client Name</label>
+          <input value={form.clientName} onChange={e => s("clientName", e.target.value)} style={inputStyle} />
+          <label style={labelStyle}>Site / Building</label>
+          <input value={form.siteName} onChange={e => s("siteName", e.target.value)} style={inputStyle} />
           <label style={labelStyle}>Address</label>
-          <input value={form.siteAddress} onChange={e=>s("siteAddress",e.target.value)} style={inputStyle}/>
+          <input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} />
         </div>
 
         <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>🔧 TMV Details</div>
-          <label style={labelStyle}>TMV ID / Reference</label>
-          <input value={form.tmvId} onChange={e=>s("tmvId",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Location</label>
-          <input value={form.tmvLocation} onChange={e=>s("tmvLocation",e.target.value)} style={inputStyle} placeholder="e.g. Bathroom basin"/>
-          <label style={labelStyle}>TMV Type</label>
-          <select value={form.tmvType} onChange={e=>s("tmvType",e.target.value)} style={selectStyle}>
-            <option>TMV2</option><option>TMV3</option>
+          <div style={sectionTitleStyle}>TMV Valves</div>
+          <div style={{ fontSize: 11, color: "#666", marginBottom: 12 }}>Healthcare range: 38-44°C. Failsafe: outlet must drop/shut off when either supply is isolated.</div>
+          {form.valves.map((v, i) => (
+            <div key={i} style={{ background: "#f8f9fa", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid #e0e0e0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontWeight: 700, fontSize: 14, color: "#4A7CFF" }}>Valve {i + 1}</span>
+                {form.valves.length > 1 && <button onClick={() => removeValve(i)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Remove</button>}
+              </div>
+              <label style={labelStyle}>Location</label>
+              <input value={v.location} onChange={e => updateValve(i, "location", e.target.value)} style={inputStyle} placeholder="e.g. En-suite basin" />
+              <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>TMV Make / Model</label>
+                  <input value={v.makeModel} onChange={e => updateValve(i, "makeModel", e.target.value)} style={inputStyle} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Serial No.</label>
+                  <input value={v.serialNo} onChange={e => updateValve(i, "serialNo", e.target.value)} style={inputStyle} />
+                </div>
+              </div>
+              <label style={labelStyle}>TMV Approval</label>
+              <select value={v.approval} onChange={e => updateValve(i, "approval", e.target.value)} style={selectStyle}>
+                <option>TMV2</option><option>TMV3</option>
+              </select>
+              <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Hot Inlet (°C)</label>
+                  <input type="number" step="0.1" value={v.hotInlet} onChange={e => updateValve(i, "hotInlet", e.target.value)} style={inputStyle} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Cold Inlet (°C)</label>
+                  <input type="number" step="0.1" value={v.coldInlet} onChange={e => updateValve(i, "coldInlet", e.target.value)} style={inputStyle} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Mixed Outlet (°C)</label>
+                  <input type="number" step="0.1" value={v.mixedOutlet} onChange={e => updateValve(i, "mixedOutlet", e.target.value)} style={inputStyle} />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Specified Range</label>
+                  <input value={v.specifiedRange} onChange={e => updateValve(i, "specifiedRange", e.target.value)} style={inputStyle} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Within Range</label>
+                  <select value={v.withinRange} onChange={e => updateValve(i, "withinRange", e.target.value)} style={selectStyle}>
+                    <option>Yes</option><option>No</option>
+                  </select>
+                </div>
+              </div>
+              <div style={checkStyle}><input type="checkbox" checked={v.strainerPresent} onChange={e => updateValve(i, "strainerPresent", e.target.checked)} /><span>Strainer Present</span></div>
+              <div style={checkStyle}><input type="checkbox" checked={v.strainerCleaned} onChange={e => updateValve(i, "strainerCleaned", e.target.checked)} /><span>Strainer Cleaned</span></div>
+              <div style={{ fontWeight: 600, fontSize: 12, color: "#334", marginBottom: 6, marginTop: 6 }}>Failsafe Tests</div>
+              <div style={checkStyle}><input type="checkbox" checked={v.failsafeCold} onChange={e => updateValve(i, "failsafeCold", e.target.checked)} /><span>Cold supply isolation — outlet drops/shuts off</span></div>
+              <div style={checkStyle}><input type="checkbox" checked={v.failsafeHot} onChange={e => updateValve(i, "failsafeHot", e.target.checked)} /><span>Hot supply isolation — outlet drops/shuts off</span></div>
+              <label style={labelStyle}>Service/Calibration Performed</label>
+              <select value={v.servicePerformed} onChange={e => updateValve(i, "servicePerformed", e.target.value)} style={selectStyle}>
+                <option>Yes</option><option>No</option>
+              </select>
+              <label style={labelStyle}>Comments / Remedial Actions</label>
+              <textarea value={v.comments} onChange={e => updateValve(i, "comments", e.target.value)} style={{ ...inputStyle, minHeight: 50 }} />
+            </div>
+          ))}
+          <button onClick={addValve} style={{ background: "#4A7CFF", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>+ Add Valve</button>
+        </div>
+
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>Result & Notes</div>
+          <label style={labelStyle}>Overall Result</label>
+          <select value={form.result} onChange={e => s("result", e.target.value)} style={selectStyle}>
+            <option>Satisfactory</option><option>Unsatisfactory</option>
           </select>
-          <label style={labelStyle}>Manufacturer</label>
-          <input value={form.manufacturer} onChange={e=>s("manufacturer",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Model</label>
-          <input value={form.model} onChange={e=>s("model",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Serial Number</label>
-          <input value={form.serialNo} onChange={e=>s("serialNo",e.target.value)} style={inputStyle}/>
-        </div>
-
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>🌡️ Temperature Readings</div>
-          <label style={labelStyle}>Mixed Outlet Temperature (°C)</label>
-          <input type="number" step="0.1" value={form.mixedOutletTemp} onChange={e=>s("mixedOutletTemp",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Hot Supply Temperature at Inlet (°C)</label>
-          <input type="number" step="0.1" value={form.hotSupplyTemp} onChange={e=>s("hotSupplyTemp",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Cold Supply Temperature (°C)</label>
-          <input type="number" step="0.1" value={form.coldSupplyTemp} onChange={e=>s("coldSupplyTemp",e.target.value)} style={inputStyle}/>
-        </div>
-
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>✅ Test & Results</div>
-          <label style={labelStyle}>Fail-Safe Test</label>
-          <select value={form.failSafeTest} onChange={e=>s("failSafeTest",e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select>
-          <label style={labelStyle}>Action Taken</label>
-          <textarea value={form.actionTaken} onChange={e=>s("actionTaken",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Describe any action taken..."/>
-          <label style={labelStyle}>Result</label>
-          <select value={form.result} onChange={e=>s("result",e.target.value)} style={selectStyle}><option>Satisfactory</option><option>Unsatisfactory</option></select>
           <label style={labelStyle}>Next Service Due</label>
-          <input type="date" value={form.nextServiceDue} onChange={e=>s("nextServiceDue",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Recommendations</label>
-          <textarea value={form.recommendations} onChange={e=>s("recommendations",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Any recommendations..."/>
+          <input type="date" value={form.nextServiceDue} onChange={e => s("nextServiceDue", e.target.value)} style={inputStyle} />
           <label style={labelStyle}>Notes</label>
-          <textarea value={form.notes} onChange={e=>s("notes",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Additional notes..."/>
+          <textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
         </div>
 
         <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>✍️ Signature</div>
-          <PlumbingSigPad onSign={dataUrl=>s("sigImage",dataUrl)}/>
+          <div style={sectionTitleStyle}>Declaration & Signature</div>
+          <p style={{ fontSize: 12, color: "#666", lineHeight: 1.5, marginBottom: 12 }}>I confirm that the TMV service has been carried out in accordance with NHS Estates HTM 04-01 and the relevant TMV scheme requirements.</p>
+          <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
         </div>
 
-        <div style={{ display:"flex", gap:10, marginTop:8 }}>
-          <button onClick={handleSave} style={{ flex:1, padding:"14px 0", background:"#00b4d8", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>💾 Save Record</button>
-          <button onClick={()=>setShowPDF(true)} style={{ flex:1, padding:"14px 0", background:"#0d1f2d", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>📄 Generate PDF</button>
+        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+          <button onClick={handleSave} style={{ flex: 1, padding: "14px 0", background: "#00b4d8", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Save Record</button>
+          <button onClick={() => setShowPDF(true)} style={{ flex: 1, padding: "14px 0", background: "#0d1f2d", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Generate PDF</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ── RPZ Valve Test Certificate Form ─────────────────────────────────────────
+// ── RPZ Valve Test Certificate (WRAS) — Multi-Step Wizard ───────────────────
 function PlumbingRPZForm({ onBack, onSave, currentUser }) {
+  const [step, setStep] = useState(1);
+  const totalSteps = 5;
   const [form, setForm] = useState({
     certRef: "RPZ-" + Date.now().toString(36).toUpperCase(),
-    date: new Date().toISOString().slice(0,10),
-    siteAddress: "", sitePostcode: "",
-    testerName: "", wiapsQualNo: "",
-    valveMake: "", valveModel: "", valveSize: "", valveLocation: "",
-    fluidCategory: "4",
-    cv1DiffPressure: "", cv2DiffPressure: "", reliefValveOpeningPressure: "",
-    overallResult: "Pass",
+    date: new Date().toISOString().slice(0, 10),
+    // Tester
+    testerName: "", testerCompany: "", wrasApprovedNo: "",
+    // Client / Site
+    clientName: "", siteAddress: "", sitePostcode: "",
+    // Device
+    deviceMake: "", deviceModel: "", deviceSerial: "", deviceSize: "", deviceLocation: "",
+    installDate: "", lastTestDate: "",
+    // Pre-test checks
+    isoValve1Tight: false, isoValve2Tight: false,
+    strainerPresent: false, strainerCleaned: false, accessibility: false,
+    // Test results
+    cv1Pressure: "", cv2HoldsTight: false, cv2Result: "Pass",
+    reliefValvePSID: "", reliefValveResult: "Pass",
+    downstreamIsoTight: false,
+    overallResult: "PASS",
+    // Test equipment
+    testEquipMake: "", testEquipModel: "", testEquipSerial: "", testEquipCalDate: "",
+    // Remedial / permissions
+    remedialWork: "",
+    permOffName: "", permOnName: "",
+    copyTo: "Water undertaker / Building owner",
     nextTestDue: "",
-    notes: "", sigImage: ""
+    notes: "", signatureData: ""
   });
   const [showPDF, setShowPDF] = useState(false);
-  const s = (k,v) => setForm(f=>({...f,[k]:v}));
-  const labelStyle = { display:"block", fontSize:12, fontWeight:600, color:"#334", marginBottom:4 };
-  const inputStyle = { width:"100%", padding:"10px 12px", border:"1px solid #d0d5dd", borderRadius:8, fontSize:14, boxSizing:"border-box", marginBottom:12 };
-  const sectionStyle = { background:"#fff", borderRadius:14, padding:16, marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" };
-  const sectionTitleStyle = { fontSize:15, fontWeight:700, color:"#0d1f2d", marginBottom:12, display:"flex", alignItems:"center", gap:8 };
-  const selectStyle = { ...inputStyle, background:"#fff" };
+  const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: "#334", marginBottom: 4 };
+  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #d0d5dd", borderRadius: 8, fontSize: 14, boxSizing: "border-box", marginBottom: 12 };
+  const sectionStyle = { background: "#fff", borderRadius: 14, padding: 16, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" };
+  const sectionTitleStyle = { fontSize: 15, fontWeight: 700, color: "#0d1f2d", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 };
+  const checkStyle = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13 };
+  const selectStyle = { ...inputStyle, background: "#fff" };
 
   if (showPDF) {
-    const fields = [
-      { title: "Test Details", rows: [
-        { label: "Reference", value: form.certRef },
-        { label: "Date", value: form.date },
-        { label: "Tester Name", value: form.testerName },
-        { label: "WIAPS Qualification No.", value: form.wiapsQualNo },
-      ]},
-      { title: "Site", rows: [
-        { label: "Address", value: form.siteAddress },
-        { label: "Postcode", value: form.sitePostcode },
-      ]},
-      { title: "Valve Details", rows: [
-        { label: "Make", value: form.valveMake },
-        { label: "Model", value: form.valveModel },
-        { label: "Size", value: form.valveSize },
-        { label: "Location", value: form.valveLocation },
-        { label: "Fluid Category", value: form.fluidCategory },
-      ]},
-      { title: "Test Readings", rows: [
-        { label: "CV1 Differential Pressure", value: form.cv1DiffPressure ? form.cv1DiffPressure + " bar" : "" },
-        { label: "CV2 Differential Pressure", value: form.cv2DiffPressure ? form.cv2DiffPressure + " bar" : "" },
-        { label: "Relief Valve Opening Pressure", value: form.reliefValveOpeningPressure ? form.reliefValveOpeningPressure + " bar" : "" },
-      ]},
-      { title: "Result", rows: [
-        { label: "Overall Result", value: form.overallResult },
-        { label: "Next Test Due", value: form.nextTestDue },
-        { label: "Notes", value: form.notes },
-      ]},
-    ];
-    return <PlumbingPDFPreview title="RPZ Valve Test Certificate" form={form} fields={fields} onClose={()=>setShowPDF(false)} />;
+    return <PlumbingPDFPreview certType="rpz" certTitle="RPZ Valve Test Certificate (WRAS)" certData={form} onClose={() => setShowPDF(false)} />;
   }
 
   const handleSave = () => {
-    const rec = { ...form, trade:"plumbing", type:"rpz", savedAt:new Date().toISOString() };
+    const rec = { ...form, trade: "plumbing", type: "rpz", savedAt: new Date().toISOString() };
     if (onSave) onSave(rec);
     alert("RPZ Valve Test Certificate saved!");
   };
 
+  // Auto-calculate overall result
+  const cv1Pass = form.cv1Pressure && parseFloat(form.cv1Pressure) >= 5;
+  const cv1Result = form.cv1Pressure ? (cv1Pass ? "PASS" : "FAIL") : "";
+
+  const progressBar = (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
+      {Array.from({ length: totalSteps }, (_, i) => (
+        <div key={i} style={{ flex: 1, height: 6, borderRadius: 3, background: i + 1 <= step ? "#4A7CFF" : "#e0e0e0", transition: "background 0.2s" }} />
+      ))}
+      <span style={{ fontSize: 11, color: "#666", fontWeight: 600, flexShrink: 0 }}>Step {step}/{totalSteps}</span>
+    </div>
+  );
+
+  const navButtons = (
+    <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+      {step > 1 && <button onClick={() => setStep(step - 1)} style={{ flex: 1, padding: "14px 0", background: "#e0e0e0", color: "#333", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Back</button>}
+      {step < totalSteps && <button onClick={() => setStep(step + 1)} style={{ flex: 1, padding: "14px 0", background: "#4A7CFF", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Next</button>}
+      {step === totalSteps && (
+        <>
+          <button onClick={handleSave} style={{ flex: 1, padding: "14px 0", background: "#00b4d8", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Save</button>
+          <button onClick={() => setShowPDF(true)} style={{ flex: 1, padding: "14px 0", background: "#0d1f2d", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Generate PDF</button>
+        </>
+      )}
+    </div>
+  );
+
   return (
-    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ background:"linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
-        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
+    <div style={{ minHeight: "100dvh", background: "#f0f2f5", fontFamily: "'Segoe UI',sans-serif" }}>
+      <div style={{ background: "linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+        <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 10, background: "#1e3044", border: "1px solid #2a4058", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#8b9db0", flexShrink: 0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
-        <div style={{ flex:1 }}>
-          <div style={{ color:"#fff", fontWeight:800, fontSize:16 }}>RPZ Valve Test</div>
-          <div style={{ color:"rgba(255,255,255,0.6)", fontSize:11 }}>Backflow Prevention Certificate</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>RPZ Valve Test</div>
+          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>WRAS / Water Fittings Regs 1999</div>
         </div>
       </div>
 
-      <div style={{ padding:"12px 16px 100px", maxWidth:600, margin:"0 auto" }}>
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>📋 Test Details</div>
-          <label style={labelStyle}>Reference</label>
-          <input value={form.certRef} onChange={e=>s("certRef",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Date</label>
-          <input type="date" value={form.date} onChange={e=>s("date",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Tester Name</label>
-          <input value={form.testerName} onChange={e=>s("testerName",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>WIAPS Qualification Number</label>
-          <input value={form.wiapsQualNo} onChange={e=>s("wiapsQualNo",e.target.value)} style={inputStyle}/>
-        </div>
+      <div style={{ padding: "12px 16px 100px", maxWidth: 600, margin: "0 auto" }}>
+        {progressBar}
 
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>📍 Site Details</div>
-          <label style={labelStyle}>Address</label>
-          <input value={form.siteAddress} onChange={e=>s("siteAddress",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Postcode</label>
-          <input value={form.sitePostcode} onChange={e=>s("sitePostcode",e.target.value)} style={inputStyle}/>
-        </div>
+        {/* Step 1: Tester & Client */}
+        {step === 1 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Tester Details</div>
+            <label style={labelStyle}>Certificate No.</label>
+            <input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Test Date</label>
+            <input type="date" value={form.date} onChange={e => s("date", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Tester Name</label>
+            <input value={form.testerName} onChange={e => s("testerName", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Company</label>
+            <input value={form.testerCompany} onChange={e => s("testerCompany", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>WRAS-Approved Tester No.</label>
+            <input value={form.wrasApprovedNo} onChange={e => s("wrasApprovedNo", e.target.value)} style={inputStyle} />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Client / Site Details</div>
+            <label style={labelStyle}>Client Name</label>
+            <input value={form.clientName} onChange={e => s("clientName", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Site Address</label>
+            <input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Postcode</label>
+            <input value={form.sitePostcode} onChange={e => s("sitePostcode", e.target.value)} style={inputStyle} />
+          </div>
+        </>}
 
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>🔧 Valve Details</div>
-          <label style={labelStyle}>Make</label>
-          <input value={form.valveMake} onChange={e=>s("valveMake",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Model</label>
-          <input value={form.valveModel} onChange={e=>s("valveModel",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Size</label>
-          <input value={form.valveSize} onChange={e=>s("valveSize",e.target.value)} style={inputStyle} placeholder="e.g. 15mm, 25mm"/>
-          <label style={labelStyle}>Location</label>
-          <input value={form.valveLocation} onChange={e=>s("valveLocation",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Fluid Category</label>
-          <select value={form.fluidCategory} onChange={e=>s("fluidCategory",e.target.value)} style={selectStyle}>
-            <option value="4">Category 4</option><option value="5">Category 5</option>
-          </select>
-        </div>
+        {/* Step 2: Device Details */}
+        {step === 2 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Device Details</div>
+            <label style={labelStyle}>Make</label>
+            <input value={form.deviceMake} onChange={e => s("deviceMake", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Model</label>
+            <input value={form.deviceModel} onChange={e => s("deviceModel", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Serial No.</label>
+            <input value={form.deviceSerial} onChange={e => s("deviceSerial", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Size</label>
+            <input value={form.deviceSize} onChange={e => s("deviceSize", e.target.value)} style={inputStyle} placeholder="e.g. 15mm, 25mm, 50mm" />
+            <label style={labelStyle}>Location</label>
+            <input value={form.deviceLocation} onChange={e => s("deviceLocation", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Date of Installation</label>
+            <input type="date" value={form.installDate} onChange={e => s("installDate", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Date of Last Test</label>
+            <input type="date" value={form.lastTestDate} onChange={e => s("lastTestDate", e.target.value)} style={inputStyle} />
+          </div>
+        </>}
 
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>📊 Test Readings</div>
-          <label style={labelStyle}>CV1 Differential Pressure (bar)</label>
-          <input type="number" step="0.01" value={form.cv1DiffPressure} onChange={e=>s("cv1DiffPressure",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>CV2 Differential Pressure (bar)</label>
-          <input type="number" step="0.01" value={form.cv2DiffPressure} onChange={e=>s("cv2DiffPressure",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Relief Valve Opening Pressure (bar)</label>
-          <input type="number" step="0.01" value={form.reliefValveOpeningPressure} onChange={e=>s("reliefValveOpeningPressure",e.target.value)} style={inputStyle}/>
-        </div>
+        {/* Step 3: Pre-Test Checks */}
+        {step === 3 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Pre-Test Checks</div>
+            <div style={checkStyle}><input type="checkbox" checked={form.isoValve1Tight} onChange={e => s("isoValve1Tight", e.target.checked)} /><span>Isolating Valve No.1 Tight</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.isoValve2Tight} onChange={e => s("isoValve2Tight", e.target.checked)} /><span>Isolating Valve No.2 Tight</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.strainerPresent} onChange={e => s("strainerPresent", e.target.checked)} /><span>Strainer Present</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.strainerCleaned} onChange={e => s("strainerCleaned", e.target.checked)} /><span>Strainer Cleaned</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.accessibility} onChange={e => s("accessibility", e.target.checked)} /><span>Accessibility Acceptable</span></div>
+          </div>
+        </>}
 
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>✅ Result</div>
-          <label style={labelStyle}>Overall Result</label>
-          <select value={form.overallResult} onChange={e=>s("overallResult",e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select>
-          <label style={labelStyle}>Next Test Due</label>
-          <input type="date" value={form.nextTestDue} onChange={e=>s("nextTestDue",e.target.value)} style={inputStyle}/>
-          <label style={labelStyle}>Notes</label>
-          <textarea value={form.notes} onChange={e=>s("notes",e.target.value)} style={{...inputStyle, minHeight:60}} placeholder="Additional notes..."/>
-        </div>
+        {/* Step 4: Test Results */}
+        {step === 4 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Test Results</div>
 
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>✍️ Signature</div>
-          <PlumbingSigPad onSign={dataUrl=>s("sigImage",dataUrl)}/>
-        </div>
+            <div style={{ background: "#f0f4ff", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid #d0d8f0" }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: "#333", marginBottom: 8 }}>First (Upstream) Check Valve</div>
+              <label style={labelStyle}>Differential Pressure Reading (PSID)</label>
+              <input type="number" step="0.1" value={form.cv1Pressure} onChange={e => s("cv1Pressure", e.target.value)} style={inputStyle} placeholder="Must be >= 5 PSID" />
+              {cv1Result && (
+                <div style={{ padding: "6px 12px", borderRadius: 6, background: cv1Pass ? "#d1fae5" : "#fee2e2", color: cv1Pass ? "#065f46" : "#991b1b", fontWeight: 700, fontSize: 13, textAlign: "center" }}>{cv1Result} {cv1Pass ? "(>= 5 PSID)" : "(< 5 PSID - FAIL)"}</div>
+              )}
+            </div>
 
-        <div style={{ display:"flex", gap:10, marginTop:8 }}>
-          <button onClick={handleSave} style={{ flex:1, padding:"14px 0", background:"#00b4d8", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>💾 Save Certificate</button>
-          <button onClick={()=>setShowPDF(true)} style={{ flex:1, padding:"14px 0", background:"#0d1f2d", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer" }}>📄 Generate PDF</button>
-        </div>
+            <div style={{ background: "#f0f4ff", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid #d0d8f0" }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: "#333", marginBottom: 8 }}>Second (Downstream) Check Valve</div>
+              <div style={checkStyle}><input type="checkbox" checked={form.cv2HoldsTight} onChange={e => s("cv2HoldsTight", e.target.checked)} /><span>Holds Tight</span></div>
+              <label style={labelStyle}>Result</label>
+              <select value={form.cv2Result} onChange={e => s("cv2Result", e.target.value)} style={selectStyle}>
+                <option>Pass</option><option>Fail</option>
+              </select>
+            </div>
+
+            <div style={{ background: "#f0f4ff", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid #d0d8f0" }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: "#333", marginBottom: 8 }}>Relief Valve</div>
+              <label style={labelStyle}>Opens at Differential (PSID)</label>
+              <input type="number" step="0.1" value={form.reliefValvePSID} onChange={e => s("reliefValvePSID", e.target.value)} style={inputStyle} placeholder="Must be <= 2 PSID below CV1 reading" />
+              <label style={labelStyle}>Result</label>
+              <select value={form.reliefValveResult} onChange={e => s("reliefValveResult", e.target.value)} style={selectStyle}>
+                <option>Pass</option><option>Fail</option>
+              </select>
+            </div>
+
+            <div style={{ background: "#f0f4ff", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid #d0d8f0" }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: "#333", marginBottom: 8 }}>Downstream Isolation Valve</div>
+              <div style={checkStyle}><input type="checkbox" checked={form.downstreamIsoTight} onChange={e => s("downstreamIsoTight", e.target.checked)} /><span>Tight</span></div>
+            </div>
+
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, marginTop: 8 }}>Overall Result</div>
+            <select value={form.overallResult} onChange={e => s("overallResult", e.target.value)} style={{ ...selectStyle, fontSize: 16, fontWeight: 700, textAlign: "center" }}>
+              <option>PASS</option><option>FAIL</option>
+            </select>
+          </div>
+
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Test Equipment</div>
+            <label style={labelStyle}>Make</label>
+            <input value={form.testEquipMake} onChange={e => s("testEquipMake", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Model</label>
+            <input value={form.testEquipModel} onChange={e => s("testEquipModel", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Serial No.</label>
+            <input value={form.testEquipSerial} onChange={e => s("testEquipSerial", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Calibration Date</label>
+            <input type="date" value={form.testEquipCalDate} onChange={e => s("testEquipCalDate", e.target.value)} style={inputStyle} />
+          </div>
+        </>}
+
+        {/* Step 5: Permissions, Remedial & Declaration */}
+        {step === 5 && <>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Remedial Work</div>
+            <label style={labelStyle}>Remedial Work Performed (if any)</label>
+            <textarea value={form.remedialWork} onChange={e => s("remedialWork", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Permissions</div>
+            <label style={labelStyle}>Permission to Turn Off Supply — Name</label>
+            <input value={form.permOffName} onChange={e => s("permOffName", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Permission to Turn On Supply — Name</label>
+            <input value={form.permOnName} onChange={e => s("permOnName", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Copy To</label>
+            <input value={form.copyTo} onChange={e => s("copyTo", e.target.value)} style={inputStyle} />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Result</div>
+            <label style={labelStyle}>Next Test Due</label>
+            <input type="date" value={form.nextTestDue} onChange={e => s("nextTestDue", e.target.value)} style={inputStyle} />
+            <label style={labelStyle}>Notes</label>
+            <textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
+          </div>
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Declaration & Signature</div>
+            <p style={{ fontSize: 12, color: "#666", lineHeight: 1.5, marginBottom: 12 }}>I confirm that this RPZ valve has been tested in accordance with the Water Supply (Water Fittings) Regulations 1999 and WRAS requirements.</p>
+            <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
+          </div>
+        </>}
+
+        {navButtons}
       </div>
     </div>
   );
@@ -25102,238 +28239,703 @@ function PlumbingDashboard({ onBack, currentUser, onNewJob, onRecords, onReport,
 // ─── OIL & RENEWABLES TRADE MODULE ──────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// ── Oil & Renewables PDF Generation ─────────────────────────────────────────
-function generateOilCertPDF(certData, certType, certTitle) {
-  const canvas = document.createElement("canvas");
-  const W = 800, pageH = 1132;
-  canvas.width = W;
-  const ctx = canvas.getContext("2d");
-  const pages = [];
-  let y = 0;
-  const startPage = () => { canvas.height = pageH; ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, pageH); y = 30; };
-  const checkPage = (need) => { if (y + need > pageH - 40) { pages.push(canvas.toDataURL("image/png")); startPage(); } };
-  const drawText = (text, x, _y, opts = {}) => {
-    ctx.font = `${opts.bold ? "bold " : ""}${opts.size || 13}px 'Segoe UI', sans-serif`;
-    ctx.fillStyle = opts.color || "#222";
-    ctx.textAlign = opts.align || "left";
-    ctx.fillText(text || "", x, _y);
-    ctx.textAlign = "left";
+// ── Oil & Renewables PDF Generation (jsPDF table-based layout) ──────────────
+async function generateOilRenewablesPDF(certType, data) {
+  await new Promise((res, rej) => { if (window.jspdf) return res(); const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const W = 210, H = 297, M = 12, CW = W - 2 * M;
+  let y = 0, pageNum = 1;
+  const certRef = data.certRef || certType.toUpperCase() + "-" + Date.now().toString(36).toUpperCase();
+  const certDate = data.date || new Date().toISOString().split("T")[0];
+  const DARK = "#333333", ACCENT = "#2d6a4f", GREY = "#f5f5f5", WHITE = "#ffffff", LGREY = "#e5e7eb";
+  const CB = "\u2611", CU = "\u2610";
+
+  const addFooter = () => {
+    pdf.setFontSize(7); pdf.setTextColor(150);
+    pdf.text("Generated by Gas Safety App — Oil & Renewables Module", M, H - 6);
+    pdf.text("Ref: " + certRef + "  |  Page " + pageNum, W - M, H - 6, { align: "right" });
+    pdf.setDrawColor(200); pdf.line(M, H - 10, W - M, H - 10);
   };
-  const drawLine = (_y) => { ctx.strokeStyle = "#ddd"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(30, _y); ctx.lineTo(W - 30, _y); ctx.stroke(); };
-  const drawSection = (title) => { checkPage(40); ctx.fillStyle = "#2d6a4f"; ctx.fillRect(30, y, W - 60, 28); drawText(title, 42, y + 19, { bold: true, size: 13, color: "#fff" }); y += 38; };
-  const drawField = (label, value) => { checkPage(24); drawText(label + ":", 40, y, { bold: true, size: 11, color: "#555" }); drawText(String(value || "N/A"), 220, y, { size: 11 }); y += 22; };
 
-  startPage();
-  // Header
-  ctx.fillStyle = "#2d6a4f"; ctx.fillRect(0, 0, W, 80);
-  drawText("Oil & Renewables", 40, 35, { bold: true, size: 22, color: "#fff" });
-  drawText(certTitle, 40, 60, { size: 14, color: "rgba(255,255,255,0.85)" });
-  drawText("Ref: " + (certData.certRef || "N/A"), W - 40, 35, { align: "right", size: 12, color: "rgba(255,255,255,0.8)" });
-  drawText("Date: " + (certData.date || new Date().toLocaleDateString()), W - 40, 55, { align: "right", size: 11, color: "rgba(255,255,255,0.7)" });
-  y = 100;
+  const checkPage = (need) => {
+    if (y + need > H - 16) { addFooter(); pdf.addPage(); pageNum++; y = 12; }
+  };
 
-  // Engineer details
-  drawSection("Engineer Details");
-  drawField("Engineer Name", certData.engineerName);
-  drawField("OFTEC Registration", certData.oftecReg || certData.mcsNumber || "N/A");
-  drawField("Company", certData.company);
-  drawField("Company Address", certData.companyAddress);
-  drawField("Telephone", certData.telephone);
+  const sectionHeader = (title) => {
+    checkPage(10);
+    pdf.setFillColor(45, 106, 79); pdf.rect(M, y, CW, 7, "F");
+    pdf.setFontSize(9); pdf.setFont("helvetica", "bold"); pdf.setTextColor(255);
+    pdf.text(title, M + 3, y + 5);
+    pdf.setTextColor(0); y += 9;
+  };
 
-  // Client details
-  drawSection("Client / Site Details");
-  drawField("Client Name", certData.clientName);
-  drawField("Site Address", certData.siteAddress);
-  drawField("Postcode", certData.postcode);
-  drawField("Client Tel", certData.clientTel);
-  drawField("Client Email", certData.clientEmail);
-  if (certData.landlordName) drawField("Landlord Name", certData.landlordName);
-  if (certData.landlordAddress) drawField("Landlord Address", certData.landlordAddress);
+  const tableRow = (label, value, opts = {}) => {
+    checkPage(7);
+    const rh = opts.height || 6.5;
+    const bg = opts.grey ? GREY : WHITE;
+    pdf.setFillColor(bg === GREY ? 245 : 255, bg === GREY ? 245 : 255, bg === GREY ? 245 : 255);
+    pdf.rect(M, y, CW, rh, "F");
+    pdf.setDrawColor(200); pdf.rect(M, y, CW, rh, "S");
+    pdf.setDrawColor(200); pdf.line(M + CW * 0.38, y, M + CW * 0.38, y + rh);
+    pdf.setFontSize(8); pdf.setFont("helvetica", "bold"); pdf.setTextColor(80);
+    pdf.text(String(label || ""), M + 2, y + rh * 0.65);
+    pdf.setFont("helvetica", "normal"); pdf.setTextColor(30);
+    const val = String(value === undefined || value === null || value === "" ? "—" : value);
+    pdf.text(val, M + CW * 0.38 + 2, y + rh * 0.65);
+    y += rh;
+  };
 
-  // Type-specific fields
-  if (certType === "cd11" || certType === "cd10") {
-    drawSection("Appliance Details");
-    drawField("Make", certData.applianceMake);
-    drawField("Model", certData.applianceModel);
-    drawField("Serial Number", certData.applianceSerial);
-    drawField("Burner Type", certData.burnerType);
-    drawField("Fuel Type", certData.fuelType);
-    drawField("Heat Output (kW)", certData.heatOutput);
-  }
+  const checkboxRow = (label, checked, opts = {}) => {
+    tableRow(label, (checked === true || checked === "Yes" || checked === "Pass" || checked === true) ? CB : CU, opts);
+  };
 
+  const passFailRow = (num, label, value, comment, opts = {}) => {
+    checkPage(7);
+    const rh = 6.5;
+    const bg = opts.grey ? GREY : WHITE;
+    pdf.setFillColor(bg === GREY ? 245 : 255, bg === GREY ? 245 : 255, bg === GREY ? 245 : 255);
+    pdf.rect(M, y, CW, rh, "F");
+    pdf.setDrawColor(200); pdf.rect(M, y, CW, rh, "S");
+    // Columns: No(8%) | Item(40%) | Result(18%) | Comments(34%)
+    const c1 = CW * 0.08, c2 = CW * 0.40, c3 = CW * 0.18;
+    pdf.line(M + c1, y, M + c1, y + rh);
+    pdf.line(M + c1 + c2, y, M + c1 + c2, y + rh);
+    pdf.line(M + c1 + c2 + c3, y, M + c1 + c2 + c3, y + rh);
+    pdf.setFontSize(7); pdf.setFont("helvetica", "normal"); pdf.setTextColor(80);
+    pdf.text(String(num), M + 2, y + rh * 0.65);
+    pdf.setFont("helvetica", "normal"); pdf.setTextColor(30);
+    pdf.text(String(label || ""), M + c1 + 2, y + rh * 0.65);
+    const pf = String(value || "—");
+    if (pf === "Pass" || pf === "Satisfactory") pdf.setTextColor(34, 139, 34);
+    else if (pf === "Fail") pdf.setTextColor(220, 38, 38);
+    else if (pf === "Advisory") pdf.setTextColor(217, 119, 6);
+    else pdf.setTextColor(100);
+    pdf.text(pf, M + c1 + c2 + 2, y + rh * 0.65);
+    pdf.setTextColor(80); pdf.setFont("helvetica", "normal");
+    pdf.text(String(comment || ""), M + c1 + c2 + c3 + 2, y + rh * 0.65);
+    y += rh;
+  };
+
+  const passFailHeader = () => {
+    checkPage(7);
+    const rh = 6;
+    pdf.setFillColor(70, 70, 70); pdf.rect(M, y, CW, rh, "F");
+    const c1 = CW * 0.08, c2 = CW * 0.40, c3 = CW * 0.18;
+    pdf.setFontSize(7); pdf.setFont("helvetica", "bold"); pdf.setTextColor(255);
+    pdf.text("No.", M + 2, y + rh * 0.7);
+    pdf.text("Item", M + c1 + 2, y + rh * 0.7);
+    pdf.text("Result", M + c1 + c2 + 2, y + rh * 0.7);
+    pdf.text("Comments", M + c1 + c2 + c3 + 2, y + rh * 0.7);
+    pdf.setTextColor(0); y += rh;
+  };
+
+  const twoColRow = (l1, v1, l2, v2, opts = {}) => {
+    checkPage(7);
+    const rh = 6.5;
+    const bg = opts.grey ? GREY : WHITE;
+    pdf.setFillColor(bg === GREY ? 245 : 255, bg === GREY ? 245 : 255, bg === GREY ? 245 : 255);
+    pdf.rect(M, y, CW, rh, "F");
+    pdf.setDrawColor(200); pdf.rect(M, y, CW, rh, "S");
+    pdf.line(M + CW * 0.5, y, M + CW * 0.5, y + rh);
+    pdf.line(M + CW * 0.19, y, M + CW * 0.19, y + rh);
+    pdf.line(M + CW * 0.69, y, M + CW * 0.69, y + rh);
+    pdf.setFontSize(7.5); pdf.setFont("helvetica", "bold"); pdf.setTextColor(80);
+    pdf.text(String(l1 || ""), M + 2, y + rh * 0.65);
+    pdf.setFont("helvetica", "normal"); pdf.setTextColor(30);
+    pdf.text(String(v1 === undefined || v1 === null || v1 === "" ? "—" : v1), M + CW * 0.19 + 2, y + rh * 0.65);
+    pdf.setFont("helvetica", "bold"); pdf.setTextColor(80);
+    pdf.text(String(l2 || ""), M + CW * 0.5 + 2, y + rh * 0.65);
+    pdf.setFont("helvetica", "normal"); pdf.setTextColor(30);
+    pdf.text(String(v2 === undefined || v2 === null || v2 === "" ? "—" : v2), M + CW * 0.69 + 2, y + rh * 0.65);
+    y += rh;
+  };
+
+  const wrapText = (text, maxWidth) => {
+    if (!text) return [""];
+    const words = String(text).split(" ");
+    const lines = []; let line = "";
+    words.forEach(w => {
+      const test = line ? line + " " + w : w;
+      if (pdf.getTextWidth(test) > maxWidth && line) { lines.push(line); line = w; }
+      else { line = test; }
+    });
+    if (line) lines.push(line);
+    return lines;
+  };
+
+  const notesBlock = (title, text) => {
+    if (!text) return;
+    sectionHeader(title);
+    checkPage(12);
+    pdf.setFontSize(8); pdf.setFont("helvetica", "normal"); pdf.setTextColor(30);
+    const lines = wrapText(text, CW - 6);
+    const blockH = Math.max(lines.length * 4.5 + 4, 10);
+    checkPage(blockH);
+    pdf.setFillColor(255, 255, 255); pdf.setDrawColor(200);
+    pdf.rect(M, y, CW, blockH, "FD");
+    lines.forEach((ln, i) => { pdf.text(ln, M + 3, y + 4 + i * 4.5); });
+    y += blockH + 2;
+  };
+
+  // ── Page header ──
+  const drawHeader = (title, subtitle) => {
+    pdf.setFillColor(45, 106, 79); pdf.rect(0, 0, W, 24, "F");
+    pdf.setFontSize(16); pdf.setFont("helvetica", "bold"); pdf.setTextColor(255);
+    pdf.text(title, M, 10);
+    pdf.setFontSize(9); pdf.setFont("helvetica", "normal"); pdf.setTextColor(230);
+    pdf.text(subtitle || "", M, 16);
+    pdf.setFontSize(8); pdf.setTextColor(200);
+    pdf.text("Ref: " + certRef, W - M, 10, { align: "right" });
+    pdf.text("Date: " + certDate, W - M, 16, { align: "right" });
+    y = 28;
+  };
+
+  // ── Common sections ──
+  const companySection = () => {
+    sectionHeader("Company / Installer Details");
+    tableRow("Company Name", data.company, { grey: true });
+    tableRow("Address", data.companyAddress);
+    tableRow("Telephone", data.telephone, { grey: true });
+    if (certType === "heatpump" || certType === "solarthermal") {
+      tableRow("MCS Registration No.", data.mcsNumber);
+      tableRow("Installer Name", data.engineerName, { grey: true });
+    } else {
+      tableRow("Company OFTEC Reg No.", data.companyOftecReg || data.oftecReg);
+      tableRow("Technician OFTEC Reg No.", data.techOftecReg || data.oftecReg, { grey: true });
+      tableRow("Technician Name", data.engineerName);
+    }
+  };
+
+  const clientSection = () => {
+    sectionHeader("Client Details");
+    tableRow("Client / Landlord Name", data.clientName, { grey: true });
+    tableRow("Client Address", data.clientAddress || data.siteAddress);
+    tableRow("Client Telephone", data.clientTel, { grey: true });
+    tableRow("Client Email", data.clientEmail);
+    if (data.landlordName) {
+      tableRow("Landlord Name", data.landlordName, { grey: true });
+      tableRow("Landlord Address", data.landlordAddress);
+    }
+    if (data.tenantName) {
+      tableRow("Tenant Name", data.tenantName, { grey: true });
+    }
+  };
+
+  const jobAddressSection = () => {
+    sectionHeader("Job / Installation Address");
+    tableRow("Address", data.siteAddress || data.jobAddress, { grey: true });
+    tableRow("Postcode", data.postcode);
+  };
+
+  const declarationSection = () => {
+    sectionHeader("Declaration");
+    checkPage(20);
+    pdf.setFontSize(7.5); pdf.setFont("helvetica", "normal"); pdf.setTextColor(50);
+    const decText = "I certify that the above information is accurate and that the work described has been carried out in accordance with the relevant standards and regulations. The system/appliance has been checked and the results are as stated.";
+    const decLines = wrapText(decText, CW - 6);
+    const decH = decLines.length * 4 + 4;
+    pdf.setFillColor(250, 250, 250); pdf.setDrawColor(200); pdf.rect(M, y, CW, decH, "FD");
+    decLines.forEach((ln, i) => { pdf.text(ln, M + 3, y + 4 + i * 4); });
+    y += decH + 2;
+    twoColRow("Engineer Name", data.engineerName, "Date", certDate, { grey: true });
+    twoColRow("Position", data.engineerPosition || "Engineer", "Signature", data.signatureData ? "[Signed]" : "");
+    if (data.signatureData) {
+      checkPage(22);
+      try { pdf.addImage(data.signatureData, "PNG", M + CW * 0.69, y, 40, 15); y += 17; } catch(e) { /* ignore */ }
+    }
+  };
+
+  const resultSection = () => {
+    sectionHeader("Overall Result");
+    checkPage(10);
+    const res = data.result || "Satisfactory";
+    const rh = 8;
+    pdf.setFillColor(res === "Satisfactory" || res === "Pass" ? 220 : 255, res === "Satisfactory" || res === "Pass" ? 255 : 220, res === "Satisfactory" || res === "Pass" ? 220 : 220);
+    pdf.setDrawColor(200); pdf.rect(M, y, CW, rh, "FD");
+    pdf.setFontSize(11); pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(res === "Satisfactory" || res === "Pass" ? 34 : 220, res === "Satisfactory" || res === "Pass" ? 139 : 38, res === "Satisfactory" || res === "Pass" ? 34 : 38);
+    pdf.text(res.toUpperCase(), W / 2, y + rh * 0.7, { align: "center" });
+    pdf.setTextColor(0); y += rh + 2;
+    if (data.nextInspection) tableRow("Next Inspection Due", data.nextInspection, { grey: true });
+  };
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // CD/11 — OFTEC Oil Firing Servicing and Commissioning Report
+  // ════════════════════════════════════════════════════════════════════════════
   if (certType === "cd11") {
-    drawSection("Service Checklist");
-    const checks = ["oilStorage", "oilSupply", "airSupply", "chimneyFlue", "electricalSafety", "heatExchanger", "combustionChamber", "pressureJetBurner", "safetyControls", "controlsCheck", "systemCheck"];
-    const checkLabels = ["Oil Storage", "Oil Supply", "Air Supply", "Chimney/Flue", "Electrical Safety", "Heat Exchanger", "Combustion Chamber", "Pressure Jet Burner", "Safety Controls", "Controls Check", "System Check"];
-    checks.forEach((c, i) => { drawField(checkLabels[i], certData[c] || "N/A"); });
-    drawSection("Combustion Analysis");
-    drawField("CO (ppm)", certData.coPPM);
-    drawField("CO₂ (%)", certData.co2Percent);
-    drawField("Flue Temp (°C)", certData.flueTemp);
-    drawField("Efficiency (%)", certData.efficiency);
-    drawField("Smoke Number", certData.smokeNumber);
+    drawHeader("OFTEC CD/11", "Oil Firing Servicing and Commissioning Report — BS 5410");
+    companySection();
+    clientSection();
+    jobAddressSection();
+
+    sectionHeader("Pre-Commissioning Checks");
+    checkboxRow("Completed CD/10 for installation works", data.cd10Complete, { grey: true });
+    tableRow("Building Notice (if not Competent Person)", data.buildingNotice);
+
+    sectionHeader("Appliance Details");
+    twoColRow("Make", data.applianceMake, "Model", data.applianceModel, { grey: true });
+    tableRow("Serial Number", data.applianceSerial);
+
+    sectionHeader("Burner Details");
+    twoColRow("Make", data.burnerMake || data.applianceMake, "Model", data.burnerModel, { grey: true });
+    tableRow("Burner Type", data.burnerType);
+
+    sectionHeader("Installation Configuration");
+    twoColRow("Tank Type", data.tankType, "Flue Type", data.flueType, { grey: true });
+    twoColRow("Fuel Type", data.fuelType, "Call Type", data.callType);
+
+    sectionHeader("Service & Commissioning Schedule");
+    passFailHeader();
+    const svcItems = [
+      ["1", "Oil storage", "oilStorage"], ["2", "Oil supply system", "oilSupply"],
+      ["3", "Air supply", "airSupply"], ["4", "Chimney/flue", "chimneyFlue"],
+      ["5", "Electrical safety", "electricalSafety"], ["6", "Heat exchanger", "heatExchanger"],
+      ["7", "Combustion chamber", "combustionChamber"], ["8", "Pressure jet burner", "pressureJetBurner"],
+      ["9", "Vaporising and wallflame burner", "vaporisingBurner"], ["10", "Wallflame burner (additional)", "wallflameBurner"],
+      ["11", "Appliance safety controls", "safetyControls"], ["12", "Controls check", "controlsCheck"],
+      ["13", "System check — Hot water type", "systemCheckHW"], ["14", "System check — Warm air type", "systemCheckWA"]
+    ];
+    svcItems.forEach((item, i) => passFailRow(item[0], item[1], data[item[2]] || "N/A", data[item[2] + "Comment"] || "", { grey: i % 2 === 0 }));
+
+    sectionHeader("Combustion Test Results (BS 5410-1)");
+    twoColRow("Flue Gas Temp (°C)", data.flueTemp, "Ambient Temp (°C)", data.ambientTemp, { grey: true });
+    twoColRow("Net Temperature (°C)", data.netTemp, "CO\u2082 (%)", data.co2Percent);
+    twoColRow("CO (ppm)", data.coPPM, "CO/CO\u2082 Ratio", data.coCo2Ratio, { grey: true });
+    twoColRow("Smoke No. (0-9)", data.smokeNumber, "Efficiency (%)", data.efficiency);
+    twoColRow("Oil Pressure (bar)", data.oilPressure, "Nozzle Size & Type", data.nozzle, { grey: true });
+
+    notesBlock("Important Comments", data.notes);
+    resultSection();
+    declarationSection();
   }
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // CD/10 — OFTEC Oil Firing Installation Completion Report
+  // ════════════════════════════════════════════════════════════════════════════
   if (certType === "cd10") {
-    drawSection("Installation Checklist");
-    const instChecks = ["oilStorageInst", "oilSupplyInst", "flueSysInst", "ventilationInst", "electricalInst", "controlsInst", "commissioningInst"];
-    const instLabels = ["Oil Storage", "Oil Supply", "Flue System", "Ventilation", "Electrical", "Controls", "Commissioning"];
-    instChecks.forEach((c, i) => { drawField(instLabels[i], certData[c] || "N/A"); });
-    if (certData.nonCompliances) { drawSection("Non-Compliances"); checkPage(40); drawText(certData.nonCompliances, 40, y, { size: 11 }); y += 30; }
+    drawHeader("OFTEC CD/10", "Oil Firing Installation Completion Report");
+    companySection();
+    clientSection();
+    jobAddressSection();
+
+    sectionHeader("Appliance Specification");
+    twoColRow("Make", data.applianceMake, "Model", data.applianceModel, { grey: true });
+    twoColRow("Serial Number", data.applianceSerial, "Type", data.applianceType);
+    twoColRow("Burner Type", data.burnerType, "Fuel Type", data.fuelType, { grey: true });
+    tableRow("Heat Output (kW)", data.heatOutput);
+
+    sectionHeader("Installation Checklist");
+    passFailHeader();
+    const instItems = [
+      ["1", "Oil storage tank and stand", "oilStorageInst"],
+      ["2", "Oil supply pipework — material & size", "oilSupplyInst"],
+      ["3", "Fire valve fitted", "fireValveInst"],
+      ["4", "Oil filter fitted", "oilFilterInst"],
+      ["5", "Flue system — type and route", "flueSysInst"],
+      ["6", "Flue terminal position compliant", "flueTerminalInst"],
+      ["7", "Condensate drain (if condensing)", "condensateDrainInst"],
+      ["8", "Air supply / ventilation", "ventilationInst"],
+      ["9", "Electrical connections", "electricalInst"],
+      ["10", "Controls and safety devices", "controlsInst"],
+      ["11", "Commissioning measurements taken", "commissioningInst"],
+    ];
+    instItems.forEach((item, i) => passFailRow(item[0], item[1], data[item[2]] || "N/A", data[item[2] + "Comment"] || "", { grey: i % 2 === 0 }));
+
+    sectionHeader("Building Regulations Compliance");
+    tableRow("Building Notice/CPS notification", data.buildingNotice, { grey: true });
+    tableRow("Energy efficiency information provided", data.energyEffInfo);
+
+    sectionHeader("Handover Checklist");
+    checkboxRow("User instructions given", data.userInstructionsGiven, { grey: true });
+    checkboxRow("Operating manual left on site", data.manualLeft);
+    checkboxRow("Benchmark/warranty registered", data.benchmarkRegistered, { grey: true });
+
+    sectionHeader("Combustion Test Results");
+    twoColRow("Flue Gas Temp (°C)", data.flueTemp, "CO\u2082 (%)", data.co2Percent, { grey: true });
+    twoColRow("CO (ppm)", data.coPPM, "Smoke No.", data.smokeNumber);
+    twoColRow("Efficiency (%)", data.efficiency, "Oil Pressure (bar)", data.oilPressure, { grey: true });
+    twoColRow("Nozzle Size & Type", data.nozzle, "", "");
+
+    notesBlock("Non-Compliances / Remedial Work", data.nonCompliances);
+    notesBlock("Additional Notes", data.notes);
+    resultSection();
+    declarationSection();
   }
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // CD/12 — OFTEC Oil Tank Installation/Inspection Report
+  // ════════════════════════════════════════════════════════════════════════════
   if (certType === "cd12") {
-    drawSection("Oil Installation Details");
-    drawField("Appliance Make", certData.applianceMake);
-    drawField("Appliance Model", certData.applianceModel);
-    drawField("Location", certData.applianceLocation);
-    drawSection("Landlord Safety Check");
-    const ldChecks = ["oilStorageCheck", "oilSupplyCheck", "flueCheck", "ventilationCheck", "safetyDevicesCheck", "combustionCheck", "generalCondition"];
-    const ldLabels = ["Oil Storage", "Oil Supply", "Flue/Chimney", "Ventilation", "Safety Devices", "Combustion", "General Condition"];
-    ldChecks.forEach((c, i) => { drawField(ldLabels[i], certData[c] || "N/A"); });
-    drawField("CO Alarm Present", certData.coAlarm);
-    drawField("Risk Assessment", certData.riskAssessment);
+    drawHeader("OFTEC CD/12", "Oil Tank Installation / Inspection Report — Building Regs Part J");
+    companySection();
+    clientSection();
+    jobAddressSection();
+
+    sectionHeader("Tank Details");
+    twoColRow("Make", data.tankMake, "Model", data.tankModel, { grey: true });
+    twoColRow("Capacity (litres)", data.tankCapacity, "Material", data.tankMaterial);
+    tableRow("Single Skin / Bunded", data.tankBunded || "Single Skin", { grey: true });
+
+    sectionHeader("Location & Distances");
+    twoColRow("Distance from Building (m)", data.distBuilding, "Distance from Boundary (m)", data.distBoundary, { grey: true });
+    tableRow("Distance from Non-Fire-Rated Structure (m)", data.distNonFireRated);
+
+    sectionHeader("Base / Support");
+    twoColRow("Base Type", data.tankBase, "Level", data.tankBaseLevel, { grey: true });
+    tableRow("Base Adequate", data.baseAdequate);
+
+    sectionHeader("Fire Protection");
+    twoColRow("Fire Wall Required", data.fireWallRequired, "Fire Wall Adequate", data.fireWallAdequate, { grey: true });
+
+    sectionHeader("Secondary Containment");
+    tableRow("Secondary Containment Required", data.secContainRequired, { grey: true });
+    tableRow("Bunded Tank or Bund Wall", data.secContainType);
+    tableRow("Capacity Adequate (\u2265110%)", data.secContainCapacity, { grey: true });
+
+    sectionHeader("Fill Point & Vent");
+    twoColRow("Fill Point Accessible", data.fillAccessible, "Fill Point Labelled", data.fillLabelled, { grey: true });
+    tableRow("Drip Tray Present", data.dripTray);
+    twoColRow("Vent Pipe Present", data.ventPresent, "Vent Pipe Size", data.ventSize, { grey: true });
+    tableRow("Vent Termination Correct", data.ventTermination);
+
+    sectionHeader("Contents Gauge & Supply");
+    tableRow("Contents Gauge Working", data.contentsGauge, { grey: true });
+    twoColRow("Oil Supply Size", data.oilSupplySize, "Connection Type", data.oilSupplyType);
+    tableRow("Fire Valve Fitted", data.fireValve, { grey: true });
+
+    sectionHeader("Compliance Assessment");
+    tableRow("Compliant with Part J / OFTEC Standards", data.compliance, { grey: true });
+
+    notesBlock("Defects / Recommendations", data.defects || data.notes);
+    resultSection();
+    declarationSection();
   }
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // CD/14 — OFTEC Oil Appliance Decommissioning Report
+  // ════════════════════════════════════════════════════════════════════════════
   if (certType === "cd14") {
-    drawSection("Warning Notice Details");
-    drawField("Risk Category", certData.riskCategory);
-    drawField("Identified Risks", certData.identifiedRisks);
-    drawField("Recommended Action", certData.recommendedAction);
-    drawField("Appliance Isolated", certData.applianceIsolated);
+    drawHeader("OFTEC CD/14", "Oil Appliance Decommissioning Report");
+    companySection();
+    clientSection();
+    jobAddressSection();
+
+    sectionHeader("Appliance Details");
+    twoColRow("Make", data.applianceMake, "Model", data.applianceModel, { grey: true });
+    twoColRow("Serial Number", data.applianceSerial, "Location", data.applianceLocation);
+
+    sectionHeader("Reason for Decommissioning");
+    checkPage(14);
+    pdf.setFontSize(8); pdf.setFont("helvetica", "normal"); pdf.setTextColor(30);
+    const reasonLines = wrapText(data.decommissionReason || data.identifiedRisks || "—", CW - 6);
+    const reasonH = Math.max(reasonLines.length * 4.5 + 4, 8);
+    pdf.setFillColor(255, 255, 255); pdf.setDrawColor(200); pdf.rect(M, y, CW, reasonH, "FD");
+    reasonLines.forEach((ln, i) => { pdf.text(ln, M + 3, y + 4 + i * 4.5); });
+    y += reasonH + 2;
+
+    sectionHeader("Actions Taken");
+    checkboxRow("Oil supply capped / disconnected", data.oilCapped, { grey: true });
+    checkboxRow("Electrical supply isolated", data.electricalIsolated);
+    checkboxRow("Flue sealed / removed", data.flueSealed, { grey: true });
+    checkboxRow("Warning notice attached", data.warningNotice);
+
+    sectionHeader("Oil Remaining");
+    twoColRow("Estimated Quantity (litres)", data.oilRemaining, "Arrangements for Removal", data.oilRemovalArrangement, { grey: true });
+
+    notesBlock("Additional Notes", data.notes);
+    declarationSection();
   }
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // TI/133D — Oil Firing Inspection Report (Landlord)
+  // ════════════════════════════════════════════════════════════════════════════
   if (certType === "ti133d") {
-    drawSection("Tank Details");
-    drawField("Tank Capacity (litres)", certData.tankCapacity);
-    drawField("Tank Material", certData.tankMaterial);
-    drawField("Tank Age (years)", certData.tankAge);
-    drawField("Tank Base Type", certData.tankBase);
-    drawSection("Environmental Hazards");
-    drawField("Proximity to Water", certData.proximityWater);
-    drawField("Nearby Drains", certData.nearbyDrains);
-    drawField("Borehole Nearby", certData.boreholeNearby);
-    drawField("Flood Risk Area", certData.floodRisk);
-    drawSection("Fire Hazards");
-    drawField("Boundary Distance", certData.boundaryDistance);
-    drawField("Eaves Distance", certData.eavesDistance);
-    drawField("Ignition Sources", certData.ignitionSources);
-    drawField("Flue Termination", certData.flueTermination);
+    drawHeader("OFTEC TI/133D", "Oil Firing Inspection Report — Landlord");
+    companySection();
+
+    sectionHeader("Landlord / Tenant Details");
+    twoColRow("Landlord Name", data.landlordName, "Landlord Address", data.landlordAddress, { grey: true });
+    twoColRow("Tenant Name", data.tenantName, "Tenant Tel", data.tenantTel);
+    tableRow("Property Type", data.propertyType, { grey: true });
+    tableRow("Number of Oil Appliances", data.numAppliances);
+
+    jobAddressSection();
+
+    sectionHeader("Pre-Commissioning Checks");
+    checkboxRow("Completed CD/10 for installation works", data.cd10Complete, { grey: true });
+    tableRow("Building Notice", data.buildingNotice);
+
+    sectionHeader("Appliance Details");
+    twoColRow("Make", data.applianceMake, "Model", data.applianceModel, { grey: true });
+    tableRow("Serial Number", data.applianceSerial);
+
+    sectionHeader("Burner Details");
+    twoColRow("Burner Make", data.burnerMake || data.applianceMake, "Burner Model", data.burnerModel, { grey: true });
+    tableRow("Burner Type", data.burnerType);
+
+    sectionHeader("Configuration");
+    twoColRow("Tank Type", data.tankType, "Flue Type", data.flueType, { grey: true });
+    twoColRow("Fuel Type", data.fuelType, "Call Type", data.callType || "Inspection");
+
+    sectionHeader("Service & Inspection Schedule");
+    passFailHeader();
+    const ti133Items = [
+      ["1", "Oil storage", "oilStorage"], ["2", "Oil supply system", "oilSupply"],
+      ["3", "Air supply", "airSupply"], ["4", "Chimney/flue", "chimneyFlue"],
+      ["5", "Electrical safety", "electricalSafety"], ["6", "Heat exchanger", "heatExchanger"],
+      ["7", "Combustion chamber", "combustionChamber"], ["8", "Pressure jet burner", "pressureJetBurner"],
+      ["9", "Vaporising and wallflame burner", "vaporisingBurner"], ["10", "Wallflame burner (additional)", "wallflameBurner"],
+      ["11", "Appliance safety controls", "safetyControls"], ["12", "Controls check", "controlsCheck"],
+      ["13", "System check — Hot water type", "systemCheckHW"], ["14", "System check — Warm air type", "systemCheckWA"]
+    ];
+    ti133Items.forEach((item, i) => passFailRow(item[0], item[1], data[item[2]] || "N/A", data[item[2] + "Comment"] || "", { grey: i % 2 === 0 }));
+
+    sectionHeader("Combustion Test Results");
+    twoColRow("Flue Gas Temp (\u00b0C)", data.flueTemp, "Ambient Temp (\u00b0C)", data.ambientTemp, { grey: true });
+    twoColRow("Net Temperature (\u00b0C)", data.netTemp, "CO\u2082 (%)", data.co2Percent);
+    twoColRow("CO (ppm)", data.coPPM, "CO/CO\u2082 Ratio", data.coCo2Ratio, { grey: true });
+    twoColRow("Smoke No. (0-9)", data.smokeNumber, "Efficiency (%)", data.efficiency);
+    twoColRow("Oil Pressure (bar)", data.oilPressure, "Nozzle Size & Type", data.nozzle, { grey: true });
+
+    sectionHeader("Prioritised Recommendations");
+    checkPage(7);
+    const rh0 = 6;
+    pdf.setFillColor(70, 70, 70); pdf.rect(M, y, CW, rh0, "F");
+    pdf.setFontSize(7); pdf.setFont("helvetica", "bold"); pdf.setTextColor(255);
+    pdf.text("Classification", M + 2, y + rh0 * 0.7);
+    pdf.text("Description", M + CW * 0.22 + 2, y + rh0 * 0.7);
+    pdf.setTextColor(0); y += rh0;
+    const recItems = (data.recommendations || []);
+    if (recItems.length > 0) {
+      recItems.forEach((rec, i) => {
+        checkPage(7);
+        const bg = i % 2 === 0 ? GREY : WHITE;
+        pdf.setFillColor(bg === GREY ? 245 : 255, bg === GREY ? 245 : 255, bg === GREY ? 245 : 255);
+        pdf.rect(M, y, CW, 6.5, "F"); pdf.setDrawColor(200); pdf.rect(M, y, CW, 6.5, "S");
+        pdf.line(M + CW * 0.22, y, M + CW * 0.22, y + 6.5);
+        pdf.setFontSize(7.5); pdf.setFont("helvetica", "bold");
+        const cls = rec.classification || "NCS";
+        if (cls === "ID") pdf.setTextColor(220, 38, 38);
+        else if (cls === "AR") pdf.setTextColor(217, 119, 6);
+        else pdf.setTextColor(100);
+        pdf.text(cls, M + 2, y + 4.5);
+        pdf.setFont("helvetica", "normal"); pdf.setTextColor(30);
+        pdf.text(String(rec.description || ""), M + CW * 0.22 + 2, y + 4.5);
+        y += 6.5;
+      });
+    } else {
+      tableRow("No recommendations", "—");
+    }
+
+    checkPage(10);
+    pdf.setFontSize(7); pdf.setFont("helvetica", "italic"); pdf.setTextColor(100);
+    pdf.text("ID = Immediately Dangerous  |  AR = At Risk  |  NCS = Not to Current Standard", M, y + 4);
+    y += 8;
+
+    sectionHeader("Validity");
+    tableRow("Valid for 12 months from", certDate, { grey: true });
+    tableRow("Expiry Date", data.expiryDate || "—");
+
+    notesBlock("Important Comments", data.notes);
+    resultSection();
+    declarationSection();
+
+    sectionHeader("Landlord Acknowledgement");
+    twoColRow("Landlord Name", data.landlordName, "Date", certDate, { grey: true });
+    tableRow("Landlord Signature", data.landlordSignature ? "[Signed]" : "");
   }
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // MCS Heat Pump Commissioning Certificate
+  // ════════════════════════════════════════════════════════════════════════════
   if (certType === "heatpump") {
-    drawSection("Heat Pump Details");
-    drawField("Make", certData.hpMake);
-    drawField("Model", certData.hpModel);
-    drawField("MCS Product Ref", certData.mcsProductRef);
-    drawField("Installed Capacity (kW)", certData.installedCapacity);
-    drawField("Flow Temperature (°C)", certData.flowTemp);
-    drawField("Weather Compensation", certData.weatherComp);
-    drawSection("Commissioning Checks");
-    const hpChecks = ["functionalTest", "pressureTest", "flowRateTest", "electricalTest", "controlsTest", "refrigerantCheck"];
-    const hpLabels = ["Functional Test", "Pressure Test", "Flow Rate Test", "Electrical Test", "Controls Test", "Refrigerant Check"];
-    hpChecks.forEach((c, i) => { drawField(hpLabels[i], certData[c] || "N/A"); });
-    drawField("Customer Handover", certData.customerHandover);
-    drawField("MIS 3005 Compliance", certData.mis3005Compliance);
+    drawHeader("MCS Heat Pump Certificate", "Commissioning Certificate — MCS MIS 3005");
+    companySection();
+    clientSection();
+    jobAddressSection();
+
+    sectionHeader("Heat Pump Specification");
+    twoColRow("Make", data.hpMake, "Model", data.hpModel, { grey: true });
+    twoColRow("Serial Number", data.hpSerial, "MCS Product Ref", data.mcsProductRef);
+    twoColRow("Type", data.hpType, "Refrigerant Type", data.refrigerantType, { grey: true });
+    twoColRow("Heating Capacity (kW)", data.installedCapacity, "CoP at Design", data.copDesign);
+
+    sectionHeader("System Design");
+    twoColRow("Design Room Temp (\u00b0C)", data.designRoomTemp, "Design Outdoor Temp (\u00b0C)", data.designOutdoorTemp, { grey: true });
+    tableRow("Heat Loss Calculation Reference", data.heatLossRef);
+    twoColRow("Flow Temp at Design (\u00b0C)", data.flowTemp, "Emitter Type", data.emitterType, { grey: true });
+
+    sectionHeader("Hot Water");
+    twoColRow("Cylinder Make/Model", data.cylinderMakeModel, "Capacity (litres)", data.cylinderCapacity, { grey: true });
+    checkboxRow("Legionella Cycle Enabled", data.legionellaCycle);
+
+    sectionHeader("Controls");
+    twoColRow("Programmer", data.programmer, "Room Thermostat", data.roomThermostat, { grey: true });
+    twoColRow("Weather Compensation", data.weatherComp, "Smart Controls", data.smartControls);
+
+    sectionHeader("Commissioning Checks");
+    checkboxRow("Refrigerant charge verified", data.refrigerantCheck, { grey: true });
+    checkboxRow("Electrical connections checked", data.electricalTest);
+    twoColRow("Primary Flow Rate (l/min)", data.primaryFlowRate, "DHW Flow Rate (l/min)", data.dhwFlowRate, { grey: true });
+    twoColRow("System Pressure (bar)", data.systemPressure, "Refrigerant Suction", data.refSuction);
+    twoColRow("Refrigerant Discharge", data.refDischarge, "", "", { grey: true });
+    twoColRow("Flow Temp (\u00b0C)", data.commFlowTemp, "Return Temp (\u00b0C)", data.commReturnTemp);
+    tableRow("Delta T (\u00b0C)", data.deltaT, { grey: true });
+    tableRow("COP Measured at Commissioning", data.copMeasured);
+    twoColRow("Noise at 1m (dB)", data.noise1m, "Noise at Boundary (dB)", data.noiseBoundary, { grey: true });
+
+    sectionHeader("Customer Handover");
+    checkboxRow("Manual provided", data.manualProvided, { grey: true });
+    checkboxRow("System operation explained", data.operationExplained);
+    checkboxRow("Maintenance schedule discussed", data.maintenanceDiscussed, { grey: true });
+    tableRow("BUS / EPC Reference", data.busEpcRef);
+
+    notesBlock("Additional Notes", data.notes);
+    resultSection();
+    declarationSection();
   }
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // Solar Thermal Commissioning Certificate
+  // ════════════════════════════════════════════════════════════════════════════
   if (certType === "solarthermal") {
-    drawSection("Solar Thermal Details");
-    drawField("Collector Make", certData.collectorMake);
-    drawField("Collector Model", certData.collectorModel);
-    drawField("MCS Product Ref", certData.mcsProductRef);
-    drawField("Collector Area (m²)", certData.collectorArea);
-    drawField("System Type", certData.systemType);
-    drawField("Annual Yield Estimate (kWh/yr)", certData.annualYield);
-    drawSection("Commissioning Checks");
-    const stChecks = ["pressureTest", "flowRateCheck", "pumpOperation", "controllerSetup", "glycolConcentration", "insulationCheck"];
-    const stLabels = ["Pressure Test", "Flow Rate Check", "Pump Operation", "Controller Setup", "Glycol Concentration", "Insulation Check"];
-    stChecks.forEach((c, i) => { drawField(stLabels[i], certData[c] || "N/A"); });
+    drawHeader("Solar Thermal Certificate", "MCS Commissioning Certificate — MCS MIS 3001");
+    companySection();
+    clientSection();
+    jobAddressSection();
+
+    sectionHeader("System Specification");
+    twoColRow("Make", data.collectorMake, "Model", data.collectorModel, { grey: true });
+    twoColRow("MCS Product Ref", data.mcsProductRef, "Type", data.collectorType);
+    twoColRow("Number of Panels", data.numPanels, "Total Collector Area (m\u00b2)", data.collectorArea, { grey: true });
+    twoColRow("Orientation", data.orientation, "Tilt Angle (\u00b0)", data.tiltAngle);
+    tableRow("Azimuth (\u00b0)", data.azimuth, { grey: true });
+
+    sectionHeader("Cylinder & Controller");
+    twoColRow("Cylinder Make", data.cylinderMake, "Model", data.cylinderModel, { grey: true });
+    twoColRow("Capacity (litres)", data.cylinderCapacity, "Solar Coil Fitted", data.solarCoilFitted);
+    twoColRow("Controller Make", data.controllerMake, "Model", data.controllerModel, { grey: true });
+    tableRow("Sensor Positions", data.sensorPositions);
+
+    sectionHeader("Commissioning Checks");
+    checkboxRow("System flushed", data.systemFlushed, { grey: true });
+    twoColRow("Solar Fluid Type", data.solarFluidType, "Concentration (%)", data.solarFluidConc);
+    twoColRow("System Pressure (bar)", data.systemPressure, "Flow Rate (l/min)", data.flowRate, { grey: true });
+    checkboxRow("Pump operational", data.pumpOperation);
+    twoColRow("Controller \u0394T On", data.controllerDTOn, "Controller \u0394T Off", data.controllerDTOff, { grey: true });
+    twoColRow("Collector Sensor Temp (\u00b0C)", data.collectorSensorTemp, "Cylinder Sensor Temp (\u00b0C)", data.cylinderSensorTemp);
+    tableRow("High Limit / Stagnation Protection (\u00b0C)", data.highLimitTemp, { grey: true });
+
+    sectionHeader("Safety");
+    twoColRow("Expansion Vessel Size", data.expansionVesselSize, "Charge Pressure (bar)", data.expansionCharge, { grey: true });
+    checkboxRow("PRV installed", data.prvInstalled);
+    tableRow("Tundish and discharge", data.tundishDischarge, { grey: true });
+
+    sectionHeader("Customer Handover");
+    checkboxRow("Manual provided", data.manualProvided, { grey: true });
+    checkboxRow("Operation instructions given", data.operationInstructions);
+    checkboxRow("Maintenance schedule discussed", data.maintenanceDiscussed, { grey: true });
+
+    notesBlock("Additional Notes", data.notes);
+    resultSection();
+    declarationSection();
   }
 
-  // Notes
-  if (certData.notes) {
-    drawSection("Notes / Observations");
-    checkPage(50);
-    const noteLines = certData.notes.match(/.{1,90}/g) || [certData.notes];
-    noteLines.forEach(line => { checkPage(20); drawText(line, 40, y, { size: 11 }); y += 18; });
-  }
-
-  // Result
-  drawSection("Result");
-  drawField("Overall Result", certData.result);
-  if (certData.nextInspection) drawField("Next Inspection", certData.nextInspection);
-
-  // Signature
-  if (certData.signatureData) {
-    checkPage(100);
-    drawSection("Signature");
-    try {
-      const sigImg = new Image();
-      sigImg.src = certData.signatureData;
-      ctx.drawImage(sigImg, 40, y, 200, 60);
-      y += 70;
-    } catch (e) { drawText("[Signature captured]", 40, y, { size: 11 }); y += 20; }
-  }
-
-  // Footer
-  checkPage(40);
-  drawLine(y); y += 15;
-  drawText("Generated by Gas Safety App — Oil & Renewables Module", 40, y, { size: 9, color: "#999" });
-  drawText(certData.certRef || "", W - 40, y, { align: "right", size: 9, color: "#999" });
-
-  pages.push(canvas.toDataURL("image/png"));
-
-  // Open PDF
-  const w = window.open("", "_blank");
-  if (w) {
-    w.document.write("<html><head><title>" + certTitle + " - " + (certData.certRef || "") + "</title><style>@media print{@page{margin:0}body{margin:0}img{page-break-after:always}}</style></head><body style='margin:0;background:#333;text-align:center'>");
-    pages.forEach((p, i) => { w.document.write("<img src='" + p + "' style='width:100%;max-width:800px;" + (i > 0 ? "margin-top:10px;" : "") + "display:block;margin-left:auto;margin-right:auto'/>"); });
-    w.document.write("</body></html>");
-    w.document.close();
-  }
+  addFooter();
+  const fn = (data.clientName || certType).replace(/[^a-zA-Z0-9 ]/g, "").trim().replace(/\s+/g, "_") + "_" + certRef + ".pdf";
+  pdf.save(fn);
 }
 
-// ── Oil & Renewables Certificate Form Component ─────────────────────────────
+// ── Oil & Renewables Certificate Form Component (Multi-Step Wizard) ─────────
 function OilCertForm({ certType, certTitle, onBack, currentUser }) {
+  const [step, setStep] = useState(0);
   const [formData, setFormData] = useState(() => {
-    const profile = (() => { try { const p = JSON.parse(localStorage.getItem(sk("profile")) || "{}"); return p; } catch { return {}; } })();
+    const profile = (() => { try { return JSON.parse(localStorage.getItem(sk("profile")) || "{}"); } catch { return {}; } })();
     return {
       certRef: certType.toUpperCase() + "-" + Date.now().toString(36).toUpperCase(),
       date: new Date().toISOString().split("T")[0],
       engineerName: profile.displayName || profile.name || currentUser?.displayName || "",
+      engineerPosition: profile.position || "",
       oftecReg: profile.oftecReg || profile.gasId || "",
+      companyOftecReg: profile.companyOftecReg || profile.oftecReg || "",
+      techOftecReg: profile.techOftecReg || profile.oftecReg || "",
       mcsNumber: profile.mcsNumber || "",
       company: profile.company || "",
       companyAddress: profile.companyAddress || profile.address || "",
       telephone: profile.telephone || profile.phone || "",
-      clientName: "", siteAddress: "", postcode: "", clientTel: "", clientEmail: "",
-      landlordName: "", landlordAddress: "",
-      // CD/11 fields
-      applianceMake: "", applianceModel: "", applianceSerial: "", burnerType: "Pressure Jet", fuelType: "Kerosene", heatOutput: "",
-      oilStorage: "Pass", oilSupply: "Pass", airSupply: "Pass", chimneyFlue: "Pass", electricalSafety: "Pass",
-      heatExchanger: "Pass", combustionChamber: "Pass", pressureJetBurner: "Pass", safetyControls: "Pass", controlsCheck: "Pass", systemCheck: "Pass",
-      coPPM: "", co2Percent: "", flueTemp: "", efficiency: "", smokeNumber: "",
-      // CD/10 fields
-      oilStorageInst: "Pass", oilSupplyInst: "Pass", flueSysInst: "Pass", ventilationInst: "Pass", electricalInst: "Pass", controlsInst: "Pass", commissioningInst: "Pass",
+      // Client
+      clientName: "", clientAddress: "", siteAddress: "", postcode: "", clientTel: "", clientEmail: "",
+      landlordName: "", landlordAddress: "", tenantName: "", tenantTel: "",
+      propertyType: "Residential", numAppliances: "1",
+      // CD/11 & CD/10 Appliance
+      applianceMake: "", applianceModel: "", applianceSerial: "", applianceType: "", applianceLocation: "",
+      burnerMake: "", burnerModel: "", burnerType: "Pressure Jet", fuelType: "Kerosene (C2)", heatOutput: "",
+      tankType: "Plastic", flueType: "Open Flue (OF)", callType: "Service",
+      // Pre-commissioning
+      cd10Complete: "No", buildingNotice: "N/A",
+      // CD/11 14-point schedule
+      oilStorage: "Pass", oilStorageComment: "", oilSupply: "Pass", oilSupplyComment: "",
+      airSupply: "Pass", airSupplyComment: "", chimneyFlue: "Pass", chimneyFlueComment: "",
+      electricalSafety: "Pass", electricalSafetyComment: "", heatExchanger: "Pass", heatExchangerComment: "",
+      combustionChamber: "Pass", combustionChamberComment: "", pressureJetBurner: "Pass", pressureJetBurnerComment: "",
+      vaporisingBurner: "N/A", vaporisingBurnerComment: "", wallflameBurner: "N/A", wallflameBurnerComment: "",
+      safetyControls: "Pass", safetyControlsComment: "", controlsCheck: "Pass", controlsCheckComment: "",
+      systemCheckHW: "Pass", systemCheckHWComment: "", systemCheckWA: "N/A", systemCheckWAComment: "",
+      // Combustion
+      flueTemp: "", ambientTemp: "", netTemp: "", co2Percent: "", coPPM: "",
+      coCo2Ratio: "", smokeNumber: "", efficiency: "", oilPressure: "", nozzle: "",
+      // CD/10 installation
+      oilStorageInst: "Pass", oilStorageInstComment: "", oilSupplyInst: "Pass", oilSupplyInstComment: "",
+      fireValveInst: "Pass", fireValveInstComment: "", oilFilterInst: "Pass", oilFilterInstComment: "",
+      flueSysInst: "Pass", flueSysInstComment: "", flueTerminalInst: "Pass", flueTerminalInstComment: "",
+      condensateDrainInst: "N/A", condensateDrainInstComment: "",
+      ventilationInst: "Pass", ventilationInstComment: "", electricalInst: "Pass", electricalInstComment: "",
+      controlsInst: "Pass", controlsInstComment: "", commissioningInst: "Pass", commissioningInstComment: "",
+      energyEffInfo: "Yes", userInstructionsGiven: "Yes", manualLeft: "Yes", benchmarkRegistered: "Yes",
       nonCompliances: "",
-      // CD/12 fields
-      applianceLocation: "",
-      oilStorageCheck: "Pass", oilSupplyCheck: "Pass", flueCheck: "Pass", ventilationCheck: "Pass", safetyDevicesCheck: "Pass", combustionCheck: "Pass", generalCondition: "Pass",
-      coAlarm: "Yes", riskAssessment: "Low",
-      // CD/14 fields
-      riskCategory: "Potential Risk", identifiedRisks: "", recommendedAction: "", applianceIsolated: "No",
-      // TI/133D fields
-      tankCapacity: "", tankMaterial: "Plastic", tankAge: "", tankBase: "Concrete",
-      proximityWater: "No", nearbyDrains: "No", boreholeNearby: "No", floodRisk: "No",
-      boundaryDistance: "", eavesDistance: "", ignitionSources: "No", flueTermination: "N/A",
-      // Heat pump fields
-      hpMake: "", hpModel: "", mcsProductRef: "", installedCapacity: "", flowTemp: "", weatherComp: "Yes",
-      functionalTest: "Pass", pressureTest: "Pass", flowRateTest: "Pass", electricalTest: "Pass", controlsTest: "Pass", refrigerantCheck: "Pass",
-      customerHandover: "Yes", mis3005Compliance: "Yes",
-      // Solar thermal fields
-      collectorMake: "", collectorModel: "", collectorArea: "", systemType: "Pressurised", annualYield: "",
-      pumpOperation: "Pass", controllerSetup: "Pass", glycolConcentration: "Pass", insulationCheck: "Pass", flowRateCheck: "Pass",
+      // CD/12 Tank
+      tankMake: "", tankModel: "", tankCapacity: "", tankMaterial: "Plastic", tankBunded: "Single Skin",
+      distBuilding: "", distBoundary: "", distNonFireRated: "",
+      tankBase: "Concrete", tankBaseLevel: "Yes", baseAdequate: "Yes",
+      fireWallRequired: "No", fireWallAdequate: "N/A",
+      secContainRequired: "No", secContainType: "", secContainCapacity: "Yes",
+      fillAccessible: "Yes", fillLabelled: "Yes", dripTray: "Yes",
+      ventPresent: "Yes", ventSize: "", ventTermination: "Yes",
+      contentsGauge: "Yes", oilSupplySize: "", oilSupplyType: "Single Pipe",
+      fireValve: "Yes", compliance: "Yes",
+      defects: "",
+      // CD/14 Decommissioning
+      decommissionReason: "", identifiedRisks: "", recommendedAction: "",
+      oilCapped: "Yes", electricalIsolated: "Yes", flueSealed: "Yes", warningNotice: "Yes",
+      oilRemaining: "", oilRemovalArrangement: "",
+      riskCategory: "At Risk", applianceIsolated: "No",
+      // TI/133D extras
+      expiryDate: "",
+      recommendations: [],
+      // Heat pump
+      hpMake: "", hpModel: "", hpSerial: "", mcsProductRef: "", hpType: "ASHP", refrigerantType: "R32",
+      installedCapacity: "", copDesign: "",
+      designRoomTemp: "21", designOutdoorTemp: "-3", heatLossRef: "", flowTemp: "", emitterType: "Radiators",
+      cylinderMakeModel: "", cylinderCapacity: "", legionellaCycle: "Yes",
+      programmer: "", roomThermostat: "", weatherComp: "Yes", smartControls: "No",
+      refrigerantCheck: "Pass", electricalTest: "Pass",
+      primaryFlowRate: "", dhwFlowRate: "", systemPressure: "",
+      refSuction: "", refDischarge: "",
+      commFlowTemp: "", commReturnTemp: "", deltaT: "",
+      copMeasured: "", noise1m: "", noiseBoundary: "",
+      manualProvided: "Yes", operationExplained: "Yes", maintenanceDiscussed: "Yes", busEpcRef: "",
+      // Solar thermal
+      collectorMake: "", collectorModel: "", collectorType: "Flat Plate", numPanels: "1",
+      collectorArea: "", orientation: "South", tiltAngle: "35", azimuth: "180",
+      cylinderMake: "", cylinderModel: "", solarCoilFitted: "Yes",
+      controllerMake: "", controllerModel: "", sensorPositions: "",
+      systemFlushed: "Yes", solarFluidType: "Propylene Glycol", solarFluidConc: "",
+      flowRate: "", pumpOperation: "Pass",
+      controllerDTOn: "", controllerDTOff: "",
+      collectorSensorTemp: "", cylinderSensorTemp: "", highLimitTemp: "",
+      expansionVesselSize: "", expansionCharge: "", prvInstalled: "Yes", tundishDischarge: "Yes",
+      operationInstructions: "Yes",
       // Common
       notes: "", result: "Satisfactory", nextInspection: "", signatureData: null,
     };
@@ -25341,14 +28943,26 @@ function OilCertForm({ certType, certTitle, onBack, currentUser }) {
 
   const [showSigPad, setShowSigPad] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const set = (k, v) => setFormData(p => ({ ...p, [k]: v }));
-
   const inputStyle = { width: "100%", padding: "10px 12px", border: "2px solid #e5e7eb", borderRadius: 10, fontSize: 14, boxSizing: "border-box", fontFamily: "inherit", outline: "none", background: "#fff" };
   const selectStyle = { ...inputStyle, appearance: "auto" };
   const labelStyle = { fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 4, display: "block" };
   const sectionStyle = { background: "#2d6a4f", color: "#fff", padding: "8px 14px", borderRadius: 10, fontSize: 14, fontWeight: 700, margin: "16px 0 10px", letterSpacing: 0.3 };
   const passFailOpts = ["Pass", "Fail", "Advisory", "N/A"];
+
+  const PassFailWithComment = ({ label, field }) => (
+    <div style={{ marginBottom: 10 }}>
+      <label style={labelStyle}>{label}</label>
+      <div style={{ display: "flex", gap: 6 }}>
+        <select value={formData[field]} onChange={e => set(field, e.target.value)} style={{ ...selectStyle, flex: "0 0 110px", borderColor: formData[field] === "Pass" ? "#22c55e" : formData[field] === "Fail" ? "#ef4444" : formData[field] === "Advisory" ? "#f59e0b" : "#e5e7eb" }}>
+          {passFailOpts.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+        <input value={formData[field + "Comment"] || ""} onChange={e => set(field + "Comment", e.target.value)} placeholder="Comments..." style={{ ...inputStyle, flex: 1 }} />
+      </div>
+    </div>
+  );
 
   const PassFailSelect = ({ label, field }) => (
     <div style={{ marginBottom: 10 }}>
@@ -25362,27 +28976,26 @@ function OilCertForm({ certType, certTitle, onBack, currentUser }) {
   const Field = ({ label, field, type = "text", placeholder = "" }) => (
     <div style={{ marginBottom: 10 }}>
       <label style={labelStyle}>{label}</label>
-      <input type={type} value={formData[field]} onChange={e => set(field, e.target.value)} placeholder={placeholder} style={inputStyle} />
+      <input type={type} value={formData[field] || ""} onChange={e => set(field, e.target.value)} placeholder={placeholder} style={inputStyle} />
     </div>
   );
 
   const TextArea = ({ label, field, rows = 3 }) => (
     <div style={{ marginBottom: 10 }}>
       <label style={labelStyle}>{label}</label>
-      <textarea value={formData[field]} onChange={e => set(field, e.target.value)} rows={rows} style={{ ...inputStyle, resize: "vertical" }} />
+      <textarea value={formData[field] || ""} onChange={e => set(field, e.target.value)} rows={rows} style={{ ...inputStyle, resize: "vertical" }} />
     </div>
   );
 
   const SelectField = ({ label, field, options }) => (
     <div style={{ marginBottom: 10 }}>
       <label style={labelStyle}>{label}</label>
-      <select value={formData[field]} onChange={e => set(field, e.target.value)} style={selectStyle}>
+      <select value={formData[field] || options[0]} onChange={e => set(field, e.target.value)} style={selectStyle}>
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
     </div>
   );
 
-  // Simple inline signature pad
   const SigPad = () => {
     const canvasRef = useRef(null);
     const drawing = useRef(false);
@@ -25407,6 +29020,634 @@ function OilCertForm({ certType, certTitle, onBack, currentUser }) {
     );
   };
 
+  // ── Define steps per certType ──
+  const getSteps = () => {
+    if (certType === "cd11") return [
+      "Company & Engineer", "Client & Site", "Pre-Commissioning", "Appliance & Burner",
+      "Service Schedule (1-7)", "Service Schedule (8-14)", "Combustion Results", "Notes & Result", "Declaration & Sign"
+    ];
+    if (certType === "cd10") return [
+      "Company & Engineer", "Client & Site", "Appliance Details", "Installation Checklist",
+      "Building Regs & Handover", "Combustion Results", "Notes & Result", "Declaration & Sign"
+    ];
+    if (certType === "cd12") return [
+      "Company & Engineer", "Client & Site", "Tank Details", "Location & Distances",
+      "Base & Fire Protection", "Containment & Fill", "Supply & Compliance", "Notes & Result", "Declaration & Sign"
+    ];
+    if (certType === "cd14") return [
+      "Company & Engineer", "Client & Site", "Appliance Details", "Decommissioning Actions", "Notes & Sign"
+    ];
+    if (certType === "ti133d") return [
+      "Company & Engineer", "Landlord & Tenant", "Job Address", "Appliance & Config",
+      "Inspection Schedule (1-7)", "Inspection Schedule (8-14)", "Combustion Results",
+      "Recommendations", "Notes & Result", "Declaration & Sign"
+    ];
+    if (certType === "heatpump") return [
+      "Company & Installer", "Client & Site", "Heat Pump Spec", "System Design",
+      "Hot Water & Controls", "Commissioning Checks", "Noise & COP", "Handover", "Notes & Result", "Declaration & Sign"
+    ];
+    if (certType === "solarthermal") return [
+      "Company & Installer", "Client & Site", "System Spec", "Cylinder & Controller",
+      "Commissioning", "Safety", "Handover", "Notes & Result", "Declaration & Sign"
+    ];
+    return ["Details", "Notes & Sign"];
+  };
+
+  const steps = getSteps();
+  const totalSteps = steps.length;
+  const isLastStep = step === totalSteps - 1;
+
+  // ── Render step content ──
+  const renderStepContent = () => {
+    // ═══ CD/11 ═══
+    if (certType === "cd11") {
+      if (step === 0) return <>
+        <div style={sectionStyle}>Company / Installer Details</div>
+        <Field label="Company Name" field="company" />
+        <Field label="Company Address" field="companyAddress" />
+        <Field label="Telephone" field="telephone" />
+        <Field label="Company OFTEC Reg No." field="companyOftecReg" />
+        <Field label="Technician OFTEC Reg No." field="techOftecReg" />
+        <Field label="Technician Name" field="engineerName" />
+      </>;
+      if (step === 1) return <>
+        <div style={sectionStyle}>Client / Landlord Details</div>
+        <Field label="Client / Landlord Name" field="clientName" />
+        <Field label="Client Address" field="clientAddress" />
+        <Field label="Client Telephone" field="clientTel" />
+        <Field label="Client Email" field="clientEmail" type="email" />
+        <div style={sectionStyle}>Job Address</div>
+        <Field label="Site Address" field="siteAddress" />
+        <Field label="Postcode" field="postcode" />
+      </>;
+      if (step === 2) return <>
+        <div style={sectionStyle}>Pre-Commissioning Checks</div>
+        <SelectField label="Completed CD/10 for installation works?" field="cd10Complete" options={["Yes", "No"]} />
+        <SelectField label="Building Notice (if not Competent Person)" field="buildingNotice" options={["N/A", "Yes", "No"]} />
+      </>;
+      if (step === 3) return <>
+        <div style={sectionStyle}>Appliance Details</div>
+        <Field label="Make" field="applianceMake" />
+        <Field label="Model" field="applianceModel" />
+        <Field label="Serial Number" field="applianceSerial" />
+        <div style={sectionStyle}>Burner Details</div>
+        <Field label="Burner Make" field="burnerMake" />
+        <Field label="Burner Model" field="burnerModel" />
+        <SelectField label="Burner Type" field="burnerType" options={["Pressure Jet", "Vaporising", "Wall Flame"]} />
+        <div style={sectionStyle}>Configuration</div>
+        <SelectField label="Tank Type" field="tankType" options={["Steel", "Plastic", "Plastic Bunded"]} />
+        <SelectField label="Flue Type" field="flueType" options={["Open Flue (OF)", "Conventional Flue (CF)", "Balanced Flue (BF)", "System Evacuated (SE)", "BF-LLD"]} />
+        <SelectField label="Fuel Type" field="fuelType" options={["Kerosene (C2)", "Gas Oil (D)", "Class E"]} />
+        <SelectField label="Call Type" field="callType" options={["Service", "Commission", "Breakdown", "Manufacturer's Warranty", "Return Visit"]} />
+      </>;
+      if (step === 4) return <>
+        <div style={sectionStyle}>Service Schedule (Items 1-7)</div>
+        <PassFailWithComment label="1. Oil Storage" field="oilStorage" />
+        <PassFailWithComment label="2. Oil Supply System" field="oilSupply" />
+        <PassFailWithComment label="3. Air Supply" field="airSupply" />
+        <PassFailWithComment label="4. Chimney / Flue" field="chimneyFlue" />
+        <PassFailWithComment label="5. Electrical Safety" field="electricalSafety" />
+        <PassFailWithComment label="6. Heat Exchanger" field="heatExchanger" />
+        <PassFailWithComment label="7. Combustion Chamber" field="combustionChamber" />
+      </>;
+      if (step === 5) return <>
+        <div style={sectionStyle}>Service Schedule (Items 8-14)</div>
+        <PassFailWithComment label="8. Pressure Jet Burner" field="pressureJetBurner" />
+        <PassFailWithComment label="9. Vaporising & Wallflame Burner" field="vaporisingBurner" />
+        <PassFailWithComment label="10. Wallflame Burner (Additional)" field="wallflameBurner" />
+        <PassFailWithComment label="11. Appliance Safety Controls" field="safetyControls" />
+        <PassFailWithComment label="12. Controls Check" field="controlsCheck" />
+        <PassFailWithComment label="13. System Check — Hot Water" field="systemCheckHW" />
+        <PassFailWithComment label="14. System Check — Warm Air" field="systemCheckWA" />
+      </>;
+      if (step === 6) return <>
+        <div style={sectionStyle}>Combustion Test Results (BS 5410-1)</div>
+        <Field label="Flue Gas Temperature (\u00b0C)" field="flueTemp" type="number" />
+        <Field label="Ambient Temperature (\u00b0C)" field="ambientTemp" type="number" />
+        <Field label="Net Temperature (\u00b0C)" field="netTemp" type="number" />
+        <Field label="CO\u2082 (%)" field="co2Percent" type="number" />
+        <Field label="CO (ppm)" field="coPPM" type="number" />
+        <Field label="CO/CO\u2082 Ratio" field="coCo2Ratio" />
+        <Field label="Smoke No. (0-9)" field="smokeNumber" type="number" />
+        <Field label="Efficiency (%)" field="efficiency" type="number" />
+        <Field label="Oil Pressure (bar/psi)" field="oilPressure" />
+        <Field label="Nozzle Size and Type" field="nozzle" />
+      </>;
+      if (step === 7) return <>
+        <div style={sectionStyle}>Important Comments</div>
+        <TextArea label="Comments / Notes" field="notes" rows={5} />
+        <div style={sectionStyle}>Result</div>
+        <SelectField label="Overall Result" field="result" options={["Satisfactory", "Unsatisfactory"]} />
+        <Field label="Next Inspection Date" field="nextInspection" type="date" />
+      </>;
+      if (step === 8) return renderDeclarationStep();
+    }
+
+    // ═══ CD/10 ═══
+    if (certType === "cd10") {
+      if (step === 0) return <>
+        <div style={sectionStyle}>Company / Installer Details</div>
+        <Field label="Company Name" field="company" />
+        <Field label="Company Address" field="companyAddress" />
+        <Field label="Telephone" field="telephone" />
+        <Field label="Company OFTEC Reg No." field="companyOftecReg" />
+        <Field label="Technician OFTEC Reg No." field="techOftecReg" />
+        <Field label="Technician Name" field="engineerName" />
+      </>;
+      if (step === 1) return <>
+        <div style={sectionStyle}>Client Details</div>
+        <Field label="Client Name" field="clientName" />
+        <Field label="Client Address" field="clientAddress" />
+        <Field label="Client Telephone" field="clientTel" />
+        <Field label="Client Email" field="clientEmail" type="email" />
+        <Field label="Landlord Name (if applicable)" field="landlordName" />
+        <Field label="Landlord Address" field="landlordAddress" />
+        <div style={sectionStyle}>Job Address</div>
+        <Field label="Site Address" field="siteAddress" />
+        <Field label="Postcode" field="postcode" />
+      </>;
+      if (step === 2) return <>
+        <div style={sectionStyle}>Appliance Specification</div>
+        <Field label="Make" field="applianceMake" />
+        <Field label="Model" field="applianceModel" />
+        <Field label="Serial Number" field="applianceSerial" />
+        <Field label="Type" field="applianceType" />
+        <SelectField label="Burner Type" field="burnerType" options={["Pressure Jet", "Vaporising", "Wall Flame"]} />
+        <SelectField label="Fuel Type" field="fuelType" options={["Kerosene (C2)", "Gas Oil (D)", "Class E"]} />
+        <Field label="Heat Output (kW)" field="heatOutput" type="number" />
+      </>;
+      if (step === 3) return <>
+        <div style={sectionStyle}>Installation Checklist</div>
+        <PassFailWithComment label="1. Oil storage tank and stand" field="oilStorageInst" />
+        <PassFailWithComment label="2. Oil supply pipework (material & size)" field="oilSupplyInst" />
+        <PassFailWithComment label="3. Fire valve fitted" field="fireValveInst" />
+        <PassFailWithComment label="4. Oil filter fitted" field="oilFilterInst" />
+        <PassFailWithComment label="5. Flue system (type & route)" field="flueSysInst" />
+        <PassFailWithComment label="6. Flue terminal position compliant" field="flueTerminalInst" />
+        <PassFailWithComment label="7. Condensate drain (if condensing)" field="condensateDrainInst" />
+        <PassFailWithComment label="8. Air supply / ventilation" field="ventilationInst" />
+        <PassFailWithComment label="9. Electrical connections" field="electricalInst" />
+        <PassFailWithComment label="10. Controls and safety devices" field="controlsInst" />
+        <PassFailWithComment label="11. Commissioning measurements" field="commissioningInst" />
+      </>;
+      if (step === 4) return <>
+        <div style={sectionStyle}>Building Regulations Compliance</div>
+        <SelectField label="Building Notice / CPS Notification" field="buildingNotice" options={["N/A", "CPS Self-Certification", "Building Notice Submitted"]} />
+        <SelectField label="Energy Efficiency Info Provided" field="energyEffInfo" options={["Yes", "No"]} />
+        <div style={sectionStyle}>Handover Checklist</div>
+        <SelectField label="User Instructions Given" field="userInstructionsGiven" options={["Yes", "No"]} />
+        <SelectField label="Operating Manual Left on Site" field="manualLeft" options={["Yes", "No"]} />
+        <SelectField label="Benchmark / Warranty Registered" field="benchmarkRegistered" options={["Yes", "No"]} />
+      </>;
+      if (step === 5) return <>
+        <div style={sectionStyle}>Combustion Test Results</div>
+        <Field label="Flue Gas Temperature (\u00b0C)" field="flueTemp" type="number" />
+        <Field label="CO\u2082 (%)" field="co2Percent" type="number" />
+        <Field label="CO (ppm)" field="coPPM" type="number" />
+        <Field label="Smoke No. (0-9)" field="smokeNumber" type="number" />
+        <Field label="Efficiency (%)" field="efficiency" type="number" />
+        <Field label="Oil Pressure (bar)" field="oilPressure" />
+        <Field label="Nozzle Size & Type" field="nozzle" />
+      </>;
+      if (step === 6) return <>
+        <div style={sectionStyle}>Non-Compliances / Remedial Work</div>
+        <TextArea label="Non-Compliances" field="nonCompliances" rows={4} />
+        <div style={sectionStyle}>Additional Notes</div>
+        <TextArea label="Notes" field="notes" rows={4} />
+        <div style={sectionStyle}>Result</div>
+        <SelectField label="Overall Result" field="result" options={["Satisfactory", "Unsatisfactory"]} />
+        <Field label="Next Inspection Date" field="nextInspection" type="date" />
+      </>;
+      if (step === 7) return renderDeclarationStep();
+    }
+
+    // ═══ CD/12 ═══
+    if (certType === "cd12") {
+      if (step === 0) return <>
+        <div style={sectionStyle}>Company / Installer Details</div>
+        <Field label="Company Name" field="company" />
+        <Field label="Company Address" field="companyAddress" />
+        <Field label="Telephone" field="telephone" />
+        <Field label="Company OFTEC Reg No." field="companyOftecReg" />
+        <Field label="Technician Name" field="engineerName" />
+      </>;
+      if (step === 1) return <>
+        <div style={sectionStyle}>Client Details</div>
+        <Field label="Client Name" field="clientName" />
+        <Field label="Client Address" field="clientAddress" />
+        <Field label="Client Telephone" field="clientTel" />
+        <div style={sectionStyle}>Job / Site Address</div>
+        <Field label="Site Address" field="siteAddress" />
+        <Field label="Postcode" field="postcode" />
+      </>;
+      if (step === 2) return <>
+        <div style={sectionStyle}>Tank Details</div>
+        <Field label="Tank Make" field="tankMake" />
+        <Field label="Tank Model" field="tankModel" />
+        <Field label="Capacity (litres)" field="tankCapacity" type="number" />
+        <SelectField label="Material" field="tankMaterial" options={["Plastic", "Steel", "GRP", "Bunded Plastic", "Bunded Steel"]} />
+        <SelectField label="Single Skin / Bunded" field="tankBunded" options={["Single Skin", "Bunded"]} />
+      </>;
+      if (step === 3) return <>
+        <div style={sectionStyle}>Location & Distances</div>
+        <Field label="Distance from Building (m)" field="distBuilding" />
+        <Field label="Distance from Boundary (m)" field="distBoundary" />
+        <Field label="Distance from Non-Fire-Rated Structure (m)" field="distNonFireRated" />
+      </>;
+      if (step === 4) return <>
+        <div style={sectionStyle}>Base / Support</div>
+        <SelectField label="Base Type" field="tankBase" options={["Concrete", "Paving Slabs", "Compacted Hardcore", "Bare Earth", "Other"]} />
+        <SelectField label="Level" field="tankBaseLevel" options={["Yes", "No"]} />
+        <SelectField label="Base Adequate" field="baseAdequate" options={["Yes", "No"]} />
+        <div style={sectionStyle}>Fire Protection</div>
+        <SelectField label="Fire Wall Required" field="fireWallRequired" options={["No", "Yes"]} />
+        <SelectField label="Fire Wall Adequate" field="fireWallAdequate" options={["N/A", "Yes", "No"]} />
+      </>;
+      if (step === 5) return <>
+        <div style={sectionStyle}>Secondary Containment</div>
+        <SelectField label="Required" field="secContainRequired" options={["No", "Yes"]} />
+        <Field label="Type (Bunded Tank / Bund Wall)" field="secContainType" />
+        <SelectField label="Capacity Adequate (\u2265110%)" field="secContainCapacity" options={["Yes", "No", "N/A"]} />
+        <div style={sectionStyle}>Fill Point</div>
+        <SelectField label="Accessible" field="fillAccessible" options={["Yes", "No"]} />
+        <SelectField label="Labelled" field="fillLabelled" options={["Yes", "No"]} />
+        <SelectField label="Drip Tray Present" field="dripTray" options={["Yes", "No"]} />
+        <div style={sectionStyle}>Vent Pipe</div>
+        <SelectField label="Present" field="ventPresent" options={["Yes", "No"]} />
+        <Field label="Size" field="ventSize" />
+        <SelectField label="Termination Correct" field="ventTermination" options={["Yes", "No"]} />
+      </>;
+      if (step === 6) return <>
+        <div style={sectionStyle}>Contents Gauge</div>
+        <SelectField label="Working" field="contentsGauge" options={["Yes", "No"]} />
+        <div style={sectionStyle}>Oil Supply Connection</div>
+        <Field label="Size" field="oilSupplySize" />
+        <SelectField label="Type" field="oilSupplyType" options={["Single Pipe", "Two Pipe"]} />
+        <SelectField label="Fire Valve Fitted" field="fireValve" options={["Yes", "No"]} />
+        <div style={sectionStyle}>Compliance</div>
+        <SelectField label="Compliant with Part J / OFTEC Standards" field="compliance" options={["Yes", "No"]} />
+      </>;
+      if (step === 7) return <>
+        <div style={sectionStyle}>Defects / Recommendations</div>
+        <TextArea label="Defects" field="defects" rows={4} />
+        <TextArea label="Additional Notes" field="notes" rows={3} />
+        <div style={sectionStyle}>Result</div>
+        <SelectField label="Overall Result" field="result" options={["Satisfactory", "Unsatisfactory"]} />
+      </>;
+      if (step === 8) return renderDeclarationStep();
+    }
+
+    // ═══ CD/14 ═══
+    if (certType === "cd14") {
+      if (step === 0) return <>
+        <div style={sectionStyle}>Company / Installer Details</div>
+        <Field label="Company Name" field="company" />
+        <Field label="Company Address" field="companyAddress" />
+        <Field label="Telephone" field="telephone" />
+        <Field label="OFTEC Reg No." field="oftecReg" />
+        <Field label="Engineer Name" field="engineerName" />
+      </>;
+      if (step === 1) return <>
+        <div style={sectionStyle}>Client Details</div>
+        <Field label="Client Name" field="clientName" />
+        <Field label="Client Address" field="clientAddress" />
+        <Field label="Client Telephone" field="clientTel" />
+        <div style={sectionStyle}>Job Address</div>
+        <Field label="Site Address" field="siteAddress" />
+        <Field label="Postcode" field="postcode" />
+      </>;
+      if (step === 2) return <>
+        <div style={sectionStyle}>Appliance Details</div>
+        <Field label="Make" field="applianceMake" />
+        <Field label="Model" field="applianceModel" />
+        <Field label="Serial Number" field="applianceSerial" />
+        <Field label="Location" field="applianceLocation" />
+      </>;
+      if (step === 3) return <>
+        <div style={sectionStyle}>Reason for Decommissioning</div>
+        <TextArea label="Reason" field="decommissionReason" rows={4} />
+        <div style={sectionStyle}>Actions Taken</div>
+        <SelectField label="Oil Supply Capped / Disconnected" field="oilCapped" options={["Yes", "No"]} />
+        <SelectField label="Electrical Supply Isolated" field="electricalIsolated" options={["Yes", "No"]} />
+        <SelectField label="Flue Sealed / Removed" field="flueSealed" options={["Yes", "No"]} />
+        <SelectField label="Warning Notice Attached" field="warningNotice" options={["Yes", "No"]} />
+        <div style={sectionStyle}>Oil Remaining</div>
+        <Field label="Estimated Quantity (litres)" field="oilRemaining" />
+        <Field label="Arrangements for Removal" field="oilRemovalArrangement" />
+      </>;
+      if (step === 4) return <>
+        <TextArea label="Additional Notes" field="notes" rows={4} />
+        {renderDeclarationStep()}
+      </>;
+    }
+
+    // ═══ TI/133D ═══
+    if (certType === "ti133d") {
+      if (step === 0) return <>
+        <div style={sectionStyle}>Company / Installer Details</div>
+        <Field label="Company Name" field="company" />
+        <Field label="Company Address" field="companyAddress" />
+        <Field label="Telephone" field="telephone" />
+        <Field label="Company OFTEC Reg No." field="companyOftecReg" />
+        <Field label="Technician OFTEC Reg No." field="techOftecReg" />
+        <Field label="Technician Name" field="engineerName" />
+      </>;
+      if (step === 1) return <>
+        <div style={sectionStyle}>Landlord Details</div>
+        <Field label="Landlord Name" field="landlordName" />
+        <Field label="Landlord Address" field="landlordAddress" />
+        <div style={sectionStyle}>Tenant Details</div>
+        <Field label="Tenant Name" field="tenantName" />
+        <Field label="Tenant Telephone" field="tenantTel" />
+        <SelectField label="Property Type" field="propertyType" options={["Residential", "Commercial", "HMO", "Other"]} />
+        <Field label="Number of Oil Appliances" field="numAppliances" type="number" />
+      </>;
+      if (step === 2) return <>
+        <div style={sectionStyle}>Job / Site Address</div>
+        <Field label="Site Address" field="siteAddress" />
+        <Field label="Postcode" field="postcode" />
+      </>;
+      if (step === 3) return <>
+        <div style={sectionStyle}>Pre-Commissioning Checks</div>
+        <SelectField label="CD/10 Complete" field="cd10Complete" options={["Yes", "No"]} />
+        <SelectField label="Building Notice" field="buildingNotice" options={["N/A", "Yes", "No"]} />
+        <div style={sectionStyle}>Appliance Details</div>
+        <Field label="Make" field="applianceMake" />
+        <Field label="Model" field="applianceModel" />
+        <Field label="Serial Number" field="applianceSerial" />
+        <div style={sectionStyle}>Burner Details</div>
+        <Field label="Burner Make" field="burnerMake" />
+        <Field label="Burner Model" field="burnerModel" />
+        <SelectField label="Burner Type" field="burnerType" options={["Pressure Jet", "Vaporising", "Wall Flame"]} />
+        <div style={sectionStyle}>Configuration</div>
+        <SelectField label="Tank Type" field="tankType" options={["Steel", "Plastic", "Plastic Bunded"]} />
+        <SelectField label="Flue Type" field="flueType" options={["Open Flue (OF)", "Conventional Flue (CF)", "Balanced Flue (BF)", "System Evacuated (SE)", "BF-LLD"]} />
+        <SelectField label="Fuel Type" field="fuelType" options={["Kerosene (C2)", "Gas Oil (D)", "Class E"]} />
+      </>;
+      if (step === 4) return <>
+        <div style={sectionStyle}>Inspection Schedule (Items 1-7)</div>
+        <PassFailWithComment label="1. Oil Storage" field="oilStorage" />
+        <PassFailWithComment label="2. Oil Supply System" field="oilSupply" />
+        <PassFailWithComment label="3. Air Supply" field="airSupply" />
+        <PassFailWithComment label="4. Chimney / Flue" field="chimneyFlue" />
+        <PassFailWithComment label="5. Electrical Safety" field="electricalSafety" />
+        <PassFailWithComment label="6. Heat Exchanger" field="heatExchanger" />
+        <PassFailWithComment label="7. Combustion Chamber" field="combustionChamber" />
+      </>;
+      if (step === 5) return <>
+        <div style={sectionStyle}>Inspection Schedule (Items 8-14)</div>
+        <PassFailWithComment label="8. Pressure Jet Burner" field="pressureJetBurner" />
+        <PassFailWithComment label="9. Vaporising & Wallflame Burner" field="vaporisingBurner" />
+        <PassFailWithComment label="10. Wallflame Burner (Additional)" field="wallflameBurner" />
+        <PassFailWithComment label="11. Appliance Safety Controls" field="safetyControls" />
+        <PassFailWithComment label="12. Controls Check" field="controlsCheck" />
+        <PassFailWithComment label="13. System Check — Hot Water" field="systemCheckHW" />
+        <PassFailWithComment label="14. System Check — Warm Air" field="systemCheckWA" />
+      </>;
+      if (step === 6) return <>
+        <div style={sectionStyle}>Combustion Test Results</div>
+        <Field label="Flue Gas Temperature (\u00b0C)" field="flueTemp" type="number" />
+        <Field label="Ambient Temperature (\u00b0C)" field="ambientTemp" type="number" />
+        <Field label="Net Temperature (\u00b0C)" field="netTemp" type="number" />
+        <Field label="CO\u2082 (%)" field="co2Percent" type="number" />
+        <Field label="CO (ppm)" field="coPPM" type="number" />
+        <Field label="CO/CO\u2082 Ratio" field="coCo2Ratio" />
+        <Field label="Smoke No. (0-9)" field="smokeNumber" type="number" />
+        <Field label="Efficiency (%)" field="efficiency" type="number" />
+        <Field label="Oil Pressure (bar)" field="oilPressure" />
+        <Field label="Nozzle Size & Type" field="nozzle" />
+      </>;
+      if (step === 7) return <>
+        <div style={sectionStyle}>Prioritised Recommendations</div>
+        <p style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
+          ID = Immediately Dangerous | AR = At Risk | NCS = Not to Current Standard
+        </p>
+        {(formData.recommendations || []).map((rec, i) => (
+          <div key={i} style={{ display: "flex", gap: 6, marginBottom: 8, alignItems: "center" }}>
+            <select value={rec.classification} onChange={e => {
+              const recs = [...(formData.recommendations || [])];
+              recs[i] = { ...recs[i], classification: e.target.value };
+              set("recommendations", recs);
+            }} style={{ ...selectStyle, flex: "0 0 70px", borderColor: rec.classification === "ID" ? "#ef4444" : rec.classification === "AR" ? "#f59e0b" : "#e5e7eb" }}>
+              <option value="ID">ID</option><option value="AR">AR</option><option value="NCS">NCS</option>
+            </select>
+            <input value={rec.description} onChange={e => {
+              const recs = [...(formData.recommendations || [])];
+              recs[i] = { ...recs[i], description: e.target.value };
+              set("recommendations", recs);
+            }} placeholder="Description..." style={{ ...inputStyle, flex: 1 }} />
+            <button onClick={() => {
+              const recs = [...(formData.recommendations || [])];
+              recs.splice(i, 1);
+              set("recommendations", recs);
+            }} style={{ width: 32, height: 32, borderRadius: 8, background: "#fee2e2", border: "none", cursor: "pointer", fontSize: 16, color: "#ef4444", flexShrink: 0 }}>x</button>
+          </div>
+        ))}
+        <button onClick={() => set("recommendations", [...(formData.recommendations || []), { classification: "NCS", description: "" }])}
+          style={{ width: "100%", padding: 10, background: "#f0fdf4", border: "2px dashed #86efac", borderRadius: 10, fontSize: 13, fontWeight: 600, color: "#2d6a4f", cursor: "pointer" }}>
+          + Add Recommendation
+        </button>
+      </>;
+      if (step === 8) return <>
+        <div style={sectionStyle}>Notes & Result</div>
+        <TextArea label="Important Comments" field="notes" rows={4} />
+        <SelectField label="Overall Result" field="result" options={["Satisfactory", "Unsatisfactory"]} />
+        <Field label="Next Inspection Date" field="nextInspection" type="date" />
+        <div style={sectionStyle}>Validity</div>
+        <Field label="Expiry Date (12 months)" field="expiryDate" type="date" />
+      </>;
+      if (step === 9) return renderDeclarationStep();
+    }
+
+    // ═══ Heat Pump ═══
+    if (certType === "heatpump") {
+      if (step === 0) return <>
+        <div style={sectionStyle}>MCS Installer Details</div>
+        <Field label="Company Name" field="company" />
+        <Field label="Company Address" field="companyAddress" />
+        <Field label="Telephone" field="telephone" />
+        <Field label="MCS Registration No." field="mcsNumber" />
+        <Field label="Installer Name" field="engineerName" />
+      </>;
+      if (step === 1) return <>
+        <div style={sectionStyle}>Client Details</div>
+        <Field label="Client Name" field="clientName" />
+        <Field label="Client Address" field="clientAddress" />
+        <Field label="Client Telephone" field="clientTel" />
+        <Field label="Client Email" field="clientEmail" type="email" />
+        <div style={sectionStyle}>Installation Address</div>
+        <Field label="Site Address" field="siteAddress" />
+        <Field label="Postcode" field="postcode" />
+      </>;
+      if (step === 2) return <>
+        <div style={sectionStyle}>Heat Pump Specification</div>
+        <Field label="Make" field="hpMake" />
+        <Field label="Model" field="hpModel" />
+        <Field label="Serial Number" field="hpSerial" />
+        <Field label="MCS Product Reference" field="mcsProductRef" />
+        <SelectField label="Type" field="hpType" options={["ASHP", "GSHP", "WSHP"]} />
+        <Field label="Refrigerant Type" field="refrigerantType" />
+        <Field label="Heating Capacity (kW)" field="installedCapacity" type="number" />
+        <Field label="CoP at Design Conditions" field="copDesign" />
+      </>;
+      if (step === 3) return <>
+        <div style={sectionStyle}>System Design</div>
+        <Field label="Design Room Temperature (\u00b0C)" field="designRoomTemp" type="number" />
+        <Field label="Design Outdoor Temperature (\u00b0C)" field="designOutdoorTemp" type="number" />
+        <Field label="Heat Loss Calculation Reference" field="heatLossRef" />
+        <Field label="Flow Temperature at Design (\u00b0C)" field="flowTemp" type="number" />
+        <SelectField label="Emitter Type" field="emitterType" options={["Radiators", "Underfloor Heating", "Fan Coils", "Mixed"]} />
+      </>;
+      if (step === 4) return <>
+        <div style={sectionStyle}>Hot Water</div>
+        <Field label="Cylinder Make / Model" field="cylinderMakeModel" />
+        <Field label="Capacity (litres)" field="cylinderCapacity" type="number" />
+        <SelectField label="Legionella Cycle Enabled" field="legionellaCycle" options={["Yes", "No"]} />
+        <div style={sectionStyle}>Controls</div>
+        <Field label="Programmer" field="programmer" />
+        <Field label="Room Thermostat" field="roomThermostat" />
+        <SelectField label="Weather Compensation" field="weatherComp" options={["Yes", "No"]} />
+        <SelectField label="Smart Controls" field="smartControls" options={["No", "Yes"]} />
+      </>;
+      if (step === 5) return <>
+        <div style={sectionStyle}>Commissioning Checks</div>
+        <SelectField label="Refrigerant Charge Verified" field="refrigerantCheck" options={["Pass", "Fail", "N/A"]} />
+        <SelectField label="Electrical Connections Checked" field="electricalTest" options={["Pass", "Fail", "N/A"]} />
+        <Field label="Primary Flow Rate (l/min)" field="primaryFlowRate" type="number" />
+        <Field label="DHW Flow Rate (l/min)" field="dhwFlowRate" type="number" />
+        <Field label="System Pressure (bar)" field="systemPressure" />
+        <Field label="Refrigerant Suction Pressure" field="refSuction" />
+        <Field label="Refrigerant Discharge Pressure" field="refDischarge" />
+      </>;
+      if (step === 6) return <>
+        <div style={sectionStyle}>Temperatures</div>
+        <Field label="Flow Temperature (\u00b0C)" field="commFlowTemp" type="number" />
+        <Field label="Return Temperature (\u00b0C)" field="commReturnTemp" type="number" />
+        <Field label="Delta T (\u00b0C)" field="deltaT" type="number" />
+        <div style={sectionStyle}>COP & Noise</div>
+        <Field label="COP Measured at Commissioning" field="copMeasured" />
+        <Field label="Noise Level at 1m from Unit (dB)" field="noise1m" type="number" />
+        <Field label="Noise at Nearest Neighbour Boundary (dB)" field="noiseBoundary" type="number" />
+      </>;
+      if (step === 7) return <>
+        <div style={sectionStyle}>Customer Handover</div>
+        <SelectField label="Manual Provided" field="manualProvided" options={["Yes", "No"]} />
+        <SelectField label="System Operation Explained" field="operationExplained" options={["Yes", "No"]} />
+        <SelectField label="Maintenance Schedule Discussed" field="maintenanceDiscussed" options={["Yes", "No"]} />
+        <Field label="BUS / EPC Reference" field="busEpcRef" />
+      </>;
+      if (step === 8) return <>
+        <div style={sectionStyle}>Notes & Result</div>
+        <TextArea label="Additional Notes" field="notes" rows={4} />
+        <SelectField label="Overall Result" field="result" options={["Satisfactory", "Unsatisfactory"]} />
+      </>;
+      if (step === 9) return renderDeclarationStep();
+    }
+
+    // ═══ Solar Thermal ═══
+    if (certType === "solarthermal") {
+      if (step === 0) return <>
+        <div style={sectionStyle}>MCS Installer Details</div>
+        <Field label="Company Name" field="company" />
+        <Field label="Company Address" field="companyAddress" />
+        <Field label="Telephone" field="telephone" />
+        <Field label="MCS Registration No." field="mcsNumber" />
+        <Field label="Installer Name" field="engineerName" />
+      </>;
+      if (step === 1) return <>
+        <div style={sectionStyle}>Client Details</div>
+        <Field label="Client Name" field="clientName" />
+        <Field label="Client Address" field="clientAddress" />
+        <Field label="Client Telephone" field="clientTel" />
+        <Field label="Client Email" field="clientEmail" type="email" />
+        <div style={sectionStyle}>Installation Address</div>
+        <Field label="Site Address" field="siteAddress" />
+        <Field label="Postcode" field="postcode" />
+      </>;
+      if (step === 2) return <>
+        <div style={sectionStyle}>System Specification</div>
+        <Field label="Collector Make" field="collectorMake" />
+        <Field label="Collector Model" field="collectorModel" />
+        <Field label="MCS Product Reference" field="mcsProductRef" />
+        <SelectField label="Collector Type" field="collectorType" options={["Flat Plate", "Evacuated Tube"]} />
+        <Field label="Number of Panels" field="numPanels" type="number" />
+        <Field label="Total Collector Area (m\u00b2)" field="collectorArea" type="number" />
+        <SelectField label="Orientation" field="orientation" options={["North", "North East", "East", "South East", "South", "South West", "West", "North West"]} />
+        <Field label="Tilt Angle (\u00b0)" field="tiltAngle" type="number" />
+        <Field label="Azimuth (\u00b0)" field="azimuth" type="number" />
+      </>;
+      if (step === 3) return <>
+        <div style={sectionStyle}>Cylinder</div>
+        <Field label="Cylinder Make" field="cylinderMake" />
+        <Field label="Cylinder Model" field="cylinderModel" />
+        <Field label="Capacity (litres)" field="cylinderCapacity" type="number" />
+        <SelectField label="Solar Coil Fitted" field="solarCoilFitted" options={["Yes", "No"]} />
+        <div style={sectionStyle}>Controller</div>
+        <Field label="Controller Make" field="controllerMake" />
+        <Field label="Controller Model" field="controllerModel" />
+        <Field label="Sensor Positions" field="sensorPositions" />
+      </>;
+      if (step === 4) return <>
+        <div style={sectionStyle}>Commissioning Checks</div>
+        <SelectField label="System Flushed" field="systemFlushed" options={["Yes", "No"]} />
+        <Field label="Solar Fluid Type" field="solarFluidType" />
+        <Field label="Solar Fluid Concentration (%)" field="solarFluidConc" />
+        <Field label="System Pressure (bar)" field="systemPressure" />
+        <Field label="Flow Rate Through Collector (l/min)" field="flowRate" />
+        <SelectField label="Pump Operational" field="pumpOperation" options={["Pass", "Fail"]} />
+        <Field label="Controller \u0394T On (\u00b0C)" field="controllerDTOn" />
+        <Field label="Controller \u0394T Off (\u00b0C)" field="controllerDTOff" />
+        <Field label="Collector Sensor Temp (\u00b0C)" field="collectorSensorTemp" type="number" />
+        <Field label="Cylinder Sensor Temp (\u00b0C)" field="cylinderSensorTemp" type="number" />
+        <Field label="High Limit / Stagnation Protection (\u00b0C)" field="highLimitTemp" type="number" />
+      </>;
+      if (step === 5) return <>
+        <div style={sectionStyle}>Safety</div>
+        <Field label="Expansion Vessel Size" field="expansionVesselSize" />
+        <Field label="Charge Pressure (bar)" field="expansionCharge" />
+        <SelectField label="PRV Installed" field="prvInstalled" options={["Yes", "No"]} />
+        <Field label="Tundish & Discharge" field="tundishDischarge" />
+      </>;
+      if (step === 6) return <>
+        <div style={sectionStyle}>Customer Handover</div>
+        <SelectField label="Manual Provided" field="manualProvided" options={["Yes", "No"]} />
+        <SelectField label="Operation Instructions Given" field="operationInstructions" options={["Yes", "No"]} />
+        <SelectField label="Maintenance Schedule Discussed" field="maintenanceDiscussed" options={["Yes", "No"]} />
+      </>;
+      if (step === 7) return <>
+        <div style={sectionStyle}>Notes & Result</div>
+        <TextArea label="Additional Notes" field="notes" rows={4} />
+        <SelectField label="Overall Result" field="result" options={["Satisfactory", "Unsatisfactory"]} />
+      </>;
+      if (step === 8) return renderDeclarationStep();
+    }
+
+    return null;
+  };
+
+  const renderDeclarationStep = () => (
+    <>
+      <div style={sectionStyle}>Declaration</div>
+      <p style={{ fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 12, padding: "8px 12px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+        I certify that the above information is accurate and that the work described has been carried out in accordance with the relevant standards and regulations. The system/appliance has been checked and the results are as stated.
+      </p>
+      <Field label="Engineer Name" field="engineerName" />
+      <Field label="Position" field="engineerPosition" />
+      <Field label="Date" field="date" type="date" />
+      <div style={sectionStyle}>Signature</div>
+      {formData.signatureData ? (
+        <div style={{ marginBottom: 10 }}>
+          <img src={formData.signatureData} alt="Signature" style={{ width: "100%", maxWidth: 300, border: "2px solid #e5e7eb", borderRadius: 10, background: "#fff" }} />
+          <button onClick={() => set("signatureData", null)} style={{ marginTop: 6, padding: "6px 14px", background: "#f3f4f6", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Clear Signature</button>
+        </div>
+      ) : (
+        <button onClick={() => setShowSigPad(true)} style={{ width: "100%", padding: 14, background: "#fff", border: "2px dashed #ccc", borderRadius: 10, fontSize: 14, fontWeight: 600, color: "#666", cursor: "pointer", marginBottom: 10 }}>
+          Tap to Sign
+        </button>
+      )}
+    </>
+  );
+
   const handleSave = () => {
     const cert = { ...formData, trade: "oil", type: certType, savedAt: new Date().toISOString() };
     try {
@@ -25417,7 +29658,11 @@ function OilCertForm({ certType, certTitle, onBack, currentUser }) {
     setSaved(true);
   };
 
-  const handlePDF = () => { generateOilCertPDF(formData, certType, certTitle); };
+  const handlePDF = async () => {
+    setGenerating(true);
+    try { await generateOilRenewablesPDF(certType, formData); } catch (e) { console.error(e); alert("PDF generation failed: " + e.message); }
+    setGenerating(false);
+  };
 
   if (saved) {
     return (
@@ -25428,7 +29673,7 @@ function OilCertForm({ certType, certTitle, onBack, currentUser }) {
         <h2 style={{ color: "#e8edf2", fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Certificate Saved</h2>
         <p style={{ color: "#8b9db0", fontSize: 14, marginBottom: 24, textAlign: "center" }}>{certTitle} has been saved successfully.</p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-          <button onClick={handlePDF} style={{ padding: "12px 24px", background: "#2d6a4f", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Generate PDF</button>
+          <button onClick={handlePDF} disabled={generating} style={{ padding: "12px 24px", background: "#2d6a4f", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: generating ? 0.6 : 1 }}>{generating ? "Generating..." : "Generate PDF"}</button>
           <button onClick={onBack} style={{ padding: "12px 24px", background: "#1e3044", color: "#8b9db0", border: "1px solid #2a4058", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Back to Dashboard</button>
         </div>
       </div>
@@ -25439,208 +29684,43 @@ function OilCertForm({ certType, certTitle, onBack, currentUser }) {
     <div style={{ minHeight: "100dvh", background: "#f5f6fa", fontFamily: "'Segoe UI',sans-serif" }}>
       {/* Header */}
       <div style={{ background: "linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-        <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.15)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", flexShrink: 0 }}>
+        <button onClick={() => step > 0 ? setStep(step - 1) : onBack()} style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.15)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", flexShrink: 0 }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
         <div style={{ flex: 1 }}>
           <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>{certTitle}</div>
-          <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>Ref: {formData.certRef}</div>
+          <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>Ref: {formData.certRef} | Step {step + 1} of {totalSteps}</div>
         </div>
       </div>
 
-      <div style={{ padding: "12px 16px 100px", maxWidth: 480, margin: "0 auto" }}>
-        {/* Engineer Details */}
-        <div style={sectionStyle}>Engineer Details</div>
-        <Field label="Engineer Name" field="engineerName" />
-        {(certType === "heatpump" || certType === "solarthermal") ? (
-          <Field label="MCS Accreditation Number" field="mcsNumber" />
-        ) : (
-          <Field label="OFTEC Registration Number" field="oftecReg" />
-        )}
-        <Field label="Company" field="company" />
-        <Field label="Company Address" field="companyAddress" />
-        <Field label="Telephone" field="telephone" />
-
-        {/* Client Details */}
-        <div style={sectionStyle}>Client / Site Details</div>
-        <Field label="Client Name" field="clientName" />
-        <Field label="Site Address" field="siteAddress" />
-        <Field label="Postcode" field="postcode" />
-        <Field label="Client Telephone" field="clientTel" />
-        <Field label="Client Email" field="clientEmail" type="email" />
-        {(certType === "cd12" || certType === "cd10") && <>
-          <Field label="Landlord Name" field="landlordName" />
-          <Field label="Landlord Address" field="landlordAddress" />
-        </>}
-
-        {/* CD/11 Service Report */}
-        {certType === "cd11" && <>
-          <div style={sectionStyle}>Appliance Details</div>
-          <Field label="Make" field="applianceMake" />
-          <Field label="Model" field="applianceModel" />
-          <Field label="Serial Number" field="applianceSerial" />
-          <SelectField label="Burner Type" field="burnerType" options={["Pressure Jet", "Vaporising", "Wall Flame"]} />
-          <SelectField label="Fuel Type" field="fuelType" options={["Kerosene", "Gas Oil (35 sec)", "Biodiesel Blend"]} />
-          <Field label="Heat Output (kW)" field="heatOutput" />
-
-          <div style={sectionStyle}>Service Checklist</div>
-          <PassFailSelect label="Oil Storage" field="oilStorage" />
-          <PassFailSelect label="Oil Supply" field="oilSupply" />
-          <PassFailSelect label="Air Supply" field="airSupply" />
-          <PassFailSelect label="Chimney / Flue" field="chimneyFlue" />
-          <PassFailSelect label="Electrical Safety" field="electricalSafety" />
-          <PassFailSelect label="Heat Exchanger" field="heatExchanger" />
-          <PassFailSelect label="Combustion Chamber" field="combustionChamber" />
-          <PassFailSelect label="Pressure Jet Burner" field="pressureJetBurner" />
-          <PassFailSelect label="Appliance Safety Controls" field="safetyControls" />
-          <PassFailSelect label="Controls Check" field="controlsCheck" />
-          <PassFailSelect label="System Check" field="systemCheck" />
-
-          <div style={sectionStyle}>Combustion Analysis</div>
-          <Field label="CO (ppm)" field="coPPM" type="number" />
-          <Field label="CO₂ (%)" field="co2Percent" type="number" />
-          <Field label="Flue Temperature (°C)" field="flueTemp" type="number" />
-          <Field label="Efficiency (%)" field="efficiency" type="number" />
-          <Field label="Smoke Number" field="smokeNumber" type="number" />
-        </>}
-
-        {/* CD/10 Installation Report */}
-        {certType === "cd10" && <>
-          <div style={sectionStyle}>Appliance Details</div>
-          <Field label="Make" field="applianceMake" />
-          <Field label="Model" field="applianceModel" />
-          <Field label="Serial Number" field="applianceSerial" />
-          <SelectField label="Burner Type" field="burnerType" options={["Pressure Jet", "Vaporising", "Wall Flame"]} />
-          <SelectField label="Fuel Type" field="fuelType" options={["Kerosene", "Gas Oil (35 sec)", "Biodiesel Blend"]} />
-          <Field label="Heat Output (kW)" field="heatOutput" />
-
-          <div style={sectionStyle}>Installation Checklist</div>
-          <PassFailSelect label="Oil Storage" field="oilStorageInst" />
-          <PassFailSelect label="Oil Supply" field="oilSupplyInst" />
-          <PassFailSelect label="Flue System" field="flueSysInst" />
-          <PassFailSelect label="Ventilation" field="ventilationInst" />
-          <PassFailSelect label="Electrical" field="electricalInst" />
-          <PassFailSelect label="Controls" field="controlsInst" />
-          <PassFailSelect label="Commissioning" field="commissioningInst" />
-
-          <div style={sectionStyle}>Non-Compliances & Remedial Work</div>
-          <TextArea label="Non-Compliances" field="nonCompliances" rows={4} />
-        </>}
-
-        {/* CD/12 Landlord Check */}
-        {certType === "cd12" && <>
-          <div style={sectionStyle}>Oil Installation Details</div>
-          <Field label="Appliance Make" field="applianceMake" />
-          <Field label="Appliance Model" field="applianceModel" />
-          <Field label="Location" field="applianceLocation" />
-
-          <div style={sectionStyle}>Safety Checklist</div>
-          <PassFailSelect label="Oil Storage" field="oilStorageCheck" />
-          <PassFailSelect label="Oil Supply" field="oilSupplyCheck" />
-          <PassFailSelect label="Flue / Chimney" field="flueCheck" />
-          <PassFailSelect label="Ventilation" field="ventilationCheck" />
-          <PassFailSelect label="Safety Devices" field="safetyDevicesCheck" />
-          <PassFailSelect label="Combustion" field="combustionCheck" />
-          <PassFailSelect label="General Condition" field="generalCondition" />
-
-          <SelectField label="CO Alarm Present" field="coAlarm" options={["Yes", "No"]} />
-          <SelectField label="Risk Assessment" field="riskAssessment" options={["Low", "Medium", "High"]} />
-        </>}
-
-        {/* CD/14 Warning Notice */}
-        {certType === "cd14" && <>
-          <div style={sectionStyle}>Warning Notice</div>
-          <SelectField label="Risk Category" field="riskCategory" options={["Potential Risk", "Immediate Risk"]} />
-          <TextArea label="Identified Risks" field="identifiedRisks" rows={4} />
-          <TextArea label="Recommended Action" field="recommendedAction" rows={3} />
-          <SelectField label="Appliance Isolated" field="applianceIsolated" options={["No", "Yes"]} />
-        </>}
-
-        {/* TI/133D Tank Risk Assessment */}
-        {certType === "ti133d" && <>
-          <div style={sectionStyle}>Tank Details</div>
-          <Field label="Tank Capacity (litres)" field="tankCapacity" type="number" />
-          <SelectField label="Tank Material" field="tankMaterial" options={["Plastic", "Steel", "GRP", "Bunded Plastic", "Bunded Steel"]} />
-          <Field label="Tank Age (approx. years)" field="tankAge" type="number" />
-          <SelectField label="Tank Base" field="tankBase" options={["Concrete", "Paving Slabs", "Compacted Hardcore", "Bare Earth", "Other"]} />
-
-          <div style={sectionStyle}>Environmental Hazards</div>
-          <SelectField label="Proximity to Watercourse" field="proximityWater" options={["No", "Within 10m", "Within 50m"]} />
-          <SelectField label="Nearby Drains" field="nearbyDrains" options={["No", "Yes - Protected", "Yes - Unprotected"]} />
-          <SelectField label="Borehole Nearby" field="boreholeNearby" options={["No", "Yes"]} />
-          <SelectField label="Flood Risk Area" field="floodRisk" options={["No", "Yes"]} />
-
-          <div style={sectionStyle}>Fire Hazards</div>
-          <Field label="Boundary Distance (m)" field="boundaryDistance" />
-          <Field label="Eaves Distance (m)" field="eavesDistance" />
-          <SelectField label="Ignition Sources Nearby" field="ignitionSources" options={["No", "Yes"]} />
-          <Field label="Flue Termination Distance" field="flueTermination" />
-        </>}
-
-        {/* MCS Heat Pump Commissioning */}
-        {certType === "heatpump" && <>
-          <div style={sectionStyle}>Heat Pump Details</div>
-          <Field label="Make" field="hpMake" />
-          <Field label="Model" field="hpModel" />
-          <Field label="MCS Product Reference" field="mcsProductRef" />
-          <Field label="Installed Capacity (kW)" field="installedCapacity" type="number" />
-          <Field label="Flow Temperature (°C)" field="flowTemp" type="number" />
-          <SelectField label="Weather Compensation" field="weatherComp" options={["Yes", "No"]} />
-
-          <div style={sectionStyle}>Commissioning Checks</div>
-          <PassFailSelect label="Functional Test" field="functionalTest" />
-          <PassFailSelect label="Pressure Test" field="pressureTest" />
-          <PassFailSelect label="Flow Rate Test" field="flowRateTest" />
-          <PassFailSelect label="Electrical Test" field="electricalTest" />
-          <PassFailSelect label="Controls Test" field="controlsTest" />
-          <PassFailSelect label="Refrigerant Check" field="refrigerantCheck" />
-          <SelectField label="Customer Handover Complete" field="customerHandover" options={["Yes", "No"]} />
-          <SelectField label="MIS 3005 Compliance" field="mis3005Compliance" options={["Yes", "No"]} />
-        </>}
-
-        {/* Solar Thermal Commissioning */}
-        {certType === "solarthermal" && <>
-          <div style={sectionStyle}>Solar Thermal Collector</div>
-          <Field label="Collector Make" field="collectorMake" />
-          <Field label="Collector Model" field="collectorModel" />
-          <Field label="MCS Product Reference" field="mcsProductRef" />
-          <Field label="Collector Area (m²)" field="collectorArea" type="number" />
-          <SelectField label="System Type" field="systemType" options={["Pressurised", "Drain-back"]} />
-          <Field label="Annual Yield Estimate (kWh/yr)" field="annualYield" type="number" />
-
-          <div style={sectionStyle}>Commissioning Checks</div>
-          <PassFailSelect label="Pressure Test" field="pressureTest" />
-          <PassFailSelect label="Flow Rate Check" field="flowRateCheck" />
-          <PassFailSelect label="Pump Operation" field="pumpOperation" />
-          <PassFailSelect label="Controller Setup" field="controllerSetup" />
-          <PassFailSelect label="Glycol Concentration" field="glycolConcentration" />
-          <PassFailSelect label="Insulation Check" field="insulationCheck" />
-        </>}
-
-        {/* Common: Notes, Result, Next Inspection */}
-        <div style={sectionStyle}>Notes & Result</div>
-        <TextArea label="Notes / Observations" field="notes" rows={4} />
-        <SelectField label="Overall Result" field="result" options={["Satisfactory", "Unsatisfactory"]} />
-        <Field label="Next Inspection Date" field="nextInspection" type="date" />
-
-        {/* Signature */}
-        <div style={sectionStyle}>Signature</div>
-        {formData.signatureData ? (
-          <div style={{ marginBottom: 10 }}>
-            <img src={formData.signatureData} alt="Signature" style={{ width: "100%", maxWidth: 300, border: "2px solid #e5e7eb", borderRadius: 10, background: "#fff" }} />
-            <button onClick={() => set("signatureData", null)} style={{ marginTop: 6, padding: "6px 14px", background: "#f3f4f6", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Clear Signature</button>
-          </div>
-        ) : (
-          <button onClick={() => setShowSigPad(true)} style={{ width: "100%", padding: 14, background: "#fff", border: "2px dashed #ccc", borderRadius: 10, fontSize: 14, fontWeight: 600, color: "#666", cursor: "pointer", marginBottom: 10 }}>
-            Tap to Sign
-          </button>
-        )}
+      {/* Progress Bar */}
+      <div style={{ padding: "8px 16px 0" }}>
+        <div style={{ display: "flex", gap: 3, marginBottom: 4 }}>
+          {steps.map((s, i) => (
+            <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= step ? "#2d6a4f" : "#e5e7eb", transition: "background 0.2s" }} />
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: "#888", fontWeight: 600, marginBottom: 4 }}>{steps[step]}</div>
       </div>
 
-      {/* Bottom action bar */}
+      <div style={{ padding: "4px 16px 120px", maxWidth: 480, margin: "0 auto" }}>
+        {renderStepContent()}
+      </div>
+
+      {/* Bottom navigation */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", borderTop: "1px solid #e5e7eb", padding: "10px 16px", display: "flex", gap: 10, zIndex: 100 }}>
-        <button onClick={handleSave} style={{ flex: 1, padding: 14, background: "#2d6a4f", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Save Certificate</button>
-        <button onClick={handlePDF} style={{ flex: 1, padding: 14, background: "#1a1a2e", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Generate PDF</button>
+        {step > 0 && (
+          <button onClick={() => setStep(step - 1)} style={{ flex: 1, padding: 14, background: "#f3f4f6", color: "#333", border: "1px solid #e5e7eb", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Back</button>
+        )}
+        {!isLastStep && (
+          <button onClick={() => setStep(step + 1)} style={{ flex: 2, padding: 14, background: "#2d6a4f", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Next</button>
+        )}
+        {isLastStep && (
+          <>
+            <button onClick={handleSave} style={{ flex: 1, padding: 14, background: "#2d6a4f", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Save</button>
+            <button onClick={handlePDF} disabled={generating} style={{ flex: 1, padding: 14, background: "#1a1a2e", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", opacity: generating ? 0.6 : 1 }}>{generating ? "Generating..." : "PDF"}</button>
+          </>
+        )}
       </div>
 
       {showSigPad && <SigPad />}
@@ -25656,13 +29736,13 @@ function OilRenewablesDashboard({ onBack, currentUser, onNewJob, onRecords, onRe
 
   // Certificate form routing
   const certForms = {
-    oilCD11: { type: "cd11", title: "OFTEC CD/11 Service Report" },
-    oilCD10: { type: "cd10", title: "OFTEC CD/10 Installation Report" },
-    oilCD12: { type: "cd12", title: "OFTEC CD/12 Landlord Check" },
-    oilCD14: { type: "cd14", title: "OFTEC CD/14 Warning Notice" },
-    oilTI133D: { type: "ti133d", title: "Oil Tank Risk Assessment (TI/133D)" },
-    oilHeatPump: { type: "heatpump", title: "MCS Heat Pump Commissioning" },
-    oilSolarThermal: { type: "solarthermal", title: "Solar Thermal Commissioning" },
+    oilCD11: { type: "cd11", title: "OFTEC CD/11 — Oil Firing Service & Commissioning" },
+    oilCD10: { type: "cd10", title: "OFTEC CD/10 — Oil Installation Completion" },
+    oilCD12: { type: "cd12", title: "OFTEC CD/12 — Oil Tank Inspection" },
+    oilCD14: { type: "cd14", title: "OFTEC CD/14 — Oil Appliance Decommissioning" },
+    oilTI133D: { type: "ti133d", title: "TI/133D — Oil Firing Landlord Inspection" },
+    oilHeatPump: { type: "heatpump", title: "MCS Heat Pump Commissioning Certificate" },
+    oilSolarThermal: { type: "solarthermal", title: "Solar Thermal Commissioning Certificate" },
   };
 
   if (oilScreen && certForms[oilScreen]) {
@@ -27430,7 +31510,7 @@ function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone, o
                 <td style={{ background: "#1a7a7a", color: "#fff", fontWeight: 700, padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top" }}>Precautions and Restrictions to be observed for Activity (consider additional protection for vulnerable appliances or pipework that could be damaged by works):</td>
               </tr>
               <tr>
-                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:80, verticalAlign:"top" }}>Pipework and Cooker</td>
+                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:80 }}>Pipework and Cooker</td>
               </tr>
             </tbody>
           </table>
@@ -27459,7 +31539,7 @@ function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone, o
                 <td style={{ background: "#1a7a7a", color: "#fff", fontWeight: 700, padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top" }}>Has the relevant Gas isolation certificate been issued to Wates Site, If so, how?</td>
               </tr>
               <tr>
-                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:50, verticalAlign:"top" }}>By Whatsapp, message and email sent to wates admin</td>
+                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:50 }}>By Whatsapp, message and email sent to wates admin</td>
               </tr>
             </tbody>
           </table>
@@ -27492,7 +31572,7 @@ function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone, o
                 <td style={{ background: "#1a7a7a", color: "#fff", fontWeight: 700, padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top" }}>Are CO detectors installed within the property? If yes, state location if <span style={{ color:RED }}>NO</span> please contact the Wates site team.</td>
               </tr>
               <tr>
-                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:40, verticalAlign:"top" }}>Yes kitchen ceiling</td>
+                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:40 }}>Yes kitchen ceiling</td>
               </tr>
             </tbody>
           </table>
@@ -27504,7 +31584,7 @@ function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone, o
                 <td style={{ background: "#1a7a7a", color: "#fff", fontWeight: 700, padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top" }} colSpan={3}>Authorisation</td>
               </tr>
               <tr>
-                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", fontWeight:700, fontSize:11 }} colSpan={3}>I am satisfied that it is safe to do the work stated, provided that the above precautions and instructions are carried out</td>
+                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", fontWeight:700 }} colSpan={3}>I am satisfied that it is safe to do the work stated, provided that the above precautions and instructions are carried out</td>
               </tr>
               <tr>
                 <td style={{ background: "#1a7a7a", color: "#fff", fontWeight: 700, padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", width:"28%" }}>Name of Permit Issuer:</td>
@@ -27512,12 +31592,12 @@ function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone, o
                 <td style={{ background: "#1a7a7a", color: "#fff", fontWeight: 700, padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", width:"28%" }}>Date &amp; Time:</td>
               </tr>
               <tr>
-                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:50, verticalAlign:"top" }}>Wates</td>
+                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:50 }}>Wates</td>
                 <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:50 }}></td>
                 <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:50 }}></td>
               </tr>
               <tr>
-                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", fontWeight:700, fontSize:11 }} colSpan={3}>I am fully aware of and understand the requirements stated on this permit.</td>
+                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", fontWeight:700 }} colSpan={3}>I am fully aware of and understand the requirements stated on this permit.</td>
               </tr>
               <tr>
                 <td style={{ background: "#1a7a7a", color: "#fff", fontWeight: 700, padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top" }}>Name of permit receiver:</td>
@@ -27525,7 +31605,7 @@ function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone, o
                 <td style={{ background: "#1a7a7a", color: "#fff", fontWeight: 700, padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top" }}>Date &amp; Time:</td>
               </tr>
               <tr>
-                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:50, verticalAlign:"top" }}>Alect</td>
+                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:50 }}>Alect</td>
                 <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:50 }}></td>
                 <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:50 }}></td>
               </tr>
@@ -27548,7 +31628,7 @@ function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone, o
                 <td style={{ background: "#1a7a7a", color: "#fff", fontWeight: 700, padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", width:"33%" }}>Date &amp; Time:</td>
               </tr>
               <tr>
-                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:50, verticalAlign:"top" }}>Alec</td>
+                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:50 }}>Alec</td>
                 <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:50 }}></td>
                 <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:50 }}></td>
               </tr>
@@ -27598,7 +31678,7 @@ function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone, o
             <tbody>
               <tr>
                 <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", width:"33%", fontWeight:700 }}>{form.engineerName||""}</td>
-                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", width:"34%", textAlign:"center", height:70, verticalAlign:"middle" }}>
+                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "middle", background: "#fff", width:"34%", textAlign:"center", height:70 }}>
                   <span style={SIG_STYLE}>{engineerData?.engineerName || bsEngData?.engineerName || ""}</span>
                 </td>
                 <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", color: "#000", fontWeight: 700, width:"33%" }}>{dynSignDatetime}</td>
@@ -27609,7 +31689,7 @@ function GasIsolationPDFPreview({ form, onClose, autoDownload, onDownloadDone, o
                 <td style={{ background: "#1a7a7a", color: "#fff", fontWeight: 700, padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top" }}>Date &amp; Time:</td>
               </tr>
               <tr>
-                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", fontWeight:700, height:60, verticalAlign:"top" }}>Dean Tanner</td>
+                <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", fontWeight:700, height:60 }}>Dean Tanner</td>
                 <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:60 }}></td>
                 <td style={{ padding: "5px 8px", fontSize: 11, border: "1px solid #aaa", verticalAlign: "top", background: "#fff", height:60 }}></td>
               </tr>
