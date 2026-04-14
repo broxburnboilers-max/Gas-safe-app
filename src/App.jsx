@@ -15369,7 +15369,11 @@ function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, 
                   <span style={{ flex:1, borderBottom:"1px solid #999" }}>{engineerData.engineerName||""}</span>
                   <span style={{ minWidth:32, marginLeft:8 }}>Signed:</span>
                   <span style={{ flex:1, borderBottom:"1px solid #999", minHeight:16 }}>
-                    <span style={SIG_STYLE}>{engineerData?.engineerName || bsEngData?.engineerName || ""}</span>
+                    {signatureData?.engineerSigImage ? (
+                      <img src={signatureData.engineerSigImage} alt="Engineer Signature" style={{ maxHeight:18, maxWidth:80 }}/>
+                    ) : (
+                      <span style={SIG_STYLE}>{engineerData?.engineerName || bsEngData?.engineerName || ""}</span>
+                    )}
                   </span>
                   <span style={{ minWidth:26, marginLeft:8 }}>Date:</span>
                   <span style={{ border:"1px solid #999", padding:"1px 4px", minWidth:72, fontSize:8 }}>{fmtShort(certDate)}</span>
@@ -15379,7 +15383,11 @@ function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, 
                   <span style={{ minWidth:32 }}>Name:</span>
                   <span style={{ flex:1, borderBottom:"1px solid #999" }}>{certData.clientName||""}</span>
                   <span style={{ minWidth:32, marginLeft:8 }}>Signed:</span>
-                  <span style={{ flex:1, borderBottom:"1px solid #999", minHeight:16 }}>&nbsp;</span>
+                  <span style={{ flex:1, borderBottom:"1px solid #999", minHeight:16 }}>
+                    {signatureData?.customerSigImage ? (
+                      <img src={signatureData.customerSigImage} alt="Customer Signature" style={{ maxHeight:18, maxWidth:80 }}/>
+                    ) : "\u00a0"}
+                  </span>
                   <span style={{ minWidth:26, marginLeft:8 }}>Date:</span>
                   <span style={{ border:"1px solid #999", padding:"1px 4px", minWidth:72, fontSize:8 }}>{fmtShort(certDate)}</span>
                 </div>
@@ -21966,6 +21974,110 @@ async function generateElectricalPDF(certType, certData, circuits, testResults, 
   function fmtDate(d) { if (!d) return ""; try { return new Date(d).toLocaleDateString("en-GB"); } catch(e) { return d; } }
 
   const certRef = certData.certRef || "N/A";
+
+  // ── Normalise field names: forms use descriptive names, PDF expects short names ──
+  // Derive systemType from earthing booleans if not set
+  if (!certData.systemType) {
+    if (certData.earthingArrangementTNS) certData.systemType = "TN-S";
+    else if (certData.earthingArrangementTNCS) certData.systemType = "TN-C-S";
+    else if (certData.earthingArrangementTNC) certData.systemType = "TN-C";
+    else if (certData.earthingArrangementTT) certData.systemType = "TT";
+    else if (certData.earthingArrangementIT) certData.systemType = "IT";
+    else if (certData.earthingArrangement) certData.systemType = certData.earthingArrangement;
+  }
+  // Map form field names → PDF field names
+  if (!certData.result && certData.overallAssessment) certData.result = certData.overallAssessment;
+  if (!certData.wiringAge && certData.estimatedWiringAge) certData.wiringAge = certData.estimatedWiringAge;
+  if (!certData.recordsAvailable && certData.installationRecordsAvailable) certData.recordsAvailable = certData.installationRecordsAvailable;
+  if (!certData.lastInspection && certData.dateOfLastInspection) certData.lastInspection = certData.dateOfLastInspection;
+  if (!certData.extentOfInspection && certData.extentCovered) certData.extentOfInspection = certData.extentCovered;
+  if (!certData.ze && certData.externalZe) certData.ze = certData.externalZe;
+  if (!certData.engineerName && certData.inspectorName) certData.engineerName = certData.inspectorName;
+  if (!certData.designerName && certData.designerName1) certData.designerName = certData.designerName1;
+  // Minor Works mappings
+  if (!certData.workLocation && certData.installationAddress) certData.workLocation = certData.installationAddress;
+  if (!certData.circuitRef && certData.circuitNumber) certData.circuitRef = certData.circuitNumber;
+  if (!certData.circuitType && certData.circuitDescription) certData.circuitType = certData.circuitDescription;
+  if (!certData.protectiveDeviceType && certData.ocpdType) certData.protectiveDeviceType = certData.ocpdType;
+  if (!certData.protectiveDeviceRating && certData.ocpdRating) certData.protectiveDeviceRating = certData.ocpdRating;
+  if (!certData.insulationResistance && (certData.insulationLiveLive || certData.insulationLiveEarth)) {
+    certData.insulationResistance = [certData.insulationLiveLive, certData.insulationLiveEarth].filter(Boolean).join(" / ");
+  }
+  if (!certData.zs && certData.zsMax) certData.zs = certData.zsMax;
+  if (!certData.rcdTime && certData.rcdDisconnectionTime) certData.rcdTime = certData.rcdDisconnectionTime;
+  if (!certData.earthingArrangement && certData.earthingSystem) certData.earthingArrangement = certData.earthingSystem;
+  // EV Charger mappings
+  if (!certData.pmeSupply && certData.pmeAssessmentResult) certData.pmeSupply = certData.pmeAssessmentResult;
+  if (!certData.earthElectrode && certData.earthRodInstalled) certData.earthElectrode = certData.earthRodInstalled;
+  if (!certData.earthElectrodeResistance && certData.earthRodResistance) certData.earthElectrodeResistance = certData.earthRodResistance;
+  if (!certData.maxChargingCurrent && certData.outputRating) certData.maxChargingCurrent = certData.outputRating + " kW";
+
+  // Normalise circuit arrays (EIC form uses long names)
+  if (Array.isArray(circuits)) {
+    circuits = circuits.map(function(c) {
+      return {
+        description: c.description || c.circuitDescription || "",
+        wiringType: c.wiringType || "",
+        refMethod: c.refMethod || c.referenceMethod || "",
+        numPoints: c.numPoints || c.pointsServed || "",
+        liveCsa: c.liveCsa || c.liveConductorCSA || "",
+        cpc: c.cpc || c.cpcCSA || "",
+        maxDiscTime: c.maxDiscTime || "",
+        bsNo: c.bsNo || c.ocpdBSEN || "",
+        rating: c.rating || c.ocpdRating || "",
+        i2: c.i2 || "",
+        maxZs: c.maxZs || c.maxPermittedZs || "",
+        measuredZs: c.measuredZs || "",
+        r1r2: c.r1r2 || "",
+        insulR: c.insulR || "",
+        comments: c.comments || "",
+        circuitNumber: c.circuitNumber || "",
+      };
+    });
+  }
+
+  // Normalise test result arrays (EIC/EICR forms use long names)
+  if (Array.isArray(testResults)) {
+    testResults = testResults.map(function(t) {
+      return {
+        description: t.description || t.circuitDescription || "",
+        continuity: t.continuity || t.r1Line || "",
+        insulLL: t.insulLL || t.insulationLiveLive || "",
+        insulLE: t.insulLE || t.insulationLiveEarth || "",
+        polarity: t.polarity || "",
+        maxZs: t.maxZs || t.zsMax || "",
+        r1r2: t.r1r2 || "",
+        r2: t.r2 || t.r2CPC || "",
+        zs: t.zs || "",
+        rcdType: t.rcdType || "",
+        rcdRating: t.rcdRating || "",
+        rcdHalfDelta: t.rcdHalfDelta || "",
+        rcdDelta: t.rcdDelta || t.rcdDisconnectionTime || "",
+        remarks: t.remarks || "",
+        circuitNumber: t.circuitNumber || "",
+      };
+    });
+  }
+
+  // Normalise observation arrays (EICR form uses observationText)
+  if (Array.isArray(observations)) {
+    observations = observations.map(function(obs) {
+      if (typeof obs === "string") return { text: obs, code: "" };
+      return {
+        text: obs.text || obs.observation || obs.observationText || "",
+        code: obs.code || obs.classification || "",
+      };
+    });
+  }
+
+  // Normalise inspection items: form stores objects {id, section, label, outcome}, PDF expects arrays [id, label, outcome]
+  if (Array.isArray(inspectionItems)) {
+    inspectionItems = inspectionItems.map(function(item) {
+      if (Array.isArray(item)) return item;
+      return [item.id || "", item.label || item.section || "", item.outcome || ""];
+    });
+  }
+
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -22840,7 +22952,7 @@ function ElectricalPDFPreview({ certData, certType, certTitle, onClose }) {
     try {
       const c = certData.circuits || [];
       const t = certData.testResults || [];
-      const o = certData.observations || [];
+      const o = certData.appliances || certData.observations || [];
       const ins = certData.inspectionItems || [];
       await generateElectricalPDF(certType, certData, c, t, o, ins);
     } catch(e) { console.error(e); alert("Could not generate PDF: " + e.message); }
@@ -29754,7 +29866,8 @@ function TradeRecordsSubScreen({ type, label, color, records, onBack, onHome, on
       return null;
     }
     if (["emergency_lighting","fire_alarm","fire_door"].includes(type)) {
-      generateFireSafetyPDF(type, r);
+      const fireTypeMap = { emergency_lighting: "emergencyLighting", fire_alarm: "fireAlarm", fire_door: "fireDoor" };
+      generateFireSafetyPDF(fireTypeMap[type] || type, r);
       setViewing(null);
       return null;
     }
