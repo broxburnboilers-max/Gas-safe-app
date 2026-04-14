@@ -25142,38 +25142,48 @@ async function generateFireSafetyPDF(type, data) {
 }
 
 // ─── Shared Fire Safety Form Shell ──────────────────────────────────────────
-function FireFormShell({ title, step, totalSteps, stepLabels, onBack, onPrev, onNext, onSave, onPDF, children }) {
-  const pct = Math.round(((step + 1) / totalSteps) * 100);
-  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
+function FireFormShell({ title, step, totalSteps, stepLabels, onBack, onPrev, onNext, onSave, onPDF, onSetStep, children }) {
   return (
     <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
         <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
-        <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", flex:1 }}>{title}</h2>
-      </div>
-      {/* Step indicator */}
-      <div style={{ padding:"0 16px 8px" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-          <span style={{ color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600 }}>Step {step + 1} of {totalSteps}: {stepLabels[step] || ""}</span>
-          <span style={{ color:"#ff6b35", fontSize:11, fontWeight:700 }}>{pct}%</span>
+        <div style={{ flex:1 }}>
+          <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", margin:0 }}>{title}</h2>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>Fire Safety Certificate</div>
         </div>
-        <div style={{ height:4, background:"rgba(255,255,255,0.1)", borderRadius:2, overflow:"hidden" }}>
-          <div style={{ height:"100%", width:`${pct}%`, background:"linear-gradient(90deg, #ff6b35, #ff8c5a)", borderRadius:2, transition:"width 0.3s ease" }}/>
-        </div>
+        <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", background:"rgba(255,255,255,0.06)", borderRadius:8, padding:"4px 8px" }}>{step+1}/{totalSteps}</div>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 120px" }}>
+      <div style={{ overflowX:"auto", display:"flex", gap:6, padding:"10px 16px", flexShrink:0, scrollbarWidth:"none" }}>
+        {stepLabels.map((s,i) => (
+          <button key={i} onClick={() => onSetStep(i)}
+            style={{ flexShrink:0, padding:"5px 12px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap",
+              border:"1px solid",
+              borderColor: i===step ? "#ff6b35" : i<step ? "rgba(34,197,94,0.4)" : "rgba(255,255,255,0.12)",
+              background: i===step ? "rgba(255,107,53,0.2)" : i<step ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.04)",
+              color: i===step ? "#ff6b35" : i<step ? "#22c55e" : "rgba(255,255,255,0.45)"
+            }}>
+            {i<step?"✓ ":""}{s}
+          </button>
+        ))}
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
         {children}
       </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 60%, transparent 100%)", display:"flex", gap:8 }}>
-        {step > 0 && <button onClick={onPrev} style={{ padding:"12px 18px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Back</button>}
-        {step < totalSteps - 1 && <button onClick={onNext} style={{ flex:1, padding:"12px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Next</button>}
-        {step === totalSteps - 1 && <>
-          <button onClick={onSave} style={{ flex:1, padding:"12px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save Certificate</button>
-          <button onClick={onPDF} style={{ flex:1, padding:"12px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
-        </>}
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+        {step > 0 && (
+          <button onClick={onPrev} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>
+        )}
+        {step < totalSteps - 1 ? (
+          <button onClick={onNext} style={{ flex:1, padding:"13px", borderRadius:12, background:"#ff6b35", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
+        ) : (
+          <>
+            <button onClick={onSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save Certificate</button>
+            <button onClick={onPDF} style={{ flex:1, padding:"13px", borderRadius:12, background:"rgba(255,255,255,0.1)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -25183,10 +25193,10 @@ function FireFormShell({ title, step, totalSteps, stepLabels, onBack, onPrev, on
 const FS_INPUT = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
 const FS_SELECT = { ...FS_INPUT, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
 const FS_SECTION = { color:"#ff6b35", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(255,107,53,0.3)", paddingBottom:6 };
-const FS_LABEL = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4 };
+const FS_LABEL = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4, display:"block" };
 
 function FSField({ label, children }) {
-  return <div style={{ marginBottom:10 }}><div style={FS_LABEL}>{label}</div>{children}</div>;
+  return <div style={{ marginBottom:12 }}><span style={FS_LABEL}>{label}</span>{children}</div>;
 }
 function FSInput({ label, value, onChange, type, placeholder }) {
   return <FSField label={label}><input type={type || "text"} style={FS_INPUT} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}/></FSField>;
@@ -25195,20 +25205,21 @@ function FSSelect({ label, value, onChange, options }) {
   return <FSField label={label}><select style={FS_SELECT} value={value} onChange={e => onChange(e.target.value)}><option value="">Select...</option>{options.map(o => <option key={o} value={o}>{o}</option>)}</select></FSField>;
 }
 function FSTextarea({ label, value, onChange, placeholder }) {
-  return <FSField label={label}><textarea style={{ ...FS_INPUT, minHeight:60 }} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}/></FSField>;
+  return <FSField label={label}><textarea style={{ ...FS_INPUT, resize:"vertical", minHeight:80 }} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}/></FSField>;
 }
 function FSToggle({ label, value, onChange, options }) {
   const opts = options || ["Pass", "Fail", "N/A"];
-  const colors = { Pass:"#22c55e", Fail:"#ef4444", Advisory:"#f59e0b", Yes:"#22c55e", No:"#ef4444", "N/A":"#555", Satisfactory:"#22c55e", Unsatisfactory:"#ef4444" };
   return (
     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
       <span style={{ color:"rgba(255,255,255,0.8)", fontSize:13, flex:1 }}>{label}</span>
-      <div style={{ display:"flex", gap:4 }}>
+      <div style={{ display:"flex", gap:6 }}>
         {opts.map(v => (
           <button key={v} onClick={() => onChange(v)} style={{
-            padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", border:"none",
-            background: value === v ? (colors[v] || "#555") : "rgba(255,255,255,0.08)",
-            color: value === v ? "#fff" : "rgba(255,255,255,0.5)",
+            flex:1, padding:"8px", borderRadius:8, fontSize:12, fontWeight:700, cursor:"pointer",
+            border:"1px solid",
+            borderColor: value === v ? (v==="Pass"||v==="Yes"||v==="Satisfactory" ? "#22c55e" : v==="Fail"||v==="No"||v==="Unsatisfactory" ? "#ef4444" : "#ff6b35") : "rgba(255,255,255,0.12)",
+            background: value === v ? (v==="Pass"||v==="Yes"||v==="Satisfactory" ? "rgba(34,197,94,0.15)" : v==="Fail"||v==="No"||v==="Unsatisfactory" ? "rgba(239,68,68,0.15)" : "rgba(255,107,53,0.15)") : "rgba(255,255,255,0.04)",
+            color: value === v ? (v==="Pass"||v==="Yes"||v==="Satisfactory" ? "#22c55e" : v==="Fail"||v==="No"||v==="Unsatisfactory" ? "#ef4444" : "#ff6b35") : "rgba(255,255,255,0.45)"
           }}>{v}</button>
         ))}
       </div>
@@ -25218,7 +25229,7 @@ function FSToggle({ label, value, onChange, options }) {
 
 function FSSignature({ sigRef, sigData, onUpdate }) {
   const [isDrawing, setIsDrawing] = useState(false);
-  const initSig = (canvas) => { if (!canvas) return; sigRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#1a1a2e"; ctx.lineCap = "round"; };
+  const initSig = (canvas) => { if (!canvas) return; sigRef.current = canvas; const ctx = canvas.getContext("2d"); ctx.lineWidth = 2; ctx.strokeStyle = "#e8edf2"; ctx.lineCap = "round"; };
   const startDraw = (e) => { setIsDrawing(true); const c = sigRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.beginPath(); ctx.moveTo(t.clientX - r.left, t.clientY - r.top); };
   const draw = (e) => { if (!isDrawing) return; const c = sigRef.current; const ctx = c.getContext("2d"); const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; ctx.lineTo(t.clientX - r.left, t.clientY - r.top); ctx.stroke(); };
   const endDraw = () => { setIsDrawing(false); if (sigRef.current) onUpdate(sigRef.current.toDataURL()); };
@@ -25226,11 +25237,12 @@ function FSSignature({ sigRef, sigData, onUpdate }) {
   return (
     <>
       <div style={FS_SECTION}>Signature</div>
-      <div style={{ background:"#fff", borderRadius:10, overflow:"hidden", marginBottom:10, position:"relative" }}>
+      <span style={FS_LABEL}>Sign below</span>
+      <div style={{ background:"#1e3044", border:"1px solid #2a4058", borderRadius:10, overflow:"hidden", marginBottom:12, position:"relative" }}>
         <canvas ref={initSig} width={340} height={120} style={{ width:"100%", height:120, touchAction:"none" }}
           onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
           onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw}/>
-        <button onClick={clearSig} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
+        <button onClick={clearSig} style={{ position:"absolute", top:6, right:6, background:"rgba(255,255,255,0.1)", color:"#e8edf2", border:"1px solid rgba(255,255,255,0.15)", borderRadius:6, padding:"4px 10px", fontSize:10, cursor:"pointer" }}>Clear</button>
       </div>
     </>
   );
@@ -25361,7 +25373,7 @@ function FireRiskAssessmentForm({ onBack, onSave, currentUser }) {
 
   return (
     <FireFormShell title="Fire Risk Assessment — PAS 79-1:2020" step={step} totalSteps={totalSteps} stepLabels={stepLabels}
-      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF}>
+      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF} onSetStep={setStep}>
 
       {step === 0 && <>
         <div style={FS_SECTION}>General Information</div>
@@ -25520,7 +25532,7 @@ function FireExtinguisherForm({ onBack, onSave, currentUser }) {
 
   return (
     <FireFormShell title="Fire Extinguisher Service — BS 5306-3" step={step} totalSteps={totalSteps} stepLabels={stepLabels}
-      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF}>
+      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF} onSetStep={setStep}>
 
       {step === 0 && <>
         <div style={FS_SECTION}>Client & Site Details</div>
@@ -25647,7 +25659,7 @@ function EmergencyLightingForm({ onBack, onSave, currentUser }) {
 
   return (
     <FireFormShell title="Emergency Lighting — BS 5266-1:2016" step={step} totalSteps={totalSteps} stepLabels={stepLabels}
-      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF}>
+      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF} onSetStep={setStep}>
 
       {step === 0 && <>
         <div style={FS_SECTION}>Client & Site Details</div>
@@ -25781,7 +25793,7 @@ function FireAlarmServiceForm({ onBack, onSave, currentUser }) {
 
   return (
     <FireFormShell title="Fire Alarm — BS 5839-1:2017" step={step} totalSteps={totalSteps} stepLabels={stepLabels}
-      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF}>
+      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF} onSetStep={setStep}>
 
       {step === 0 && <>
         <div style={FS_SECTION}>Client & Site Details</div>
@@ -25938,7 +25950,7 @@ function FireDoorInspectionForm({ onBack, onSave, currentUser }) {
 
   return (
     <FireFormShell title="Fire Door Inspection — BS 8214:2016" step={step} totalSteps={totalSteps} stepLabels={stepLabels}
-      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF}>
+      onBack={onBack} onPrev={() => setStep(s => s - 1)} onNext={() => setStep(s => s + 1)} onSave={handleSave} onPDF={handlePDF} onSetStep={setStep}>
 
       {step === 0 && <>
         <div style={FS_SECTION}>Client & Site Details</div>
@@ -26766,24 +26778,27 @@ function generatePlumbingPDF(certData, certType, certTitle) {
 // ── Plumbing PDF Preview (wrapper component — uses generatePlumbingPDF) ─────
 function PlumbingPDFPreview({ certType, certTitle, certData, onClose }) {
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:"#1a1a2e", fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ background:"#0d1f2d", padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <button onClick={onClose} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:8, padding:"6px 14px", color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer" }}>← Back</button>
-        <span style={{ color:"#fff", fontWeight:700, fontSize:15 }}>{certTitle}</span>
-        <button onClick={() => generatePlumbingPDF(certData, certType, certTitle)} style={{ background:"#4A7CFF", color:"#fff", border:"none", borderRadius:20, padding:"8px 18px", fontWeight:700, fontSize:13, cursor:"pointer" }}>
-          Download PDF
+    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
+        <button onClick={onClose} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <div style={{ flex:1 }}>
+          <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", margin:0 }}>{certTitle}</h2>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>PDF Preview</div>
+        </div>
       </div>
       <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-        <div style={{ background:"#fff", borderRadius:16, padding:32, maxWidth:500, textAlign:"center" }}>
+        <div style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:16, padding:32, maxWidth:500, textAlign:"center" }}>
           <div style={{ fontSize:48, marginBottom:16 }}>📄</div>
-          <div style={{ fontSize:18, fontWeight:700, color:"#333", marginBottom:8 }}>{certTitle}</div>
-          <div style={{ fontSize:13, color:"#666", marginBottom:4 }}>Ref: {certData.certRef || "N/A"}</div>
-          <div style={{ fontSize:13, color:"#666", marginBottom:20 }}>Date: {certData.date || "N/A"}</div>
-          <button onClick={() => generatePlumbingPDF(certData, certType, certTitle)} style={{ background:"#4A7CFF", color:"#fff", border:"none", borderRadius:12, padding:"14px 32px", fontWeight:700, fontSize:15, cursor:"pointer" }}>
+          <div style={{ fontSize:18, fontWeight:700, color:"#e8edf2", marginBottom:8 }}>{certTitle}</div>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)", marginBottom:4 }}>Ref: {certData.certRef || "N/A"}</div>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)", marginBottom:20 }}>Date: {certData.date || "N/A"}</div>
+          <button onClick={() => generatePlumbingPDF(certData, certType, certTitle)} style={{ background:"#00b4d8", color:"#fff", border:"none", borderRadius:12, padding:"14px 32px", fontWeight:700, fontSize:15, cursor:"pointer" }}>
             Generate & Download PDF
           </button>
-          <div style={{ marginTop:16, fontSize:11, color:"#999" }}>PDF will open in a new tab for printing/saving</div>
+          <div style={{ marginTop:16, fontSize:11, color:"rgba(255,255,255,0.35)" }}>PDF will open in a new tab for printing/saving</div>
         </div>
       </div>
     </div>
@@ -26802,25 +26817,26 @@ function PlumbingSigPad({ onSign }) {
   };
 
   const start = (e) => { e.preventDefault(); setDrawing(true); const ctx = canvasRef.current.getContext("2d"); const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
-  const draw = (e) => { if (!drawing) return; e.preventDefault(); const ctx = canvasRef.current.getContext("2d"); const p = getPos(e); ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#000"; ctx.lineTo(p.x, p.y); ctx.stroke(); };
+  const draw = (e) => { if (!drawing) return; e.preventDefault(); const ctx = canvasRef.current.getContext("2d"); const p = getPos(e); ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#e8edf2"; ctx.lineTo(p.x, p.y); ctx.stroke(); };
   const end = () => { setDrawing(false); if (onSign) onSign(canvasRef.current.toDataURL()); };
   const clear = () => { const ctx = canvasRef.current.getContext("2d"); ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); if (onSign) onSign(""); };
 
   return (
     <div>
       <canvas ref={canvasRef} width={320} height={120}
-        style={{ border:"1px solid #ccc", borderRadius:8, background:"#fafafa", touchAction:"none", width:"100%", maxWidth:320, height:120 }}
+        style={{ border:"1px solid #2a4058", borderRadius:10, background:"#1e3044", touchAction:"none", width:"100%", maxWidth:320, height:120 }}
         onMouseDown={start} onMouseMove={draw} onMouseUp={end} onMouseLeave={end}
         onTouchStart={start} onTouchMove={draw} onTouchEnd={end}/>
-      <button onClick={clear} style={{ marginTop:4, fontSize:11, color:"#c00", background:"none", border:"none", cursor:"pointer" }}>Clear Signature</button>
+      <button onClick={clear} style={{ marginTop:6, fontSize:11, color:"#ef4444", background:"none", border:"none", cursor:"pointer", fontWeight:600 }}>Clear Signature</button>
     </div>
   );
 }
 
 // ── Legionella Risk Assessment Form (ACOP L8 / HSG274) — Multi-Step Wizard ──
 function PlumbingLRAForm({ onBack, onSave, currentUser }) {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const totalSteps = 8;
+  const STEPS = ["Summary & Assessor","Site Details","Cold & Hot Water","Distribution & Outlets","Temperature Monitoring","Identified Risks","Schematic & Controls","Declaration"];
   const [form, setForm] = useState({
     certRef: "LRA-" + Date.now().toString(36).toUpperCase(),
     date: new Date().toISOString().slice(0, 10),
@@ -26860,12 +26876,11 @@ function PlumbingLRAForm({ onBack, onSave, currentUser }) {
   const [showPDF, setShowPDF] = useState(false);
   const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: "#334", marginBottom: 4 };
-  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #d0d5dd", borderRadius: 8, fontSize: 14, boxSizing: "border-box", marginBottom: 12 };
-  const sectionStyle = { background: "#fff", borderRadius: 14, padding: 16, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" };
-  const sectionTitleStyle = { fontSize: 15, fontWeight: 700, color: "#0d1f2d", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 };
-  const checkStyle = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13 };
-  const selectStyle = { ...inputStyle, background: "#fff" };
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none", marginBottom:12 };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4, display:"block" };
+  const secTitle = { color:"#00b4d8", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(0,180,216,0.3)", paddingBottom:6 };
+  const checkStyle = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13, color:"rgba(255,255,255,0.75)" };
 
   if (showPDF) {
     return <PlumbingPDFPreview certType="lra" certTitle="Legionella Risk Assessment (ACOP L8)" certData={form} onClose={() => setShowPDF(false)} />;
@@ -26900,305 +26915,224 @@ function PlumbingLRAForm({ onBack, onSave, currentUser }) {
     return "#dc3545";
   };
 
-  const progressBar = (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
-      {Array.from({ length: totalSteps }, (_, i) => (
-        <div key={i} style={{ flex: 1, height: 6, borderRadius: 3, background: i + 1 <= step ? "#4A7CFF" : "#e0e0e0", transition: "background 0.2s" }} />
-      ))}
-      <span style={{ fontSize: 11, color: "#666", fontWeight: 600, flexShrink: 0 }}>Step {step}/{totalSteps}</span>
-    </div>
-  );
-
-  const navButtons = (
-    <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-      {step > 1 && <button onClick={() => setStep(step - 1)} style={{ flex: 1, padding: "14px 0", background: "#e0e0e0", color: "#333", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Back</button>}
-      {step < totalSteps && <button onClick={() => setStep(step + 1)} style={{ flex: 1, padding: "14px 0", background: "#4A7CFF", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Next</button>}
-      {step === totalSteps && (
-        <>
-          <button onClick={handleSave} style={{ flex: 1, padding: "14px 0", background: "#00b4d8", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Save</button>
-          <button onClick={() => setShowPDF(true)} style={{ flex: 1, padding: "14px 0", background: "#0d1f2d", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Generate PDF</button>
-        </>
-      )}
-    </div>
-  );
-
   return (
-    <div style={{ minHeight: "100dvh", background: "#f0f2f5", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div style={{ background: "linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-        <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 10, background: "#1e3044", border: "1px solid #2a4058", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#8b9db0", flexShrink: 0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6" /></svg>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      {/* Header */}
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>Legionella Risk Assessment</div>
-          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>ACOP L8 / HSG274</div>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <div style={{ flex:1 }}>
+          <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", margin:0 }}>Legionella Risk Assessment</h2>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>ACOP L8 / HSG274</div>
         </div>
+        <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", background:"rgba(255,255,255,0.06)", borderRadius:8, padding:"4px 8px" }}>{step+1}/{STEPS.length}</div>
       </div>
 
-      <div style={{ padding: "12px 16px 100px", maxWidth: 600, margin: "0 auto" }}>
-        {progressBar}
+      {/* Step pills */}
+      <div style={{ overflowX:"auto", display:"flex", gap:6, padding:"10px 16px", flexShrink:0, scrollbarWidth:"none" }}>
+        {STEPS.map((st,i) => (
+          <button key={i} onClick={() => setStep(i)}
+            style={{ flexShrink:0, padding:"5px 12px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", border:"1px solid", borderColor: i===step?"#00b4d8":i<step?"rgba(34,197,94,0.4)":"rgba(255,255,255,0.12)", background: i===step?"rgba(0,180,216,0.2)":i<step?"rgba(34,197,94,0.08)":"rgba(255,255,255,0.04)", color: i===step?"#00b4d8":i<step?"#22c55e":"rgba(255,255,255,0.45)" }}>
+            {i<step?"✓ ":""}{st}
+          </button>
+        ))}
+      </div>
 
-        {/* Step 1: Executive Summary & Assessor */}
-        {step === 1 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Executive Summary</div>
-            <label style={labelStyle}>Report Reference</label>
-            <input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Date of Assessment</label>
-            <input type="date" value={form.date} onChange={e => s("date", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Date of Previous Assessment</label>
-            <input type="date" value={form.previousAssessmentDate} onChange={e => s("previousAssessmentDate", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Next Recommended Assessment Date</label>
-            <input type="date" value={form.reviewDate} onChange={e => s("reviewDate", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Overall Risk Level</label>
+      {/* Content */}
+      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+
+        {/* Step 0: Executive Summary & Assessor */}
+        {step === 0 && <>
+          <div style={secTitle}>Executive Summary</div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Report Reference</span><input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Date of Assessment</span><input type="date" value={form.date} onChange={e => s("date", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Date of Previous Assessment</span><input type="date" value={form.previousAssessmentDate} onChange={e => s("previousAssessmentDate", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Next Recommended Assessment Date</span><input type="date" value={form.reviewDate} onChange={e => s("reviewDate", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Overall Risk Level</span>
             <select value={form.overallRiskLevel} onChange={e => s("overallRiskLevel", e.target.value)} style={selectStyle}>
               <option>Minimal</option><option>Slight</option><option>Possible</option><option>Probable</option><option>Imminent</option>
-            </select>
-            <label style={labelStyle}>Executive Summary</label>
-            <textarea value={form.executiveSummary} onChange={e => s("executiveSummary", e.target.value)} style={{ ...inputStyle, minHeight: 80 }} placeholder="Brief overview of findings and key risks..." />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Assessor Details</div>
-            <label style={labelStyle}>Assessor Name</label>
-            <input value={form.assessorName} onChange={e => s("assessorName", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Company</label>
-            <input value={form.assessorCompany} onChange={e => s("assessorCompany", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Qualifications</label>
-            <input value={form.assessorQualifications} onChange={e => s("assessorQualifications", e.target.value)} style={inputStyle} placeholder="e.g. Legionella Risk Assessor, City & Guilds" />
-            <label style={labelStyle}>Contact</label>
-            <input value={form.assessorContact} onChange={e => s("assessorContact", e.target.value)} style={inputStyle} placeholder="Phone / Email" />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Responsible Person</div>
-            <label style={labelStyle}>Name</label>
-            <input value={form.responsiblePerson} onChange={e => s("responsiblePerson", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Position</label>
-            <input value={form.responsiblePersonPosition} onChange={e => s("responsiblePersonPosition", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Contact</label>
-            <input value={form.responsiblePersonContact} onChange={e => s("responsiblePersonContact", e.target.value)} style={inputStyle} />
-          </div>
+            </select></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Executive Summary</span>
+            <textarea value={form.executiveSummary} onChange={e => s("executiveSummary", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 80 }} placeholder="Brief overview of findings and key risks..." /></div>
+          <div style={secTitle}>Assessor Details</div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Assessor Name</span><input value={form.assessorName} onChange={e => s("assessorName", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Company</span><input value={form.assessorCompany} onChange={e => s("assessorCompany", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Qualifications</span><input value={form.assessorQualifications} onChange={e => s("assessorQualifications", e.target.value)} style={inputStyle} placeholder="e.g. Legionella Risk Assessor, City & Guilds" /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Contact</span><input value={form.assessorContact} onChange={e => s("assessorContact", e.target.value)} style={inputStyle} placeholder="Phone / Email" /></div>
+          <div style={secTitle}>Responsible Person</div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Name</span><input value={form.responsiblePerson} onChange={e => s("responsiblePerson", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Position</span><input value={form.responsiblePersonPosition} onChange={e => s("responsiblePersonPosition", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Contact</span><input value={form.responsiblePersonContact} onChange={e => s("responsiblePersonContact", e.target.value)} style={inputStyle} /></div>
         </>}
 
-        {/* Step 2: Site Details */}
-        {step === 2 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Section 1: Site Details</div>
-            <label style={labelStyle}>Site Name</label>
-            <input value={form.siteName} onChange={e => s("siteName", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Address</label>
-            <input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Postcode</label>
-            <input value={form.sitePostcode} onChange={e => s("sitePostcode", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Description of Premises</label>
-            <textarea value={form.premisesDescription} onChange={e => s("premisesDescription", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} placeholder="Type and use of building..." />
-            <label style={labelStyle}>Number of Floors</label>
-            <input type="number" value={form.numFloors} onChange={e => s("numFloors", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Approximate Occupancy</label>
-            <input value={form.approxOccupancy} onChange={e => s("approxOccupancy", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Water Supplier</label>
-            <input value={form.waterSupplier} onChange={e => s("waterSupplier", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Water Source</label>
+        {/* Step 1: Site Details */}
+        {step === 1 && <>
+          <div style={secTitle}>Section 1: Site Details</div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Site Name</span><input value={form.siteName} onChange={e => s("siteName", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Address</span><input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Postcode</span><input value={form.sitePostcode} onChange={e => s("sitePostcode", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Description of Premises</span><textarea value={form.premisesDescription} onChange={e => s("premisesDescription", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 60 }} placeholder="Type and use of building..." /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Number of Floors</span><input type="number" value={form.numFloors} onChange={e => s("numFloors", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Approximate Occupancy</span><input value={form.approxOccupancy} onChange={e => s("approxOccupancy", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Water Supplier</span><input value={form.waterSupplier} onChange={e => s("waterSupplier", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Water Source</span>
             <select value={form.waterSource} onChange={e => s("waterSource", e.target.value)} style={selectStyle}>
               <option>Mains</option><option>Borehole</option><option>Other</option>
-            </select>
-            <label style={labelStyle}>Water Treatment in Place</label>
+            </select></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Water Treatment in Place</span>
             <select value={form.waterTreatment} onChange={e => s("waterTreatment", e.target.value)} style={selectStyle}>
               <option>Yes</option><option>No</option>
-            </select>
-            {form.waterTreatment === "Yes" && <>
-              <label style={labelStyle}>Treatment Details</label>
-              <textarea value={form.waterTreatmentDetails} onChange={e => s("waterTreatmentDetails", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
-            </>}
-          </div>
+            </select></div>
+            {form.waterTreatment === "Yes" && <div style={{ marginBottom:12 }}><span style={labelSt}>Treatment Details</span><textarea value={form.waterTreatmentDetails} onChange={e => s("waterTreatmentDetails", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 60 }} /></div>}
         </>}
 
-        {/* Step 3: System Description — Cold & Hot Water */}
-        {step === 3 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Section 2: Cold Water Storage</div>
-            <label style={labelStyle}>Type</label>
-            <input value={form.coldStorageType} onChange={e => s("coldStorageType", e.target.value)} style={inputStyle} placeholder="e.g. MDPE tank, GRP cistern" />
-            <label style={labelStyle}>Location</label>
-            <input value={form.coldStorageLocation} onChange={e => s("coldStorageLocation", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Capacity (litres)</label>
-            <input value={form.coldStorageCapacity} onChange={e => s("coldStorageCapacity", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Material</label>
-            <input value={form.coldStorageMaterial} onChange={e => s("coldStorageMaterial", e.target.value)} style={inputStyle} />
-            <div style={checkStyle}><input type="checkbox" checked={form.coldStorageLid} onChange={e => s("coldStorageLid", e.target.checked)} /><span>Lid Fitted</span></div>
-            <div style={checkStyle}><input type="checkbox" checked={form.coldStorageInsulated} onChange={e => s("coldStorageInsulated", e.target.checked)} /><span>Insulated</span></div>
-            <label style={labelStyle}>Temperature Recorded (°C)</label>
-            <input value={form.coldStorageTemp} onChange={e => s("coldStorageTemp", e.target.value)} style={inputStyle} />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Hot Water System</div>
-            <label style={labelStyle}>Type</label>
+        {/* Step 2: System Description — Cold & Hot Water */}
+        {step === 2 && <>
+          <div style={secTitle}>Section 2: Cold Water Storage</div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Type</span><input value={form.coldStorageType} onChange={e => s("coldStorageType", e.target.value)} style={inputStyle} placeholder="e.g. MDPE tank, GRP cistern" /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Location</span><input value={form.coldStorageLocation} onChange={e => s("coldStorageLocation", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Capacity (litres)</span><input value={form.coldStorageCapacity} onChange={e => s("coldStorageCapacity", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Material</span><input value={form.coldStorageMaterial} onChange={e => s("coldStorageMaterial", e.target.value)} style={inputStyle} /></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.coldStorageLid} onChange={e => s("coldStorageLid", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Lid Fitted</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.coldStorageInsulated} onChange={e => s("coldStorageInsulated", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Insulated</span></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Temperature Recorded (°C)</span><input value={form.coldStorageTemp} onChange={e => s("coldStorageTemp", e.target.value)} style={inputStyle} /></div>
+          <div style={secTitle}>Hot Water System</div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Type</span>
             <select value={form.hotWaterType} onChange={e => s("hotWaterType", e.target.value)} style={selectStyle}>
               <option>Direct</option><option>Indirect</option><option>Unvented</option><option>Combination Boiler</option>
-            </select>
-            <label style={labelStyle}>Calorifier/Cylinder Make & Model</label>
-            <input value={form.hotWaterMakeModel} onChange={e => s("hotWaterMakeModel", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Capacity (litres)</label>
-            <input value={form.hotWaterCapacity} onChange={e => s("hotWaterCapacity", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Thermostat Setting (°C)</label>
-            <input value={form.hotWaterThermostat} onChange={e => s("hotWaterThermostat", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Actual Temp at Calorifier (°C)</label>
-            <input value={form.hotWaterActualTemp} onChange={e => s("hotWaterActualTemp", e.target.value)} style={inputStyle} />
-          </div>
+            </select></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Calorifier/Cylinder Make & Model</span><input value={form.hotWaterMakeModel} onChange={e => s("hotWaterMakeModel", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Capacity (litres)</span><input value={form.hotWaterCapacity} onChange={e => s("hotWaterCapacity", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Thermostat Setting (°C)</span><input value={form.hotWaterThermostat} onChange={e => s("hotWaterThermostat", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Actual Temp at Calorifier (°C)</span><input value={form.hotWaterActualTemp} onChange={e => s("hotWaterActualTemp", e.target.value)} style={inputStyle} /></div>
         </>}
 
-        {/* Step 4: Distribution & Outlets */}
+        {/* Step 3: Distribution & Outlets */}
+        {step === 3 && <>
+          <div style={secTitle}>Distribution System</div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Pipe Material</span><input value={form.pipeMaterial} onChange={e => s("pipeMaterial", e.target.value)} style={inputStyle} placeholder="e.g. Copper, MDPE, Plastic" /></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.pipeInsulated} onChange={e => s("pipeInsulated", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Pipes Insulated</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.deadLegs} onChange={e => s("deadLegs", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Dead Legs Identified</span></div>
+            {form.deadLegs && <div style={{ marginBottom:12 }}><span style={labelSt}>Dead Leg Details</span><textarea value={form.deadLegDetails} onChange={e => s("deadLegDetails", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 60 }} /></div>}
+          <div style={secTitle}>Outlets</div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Sentinel Taps — Nearest to Source</span><input value={form.sentinelNearest} onChange={e => s("sentinelNearest", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Sentinel Taps — Furthest from Source</span><input value={form.sentinelFurthest} onChange={e => s("sentinelFurthest", e.target.value)} style={inputStyle} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Infrequently Used Outlets</span><textarea value={form.infrequentOutlets} onChange={e => s("infrequentOutlets", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 60 }} placeholder="List outlets used less than weekly..." /></div>
+          <div style={secTitle}>Other Water Systems</div>
+            <div style={checkStyle}><input type="checkbox" checked={form.hasShowers} onChange={e => s("hasShowers", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Showers</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.hasTMVs} onChange={e => s("hasTMVs", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>TMVs</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.hasWaterFeatures} onChange={e => s("hasWaterFeatures", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Water Features / Fountains</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.hasCoolingTowers} onChange={e => s("hasCoolingTowers", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Cooling Towers</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.hasEvapCondensers} onChange={e => s("hasEvapCondensers", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Evaporative Condensers</span></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Other</span><input value={form.otherSystems} onChange={e => s("otherSystems", e.target.value)} style={inputStyle} /></div>
+        </>}
+
+        {/* Step 4: Temperature Monitoring */}
         {step === 4 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Distribution System</div>
-            <label style={labelStyle}>Pipe Material</label>
-            <input value={form.pipeMaterial} onChange={e => s("pipeMaterial", e.target.value)} style={inputStyle} placeholder="e.g. Copper, MDPE, Plastic" />
-            <div style={checkStyle}><input type="checkbox" checked={form.pipeInsulated} onChange={e => s("pipeInsulated", e.target.checked)} /><span>Pipes Insulated</span></div>
-            <div style={checkStyle}><input type="checkbox" checked={form.deadLegs} onChange={e => s("deadLegs", e.target.checked)} /><span>Dead Legs Identified</span></div>
-            {form.deadLegs && <>
-              <label style={labelStyle}>Dead Leg Details</label>
-              <textarea value={form.deadLegDetails} onChange={e => s("deadLegDetails", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
-            </>}
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Outlets</div>
-            <label style={labelStyle}>Sentinel Taps — Nearest to Source</label>
-            <input value={form.sentinelNearest} onChange={e => s("sentinelNearest", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Sentinel Taps — Furthest from Source</label>
-            <input value={form.sentinelFurthest} onChange={e => s("sentinelFurthest", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Infrequently Used Outlets</label>
-            <textarea value={form.infrequentOutlets} onChange={e => s("infrequentOutlets", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} placeholder="List outlets used less than weekly..." />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Other Water Systems</div>
-            <div style={checkStyle}><input type="checkbox" checked={form.hasShowers} onChange={e => s("hasShowers", e.target.checked)} /><span>Showers</span></div>
-            <div style={checkStyle}><input type="checkbox" checked={form.hasTMVs} onChange={e => s("hasTMVs", e.target.checked)} /><span>TMVs</span></div>
-            <div style={checkStyle}><input type="checkbox" checked={form.hasWaterFeatures} onChange={e => s("hasWaterFeatures", e.target.checked)} /><span>Water Features / Fountains</span></div>
-            <div style={checkStyle}><input type="checkbox" checked={form.hasCoolingTowers} onChange={e => s("hasCoolingTowers", e.target.checked)} /><span>Cooling Towers</span></div>
-            <div style={checkStyle}><input type="checkbox" checked={form.hasEvapCondensers} onChange={e => s("hasEvapCondensers", e.target.checked)} /><span>Evaporative Condensers</span></div>
-            <label style={labelStyle}>Other</label>
-            <input value={form.otherSystems} onChange={e => s("otherSystems", e.target.value)} style={inputStyle} />
-          </div>
-        </>}
-
-        {/* Step 5: Temperature Monitoring */}
-        {step === 5 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Section 3: Temperature Monitoring</div>
-            <div style={{ fontSize: 12, color: "#4A7CFF", fontWeight: 600, marginBottom: 12 }}>Hot water: stored &gt;60°C, delivered &gt;50°C within 1 min | Cold water: &lt;20°C</div>
+          <div style={secTitle}>Section 3: Temperature Monitoring</div>
+            <div style={{ fontSize: 12, color: "#00b4d8", fontWeight: 600, marginBottom: 12 }}>Hot water: stored &gt;60°C, delivered &gt;50°C within 1 min | Cold water: &lt;20°C</div>
             {form.tempReadings.map((r, i) => (
-              <div key={i} style={{ background: "#f8f9fa", borderRadius: 10, padding: 12, marginBottom: 10, border: "1px solid #e0e0e0" }}>
+              <div key={i} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 12, marginBottom: 10, border: "1px solid rgba(255,255,255,0.08)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13 }}>Reading {i + 1}</span>
-                  {form.tempReadings.length > 1 && <button onClick={() => removeTemp(i)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Remove</button>}
+                  <span style={{ fontWeight: 700, fontSize: 13, color:"#e8edf2" }}>Reading {i + 1}</span>
+                  {form.tempReadings.length > 1 && <button onClick={() => removeTemp(i)} style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Remove</button>}
                 </div>
-                <label style={labelStyle}>Location</label>
-                <input value={r.location} onChange={e => updateTemp(i, "location", e.target.value)} style={inputStyle} placeholder="e.g. Kitchen hot tap" />
-                <label style={labelStyle}>Type</label>
+                <div style={{ marginBottom:12 }}><span style={labelSt}>Location</span><input value={r.location} onChange={e => updateTemp(i, "location", e.target.value)} style={inputStyle} placeholder="e.g. Kitchen hot tap" /></div>
+                <div style={{ marginBottom:12 }}><span style={labelSt}>Type</span>
                 <select value={r.type} onChange={e => updateTemp(i, "type", e.target.value)} style={selectStyle}>
                   <option>Hot</option><option>Cold</option>
-                </select>
-                <label style={labelStyle}>Temperature (°C)</label>
-                <input type="number" step="0.1" value={r.temp} onChange={e => updateTemp(i, "temp", e.target.value)} style={inputStyle} />
-                <label style={labelStyle}>Compliant</label>
+                </select></div>
+                <div style={{ marginBottom:12 }}><span style={labelSt}>Temperature (°C)</span><input type="number" step="0.1" value={r.temp} onChange={e => updateTemp(i, "temp", e.target.value)} style={inputStyle} /></div>
+                <div style={{ marginBottom:12 }}><span style={labelSt}>Compliant</span>
                 <select value={r.compliant} onChange={e => updateTemp(i, "compliant", e.target.value)} style={selectStyle}>
                   <option>Yes</option><option>No</option>
-                </select>
-                <label style={labelStyle}>Comments</label>
-                <input value={r.comments} onChange={e => updateTemp(i, "comments", e.target.value)} style={inputStyle} />
+                </select></div>
+                <div style={{ marginBottom:12 }}><span style={labelSt}>Comments</span><input value={r.comments} onChange={e => updateTemp(i, "comments", e.target.value)} style={inputStyle} /></div>
               </div>
             ))}
-            <button onClick={addTempReading} style={{ background: "#4A7CFF", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>+ Add Temperature Reading</button>
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Compliance Checks</div>
-            <div style={checkStyle}><input type="checkbox" checked={form.hotStored60} onChange={e => s("hotStored60", e.target.checked)} /><span>Hot water stored &gt; 60°C</span></div>
-            <div style={checkStyle}><input type="checkbox" checked={form.hotDelivered50} onChange={e => s("hotDelivered50", e.target.checked)} /><span>Hot water delivered &gt; 50°C within 1 minute</span></div>
-            <div style={checkStyle}><input type="checkbox" checked={form.coldBelow20} onChange={e => s("coldBelow20", e.target.checked)} /><span>Cold water &lt; 20°C</span></div>
-          </div>
+            <button onClick={addTempReading} style={{ background: "#00b4d8", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>+ Add Temperature Reading</button>
+          <div style={secTitle}>Compliance Checks</div>
+            <div style={checkStyle}><input type="checkbox" checked={form.hotStored60} onChange={e => s("hotStored60", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Hot water stored &gt; 60°C</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.hotDelivered50} onChange={e => s("hotDelivered50", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Hot water delivered &gt; 50°C within 1 minute</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={form.coldBelow20} onChange={e => s("coldBelow20", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Cold water &lt; 20°C</span></div>
         </>}
 
-        {/* Step 6: Identified Risks */}
-        {step === 6 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Section 4: Identified Risks</div>
-            <div style={{ fontSize: 11, color: "#666", marginBottom: 12 }}>Severity (1-5) × Likelihood (1-5) = Risk Level. 1-3 Low, 4-9 Medium, 10-16 High, 17-25 Very High</div>
+        {/* Step 5: Identified Risks */}
+        {step === 5 && <>
+          <div style={secTitle}>Section 4: Identified Risks</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginBottom: 12 }}>Severity (1-5) × Likelihood (1-5) = Risk Level. 1-3 Low, 4-9 Medium, 10-16 High, 17-25 Very High</div>
             {form.risks.map((r, i) => (
-              <div key={i} style={{ background: "#f8f9fa", borderRadius: 10, padding: 12, marginBottom: 10, border: "1px solid #e0e0e0" }}>
+              <div key={i} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 12, marginBottom: 10, border: "1px solid rgba(255,255,255,0.08)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13 }}>Risk {i + 1}</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color:"#e8edf2" }}>Risk {i + 1}</span>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <span style={{ background: riskColor(r.riskLevel), color: "#fff", padding: "2px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>Level: {r.riskLevel}</span>
-                    {form.risks.length > 1 && <button onClick={() => removeRisk(i)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Remove</button>}
+                    {form.risks.length > 1 && <button onClick={() => removeRisk(i)} style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Remove</button>}
                   </div>
                 </div>
-                <label style={labelStyle}>Location</label>
-                <input value={r.location} onChange={e => updateRisk(i, "location", e.target.value)} style={inputStyle} />
-                <label style={labelStyle}>Description</label>
-                <textarea value={r.description} onChange={e => updateRisk(i, "description", e.target.value)} style={{ ...inputStyle, minHeight: 50 }} />
-                <div style={{ display: "flex", gap: 8 }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Severity (1-5)</label>
+                <div style={{ marginBottom:12 }}><span style={labelSt}>Location</span><input value={r.location} onChange={e => updateRisk(i, "location", e.target.value)} style={inputStyle} /></div>
+                <div style={{ marginBottom:12 }}><span style={labelSt}>Description</span><textarea value={r.description} onChange={e => updateRisk(i, "description", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 50 }} /></div>
+                <div style={{ display: "grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+                  <div><span style={labelSt}>Severity (1-5)</span>
                     <select value={r.severity} onChange={e => updateRisk(i, "severity", e.target.value)} style={selectStyle}>
                       <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-                    </select>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Likelihood (1-5)</label>
+                    </select></div>
+                  <div><span style={labelSt}>Likelihood (1-5)</span>
                     <select value={r.likelihood} onChange={e => updateRisk(i, "likelihood", e.target.value)} style={selectStyle}>
                       <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-                    </select>
-                  </div>
+                    </select></div>
                 </div>
-                <label style={labelStyle}>Recommended Action</label>
-                <textarea value={r.action} onChange={e => updateRisk(i, "action", e.target.value)} style={{ ...inputStyle, minHeight: 50 }} />
-                <label style={labelStyle}>Priority</label>
+                <div style={{ marginBottom:12 }}><span style={labelSt}>Recommended Action</span><textarea value={r.action} onChange={e => updateRisk(i, "action", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 50 }} /></div>
+                <div style={{ marginBottom:12 }}><span style={labelSt}>Priority</span>
                 <select value={r.priority} onChange={e => updateRisk(i, "priority", e.target.value)} style={selectStyle}>
                   <option>Immediate</option><option>Short term</option><option>Medium term</option>
-                </select>
+                </select></div>
               </div>
             ))}
-            <button onClick={addRisk} style={{ background: "#4A7CFF", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>+ Add Risk</button>
-          </div>
+            <button onClick={addRisk} style={{ background: "#00b4d8", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>+ Add Risk</button>
         </>}
 
-        {/* Step 7: Schematic & Control Measures */}
+        {/* Step 6: Schematic & Control Measures */}
+        {step === 6 && <>
+          <div style={secTitle}>Section 5: System Schematic</div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>System Schematic Description</span><textarea value={form.schematicDescription} onChange={e => s("schematicDescription", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 100 }} placeholder="Describe the water system layout, pipe runs, tanks, calorifiers..." /></div>
+          <div style={secTitle}>Section 6: Control Measures & Recommendations</div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Existing Control Measures</span><textarea value={form.controlMeasuresInPlace} onChange={e => s("controlMeasuresInPlace", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 60 }} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Recommended Control Measures</span><textarea value={form.controlMeasuresRecommended} onChange={e => s("controlMeasuresRecommended", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 60 }} /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Monitoring Frequency</span><input value={form.monitoringFrequency} onChange={e => s("monitoringFrequency", e.target.value)} style={inputStyle} placeholder="e.g. Monthly temperature checks" /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Flushing Requirements</span><input value={form.flushingRequirements} onChange={e => s("flushingRequirements", e.target.value)} style={inputStyle} placeholder="e.g. Weekly flush of infrequently used outlets" /></div>
+        </>}
+
+        {/* Step 7: Declaration & Sign-off */}
         {step === 7 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Section 5: System Schematic</div>
-            <label style={labelStyle}>System Schematic Description</label>
-            <textarea value={form.schematicDescription} onChange={e => s("schematicDescription", e.target.value)} style={{ ...inputStyle, minHeight: 100 }} placeholder="Describe the water system layout, pipe runs, tanks, calorifiers..." />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Section 6: Control Measures & Recommendations</div>
-            <label style={labelStyle}>Existing Control Measures</label>
-            <textarea value={form.controlMeasuresInPlace} onChange={e => s("controlMeasuresInPlace", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
-            <label style={labelStyle}>Recommended Control Measures</label>
-            <textarea value={form.controlMeasuresRecommended} onChange={e => s("controlMeasuresRecommended", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
-            <label style={labelStyle}>Monitoring Frequency</label>
-            <input value={form.monitoringFrequency} onChange={e => s("monitoringFrequency", e.target.value)} style={inputStyle} placeholder="e.g. Monthly temperature checks" />
-            <label style={labelStyle}>Flushing Requirements</label>
-            <input value={form.flushingRequirements} onChange={e => s("flushingRequirements", e.target.value)} style={inputStyle} placeholder="e.g. Weekly flush of infrequently used outlets" />
-          </div>
-        </>}
-
-        {/* Step 8: Declaration & Sign-off */}
-        {step === 8 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Result & Notes</div>
-            <label style={labelStyle}>Result</label>
+          <div style={secTitle}>Result & Notes</div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Result</span>
             <select value={form.result} onChange={e => s("result", e.target.value)} style={selectStyle}>
               <option>Satisfactory</option><option>Unsatisfactory</option>
-            </select>
-            <label style={labelStyle}>Notes / Observations</label>
-            <textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Declaration & Signature</div>
-            <p style={{ fontSize: 12, color: "#666", lineHeight: 1.5, marginBottom: 12 }}>I confirm that this Legionella Risk Assessment has been carried out in accordance with ACOP L8 and HSG274, and the information recorded is accurate to the best of my knowledge.</p>
+            </select></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Notes / Observations</span><textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 60 }} /></div>
+          <div style={secTitle}>Declaration & Signature</div>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.5, marginBottom: 12 }}>I confirm that this Legionella Risk Assessment has been carried out in accordance with ACOP L8 and HSG274, and the information recorded is accurate to the best of my knowledge.</p>
             <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
-          </div>
         </>}
 
-        {navButtons}
+      </div>
+
+      {/* Bottom navigation */}
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+        {step > 0 && (
+          <button onClick={() => setStep(sv => sv-1)} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>
+        )}
+        {step < STEPS.length - 1 ? (
+          <button onClick={() => setStep(sv => sv+1)} style={{ flex:1, padding:"13px", borderRadius:12, background:"#00b4d8", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
+        ) : (
+          <>
+            <button onClick={handleSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save Certificate</button>
+            <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"13px", borderRadius:12, background:"rgba(255,255,255,0.1)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -27219,11 +27153,10 @@ function PlumbingTempLogForm({ onBack, onSave, currentUser }) {
   const [showPDF, setShowPDF] = useState(false);
   const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: "#334", marginBottom: 4 };
-  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #d0d5dd", borderRadius: 8, fontSize: 14, boxSizing: "border-box", marginBottom: 12 };
-  const sectionStyle = { background: "#fff", borderRadius: 14, padding: 16, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" };
-  const sectionTitleStyle = { fontSize: 15, fontWeight: 700, color: "#0d1f2d", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 };
-  const selectStyle = { ...inputStyle, background: "#fff" };
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none", marginBottom:12 };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4, display:"block" };
+  const secTitle = { color:"#00b4d8", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(0,180,216,0.3)", paddingBottom:6 };
 
   if (showPDF) {
     return <PlumbingPDFPreview certType="tempLog" certTitle="Water Temperature Log (HSG274)" certData={form} onClose={() => setShowPDF(false)} />;
@@ -27248,96 +27181,69 @@ function PlumbingTempLogForm({ onBack, onSave, currentUser }) {
   };
 
   return (
-    <div style={{ minHeight: "100dvh", background: "#f0f2f5", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div style={{ background: "linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-        <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 10, background: "#1e3044", border: "1px solid #2a4058", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#8b9db0", flexShrink: 0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6" /></svg>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      {/* Header */}
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>Water Temperature Log</div>
-          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>HSG274 Part 2 — Monthly Record</div>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <div style={{ flex:1 }}>
+          <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", margin:0 }}>Water Temperature Log</h2>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>HSG274 Part 2 — Monthly Record</div>
         </div>
       </div>
 
-      <div style={{ padding: "12px 16px 100px", maxWidth: 600, margin: "0 auto" }}>
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>Site Details</div>
-          <label style={labelStyle}>Reference</label>
-          <input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} />
-          <label style={labelStyle}>Site Name</label>
-          <input value={form.siteName} onChange={e => s("siteName", e.target.value)} style={inputStyle} />
-          <label style={labelStyle}>Address</label>
-          <input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} />
-          <label style={labelStyle}>Month / Year</label>
-          <input type="month" value={form.monthYear} onChange={e => s("monthYear", e.target.value)} style={inputStyle} />
-          <label style={labelStyle}>Responsible Person</label>
-          <input value={form.responsiblePerson} onChange={e => s("responsiblePerson", e.target.value)} style={inputStyle} />
-        </div>
+      {/* Content */}
+      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+        <div style={secTitle}>Site Details</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Reference</span><input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Site Name</span><input value={form.siteName} onChange={e => s("siteName", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Address</span><input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Month / Year</span><input type="month" value={form.monthYear} onChange={e => s("monthYear", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Responsible Person</span><input value={form.responsiblePerson} onChange={e => s("responsiblePerson", e.target.value)} style={inputStyle} /></div>
 
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>Temperature Records</div>
-          <div style={{ fontSize: 12, color: "#4A7CFF", fontWeight: 600, marginBottom: 12 }}>Hot water &gt; 50°C | Cold water &lt; 20°C</div>
+        <div style={secTitle}>Temperature Records</div>
+          <div style={{ fontSize: 12, color: "#00b4d8", fontWeight: 600, marginBottom: 12 }}>Hot water &gt; 50°C | Cold water &lt; 20°C</div>
           {form.readings.map((r, i) => {
             const compliance = getCompliance(r.type, r.temp);
             return (
-              <div key={i} style={{ background: "#f8f9fa", borderRadius: 10, padding: 12, marginBottom: 10, border: "1px solid #e0e0e0" }}>
+              <div key={i} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 12, marginBottom: 10, border: "1px solid rgba(255,255,255,0.08)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13 }}>Reading {i + 1}</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color:"#e8edf2" }}>Reading {i + 1}</span>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    {compliance && <span style={{ background: compliance === "Pass" ? "#d1fae5" : "#fee2e2", color: compliance === "Pass" ? "#065f46" : "#991b1b", padding: "2px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>{compliance}</span>}
-                    {form.readings.length > 1 && <button onClick={() => removeReading(i)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Remove</button>}
+                    {compliance && <span style={{ background: compliance === "Pass" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: compliance === "Pass" ? "#22c55e" : "#ef4444", padding: "2px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, border: compliance === "Pass" ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(239,68,68,0.3)" }}>{compliance}</span>}
+                    {form.readings.length > 1 && <button onClick={() => removeReading(i)} style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Remove</button>}
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Date</label>
-                    <input type="date" value={r.date} onChange={e => updateReading(i, "date", e.target.value)} style={inputStyle} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Type</label>
-                    <select value={r.type} onChange={e => updateReading(i, "type", e.target.value)} style={selectStyle}>
-                      <option>Hot</option><option>Cold</option>
-                    </select>
-                  </div>
+                <div style={{ display: "grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+                  <div><span style={labelSt}>Date</span><input type="date" value={r.date} onChange={e => updateReading(i, "date", e.target.value)} style={inputStyle} /></div>
+                  <div><span style={labelSt}>Type</span><select value={r.type} onChange={e => updateReading(i, "type", e.target.value)} style={selectStyle}><option>Hot</option><option>Cold</option></select></div>
                 </div>
-                <label style={labelStyle}>Outlet Location</label>
-                <input value={r.location} onChange={e => updateReading(i, "location", e.target.value)} style={inputStyle} placeholder="e.g. Kitchen hot tap" />
-                <div style={{ display: "flex", gap: 8 }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Temperature °C</label>
-                    <input type="number" step="0.1" value={r.temp} onChange={e => updateReading(i, "temp", e.target.value)} style={inputStyle} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={labelStyle}>Recorded By</label>
-                    <input value={r.recordedBy} onChange={e => updateReading(i, "recordedBy", e.target.value)} style={inputStyle} />
-                  </div>
+                <div style={{ marginBottom:12 }}><span style={labelSt}>Outlet Location</span><input value={r.location} onChange={e => updateReading(i, "location", e.target.value)} style={inputStyle} placeholder="e.g. Kitchen hot tap" /></div>
+                <div style={{ display: "grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+                  <div><span style={labelSt}>Temperature °C</span><input type="number" step="0.1" value={r.temp} onChange={e => updateReading(i, "temp", e.target.value)} style={inputStyle} /></div>
+                  <div><span style={labelSt}>Recorded By</span><input value={r.recordedBy} onChange={e => updateReading(i, "recordedBy", e.target.value)} style={inputStyle} /></div>
                 </div>
-                <label style={labelStyle}>Comments</label>
-                <input value={r.comments} onChange={e => updateReading(i, "comments", e.target.value)} style={inputStyle} />
+                <div style={{ marginBottom:12 }}><span style={labelSt}>Comments</span><input value={r.comments} onChange={e => updateReading(i, "comments", e.target.value)} style={inputStyle} /></div>
               </div>
             );
           })}
-          <button onClick={addReading} style={{ background: "#4A7CFF", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>+ Add Reading</button>
-        </div>
+          <button onClick={addReading} style={{ background: "#00b4d8", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>+ Add Reading</button>
 
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>Actions & Notes</div>
-          <label style={labelStyle}>Actions Required for Non-Compliant Readings</label>
-          <textarea value={form.actionsRequired} onChange={e => s("actionsRequired", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} placeholder="Describe corrective actions taken..." />
-          <label style={labelStyle}>Notes</label>
-          <textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
-        </div>
+        <div style={secTitle}>Actions & Notes</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Actions Required for Non-Compliant Readings</span><textarea value={form.actionsRequired} onChange={e => s("actionsRequired", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 60 }} placeholder="Describe corrective actions taken..." /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Notes</span><textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 60 }} /></div>
 
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>Signature</div>
-          <p style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>Signed by responsible person</p>
+        <div style={secTitle}>Signature</div>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>Signed by responsible person</p>
           <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
-        </div>
+      </div>
 
-        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-          <button onClick={handleSave} style={{ flex: 1, padding: "14px 0", background: "#00b4d8", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Save Log</button>
-          <button onClick={() => setShowPDF(true)} style={{ flex: 1, padding: "14px 0", background: "#0d1f2d", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Generate PDF</button>
-        </div>
+      {/* Bottom navigation */}
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+        <button onClick={handleSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save Log</button>
+        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"13px", borderRadius:12, background:"rgba(255,255,255,0.1)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
       </div>
     </div>
   );
@@ -27345,8 +27251,9 @@ function PlumbingTempLogForm({ onBack, onSave, currentUser }) {
 
 // ── G3 Unvented Hot Water Certificate (Building Regs G3) — Multi-Step Wizard ─
 function PlumbingG3Form({ onBack, onSave, currentUser }) {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const totalSteps = 5;
+  const STEPS = ["Installer & Client","Cylinder Spec","Safety Devices","Commissioning","Declaration"];
   const [form, setForm] = useState({
     certRef: "G3-" + Date.now().toString(36).toUpperCase(),
     date: new Date().toISOString().slice(0, 10),
@@ -27379,12 +27286,11 @@ function PlumbingG3Form({ onBack, onSave, currentUser }) {
   const [showPDF, setShowPDF] = useState(false);
   const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: "#334", marginBottom: 4 };
-  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #d0d5dd", borderRadius: 8, fontSize: 14, boxSizing: "border-box", marginBottom: 12 };
-  const sectionStyle = { background: "#fff", borderRadius: 14, padding: 16, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" };
-  const sectionTitleStyle = { fontSize: 15, fontWeight: 700, color: "#0d1f2d", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 };
-  const checkStyle = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13 };
-  const selectStyle = { ...inputStyle, background: "#fff" };
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none", marginBottom:12 };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4, display:"block" };
+  const secTitle = { color:"#00b4d8", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(0,180,216,0.3)", paddingBottom:6 };
+  const checkStyle = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13, color:"rgba(255,255,255,0.75)" };
 
   if (showPDF) {
     return <PlumbingPDFPreview certType="g3" certTitle="G3 Unvented Hot Water Certificate" certData={form} onClose={() => setShowPDF(false)} />;
@@ -27396,188 +27302,107 @@ function PlumbingG3Form({ onBack, onSave, currentUser }) {
     alert("G3 Unvented Certificate saved!");
   };
 
-  const progressBar = (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
-      {Array.from({ length: totalSteps }, (_, i) => (
-        <div key={i} style={{ flex: 1, height: 6, borderRadius: 3, background: i + 1 <= step ? "#4A7CFF" : "#e0e0e0", transition: "background 0.2s" }} />
-      ))}
-      <span style={{ fontSize: 11, color: "#666", fontWeight: 600, flexShrink: 0 }}>Step {step}/{totalSteps}</span>
-    </div>
-  );
-
-  const navButtons = (
-    <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-      {step > 1 && <button onClick={() => setStep(step - 1)} style={{ flex: 1, padding: "14px 0", background: "#e0e0e0", color: "#333", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Back</button>}
-      {step < totalSteps && <button onClick={() => setStep(step + 1)} style={{ flex: 1, padding: "14px 0", background: "#4A7CFF", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Next</button>}
-      {step === totalSteps && (
-        <>
-          <button onClick={handleSave} style={{ flex: 1, padding: "14px 0", background: "#00b4d8", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Save</button>
-          <button onClick={() => setShowPDF(true)} style={{ flex: 1, padding: "14px 0", background: "#0d1f2d", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Generate PDF</button>
-        </>
-      )}
-    </div>
-  );
-
   return (
-    <div style={{ minHeight: "100dvh", background: "#f0f2f5", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div style={{ background: "linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-        <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 10, background: "#1e3044", border: "1px solid #2a4058", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#8b9db0", flexShrink: 0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6" /></svg>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>G3 Unvented Cylinder</div>
-          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>Building Regs G3 / BS EN 12897</div>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <div style={{ flex:1 }}>
+          <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", margin:0 }}>G3 Unvented Hot Water</h2>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>Building Regulations G3</div>
         </div>
+        <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", background:"rgba(255,255,255,0.06)", borderRadius:8, padding:"4px 8px" }}>{step+1}/{STEPS.length}</div>
       </div>
-
-      <div style={{ padding: "12px 16px 100px", maxWidth: 600, margin: "0 auto" }}>
-        {progressBar}
-
-        {/* Step 1: Installer & Client */}
+      <div style={{ overflowX:"auto", display:"flex", gap:6, padding:"10px 16px", flexShrink:0, scrollbarWidth:"none" }}>
+        {STEPS.map((st,i) => (
+          <button key={i} onClick={() => setStep(i)}
+            style={{ flexShrink:0, padding:"5px 12px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", border:"1px solid", borderColor: i===step?"#00b4d8":i<step?"rgba(34,197,94,0.4)":"rgba(255,255,255,0.12)", background: i===step?"rgba(0,180,216,0.2)":i<step?"rgba(34,197,94,0.08)":"rgba(255,255,255,0.04)", color: i===step?"#00b4d8":i<step?"#22c55e":"rgba(255,255,255,0.45)" }}>
+            {i<step?"✓ ":""}{st}
+          </button>
+        ))}
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+        {step === 0 && <>
+          <div style={secTitle}>Installer Details</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Certificate Reference</span><input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Date</span><input type="date" value={form.date} onChange={e => s("date", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Engineer Name</span><input value={form.engineerName} onChange={e => s("engineerName", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Company</span><input value={form.company} onChange={e => s("company", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>G3 Qualification No.</span><input value={form.g3QualNo} onChange={e => s("g3QualNo", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Qualification Expiry Date</span><input type="date" value={form.g3QualExpiry} onChange={e => s("g3QualExpiry", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Competent Person Scheme</span><input value={form.competentPersonScheme} onChange={e => s("competentPersonScheme", e.target.value)} style={inputStyle} placeholder="e.g. APHC, CIPHE, SNIPEF" /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>CPS Membership No.</span><input value={form.cpsMembershipNo} onChange={e => s("cpsMembershipNo", e.target.value)} style={inputStyle} /></div>
+          <div style={secTitle}>Client Details</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Client Name</span><input value={form.clientName} onChange={e => s("clientName", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Installation Address</span><input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Postcode</span><input value={form.sitePostcode} onChange={e => s("sitePostcode", e.target.value)} style={inputStyle} /></div>
+        </>}
         {step === 1 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Installer Details</div>
-            <label style={labelStyle}>Certificate Reference</label>
-            <input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Date</label>
-            <input type="date" value={form.date} onChange={e => s("date", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Engineer Name</label>
-            <input value={form.engineerName} onChange={e => s("engineerName", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Company</label>
-            <input value={form.company} onChange={e => s("company", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>G3 Qualification No.</label>
-            <input value={form.g3QualNo} onChange={e => s("g3QualNo", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Qualification Expiry Date</label>
-            <input type="date" value={form.g3QualExpiry} onChange={e => s("g3QualExpiry", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Competent Person Scheme</label>
-            <input value={form.competentPersonScheme} onChange={e => s("competentPersonScheme", e.target.value)} style={inputStyle} placeholder="e.g. APHC, CIPHE, SNIPEF" />
-            <label style={labelStyle}>CPS Membership No.</label>
-            <input value={form.cpsMembershipNo} onChange={e => s("cpsMembershipNo", e.target.value)} style={inputStyle} />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Client Details</div>
-            <label style={labelStyle}>Client Name</label>
-            <input value={form.clientName} onChange={e => s("clientName", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Installation Address</label>
-            <input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Postcode</label>
-            <input value={form.sitePostcode} onChange={e => s("sitePostcode", e.target.value)} style={inputStyle} />
-          </div>
+          <div style={secTitle}>Cylinder Specification</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Make</span><input value={form.cylMake} onChange={e => s("cylMake", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Model</span><input value={form.cylModel} onChange={e => s("cylModel", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Serial No.</span><input value={form.cylSerial} onChange={e => s("cylSerial", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Capacity (litres)</span><input value={form.cylCapacity} onChange={e => s("cylCapacity", e.target.value)} style={inputStyle} placeholder="e.g. 210" /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Direct / Indirect</span><select value={form.cylType} onChange={e => s("cylType", e.target.value)} style={selectStyle}><option>Direct</option><option>Indirect</option></select></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Maximum Working Pressure (bar)</span><input value={form.cylMaxPressure} onChange={e => s("cylMaxPressure", e.target.value)} style={inputStyle} placeholder="e.g. 6" /></div>
         </>}
-
-        {/* Step 2: Cylinder Specification */}
         {step === 2 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Cylinder Specification</div>
-            <label style={labelStyle}>Make</label>
-            <input value={form.cylMake} onChange={e => s("cylMake", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Model</label>
-            <input value={form.cylModel} onChange={e => s("cylModel", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Serial No.</label>
-            <input value={form.cylSerial} onChange={e => s("cylSerial", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Capacity (litres)</label>
-            <input value={form.cylCapacity} onChange={e => s("cylCapacity", e.target.value)} style={inputStyle} placeholder="e.g. 210" />
-            <label style={labelStyle}>Direct / Indirect</label>
-            <select value={form.cylType} onChange={e => s("cylType", e.target.value)} style={selectStyle}>
-              <option>Direct</option><option>Indirect</option>
-            </select>
-            <label style={labelStyle}>Maximum Working Pressure (bar)</label>
-            <input value={form.cylMaxPressure} onChange={e => s("cylMaxPressure", e.target.value)} style={inputStyle} placeholder="e.g. 6" />
-          </div>
+          <div style={secTitle}>Temperature & Pressure Relief Valve</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Make / Model</span><input value={form.tpValveMakeModel} onChange={e => s("tpValveMakeModel", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Setting (°C / bar)</span><input value={form.tpValveSetting} onChange={e => s("tpValveSetting", e.target.value)} style={inputStyle} placeholder="e.g. 90°C / 7 bar" /></div>
+          <div style={checkStyle}><input type="checkbox" checked={form.tpValveDischarge} onChange={e => s("tpValveDischarge", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Discharge pipework to tundish fitted</span></div>
+          <div style={secTitle}>Tundish</div>
+          <div style={checkStyle}><input type="checkbox" checked={form.tundishInstalled} onChange={e => s("tundishInstalled", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Installed and visible</span></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Size</span><input value={form.tundishSize} onChange={e => s("tundishSize", e.target.value)} style={inputStyle} placeholder="e.g. 15mm / 22mm" /></div>
+          <div style={secTitle}>Discharge Pipework</div>
+          <div style={checkStyle}><input type="checkbox" checked={form.dischargeExternal} onChange={e => s("dischargeExternal", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Terminates safely externally</span></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Material</span><input value={form.dischargeMaterial} onChange={e => s("dischargeMaterial", e.target.value)} style={inputStyle} placeholder="e.g. Copper, plastic" /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Size</span><input value={form.dischargeSize} onChange={e => s("dischargeSize", e.target.value)} style={inputStyle} placeholder="e.g. 22mm to 28mm" /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Route Description</span><textarea value={form.dischargeRoute} onChange={e => s("dischargeRoute", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 50 }} placeholder="Describe discharge route..." /></div>
+          <div style={secTitle}>Expansion Vessel</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Make / Model</span><input value={form.expansionMakeModel} onChange={e => s("expansionMakeModel", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Capacity (litres)</span><input value={form.expansionCapacity} onChange={e => s("expansionCapacity", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Charge Pressure (bar)</span><input value={form.expansionCharge} onChange={e => s("expansionCharge", e.target.value)} style={inputStyle} /></div>
+          <div style={secTitle}>PRV, Strainer & Check Valve</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Pressure Reducing Valve Make</span><input value={form.prvMake} onChange={e => s("prvMake", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Set Pressure (bar)</span><input value={form.prvSetPressure} onChange={e => s("prvSetPressure", e.target.value)} style={inputStyle} /></div>
+          <div style={checkStyle}><input type="checkbox" checked={form.lineStrainer} onChange={e => s("lineStrainer", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Line Strainer Fitted</span></div>
+          <div style={checkStyle}><input type="checkbox" checked={form.checkValve} onChange={e => s("checkValve", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Check Valve / Combined Unit Fitted</span></div>
         </>}
-
-        {/* Step 3: Safety Devices */}
         {step === 3 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Temperature & Pressure Relief Valve</div>
-            <label style={labelStyle}>Make / Model</label>
-            <input value={form.tpValveMakeModel} onChange={e => s("tpValveMakeModel", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Setting (°C / bar)</label>
-            <input value={form.tpValveSetting} onChange={e => s("tpValveSetting", e.target.value)} style={inputStyle} placeholder="e.g. 90°C / 7 bar" />
-            <div style={checkStyle}><input type="checkbox" checked={form.tpValveDischarge} onChange={e => s("tpValveDischarge", e.target.checked)} /><span>Discharge pipework to tundish fitted</span></div>
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Tundish</div>
-            <div style={checkStyle}><input type="checkbox" checked={form.tundishInstalled} onChange={e => s("tundishInstalled", e.target.checked)} /><span>Installed and visible</span></div>
-            <label style={labelStyle}>Size</label>
-            <input value={form.tundishSize} onChange={e => s("tundishSize", e.target.value)} style={inputStyle} placeholder="e.g. 15mm / 22mm" />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Discharge Pipework</div>
-            <div style={checkStyle}><input type="checkbox" checked={form.dischargeExternal} onChange={e => s("dischargeExternal", e.target.checked)} /><span>Terminates safely externally</span></div>
-            <label style={labelStyle}>Material</label>
-            <input value={form.dischargeMaterial} onChange={e => s("dischargeMaterial", e.target.value)} style={inputStyle} placeholder="e.g. Copper, plastic" />
-            <label style={labelStyle}>Size</label>
-            <input value={form.dischargeSize} onChange={e => s("dischargeSize", e.target.value)} style={inputStyle} placeholder="e.g. 22mm to 28mm" />
-            <label style={labelStyle}>Route Description</label>
-            <textarea value={form.dischargeRoute} onChange={e => s("dischargeRoute", e.target.value)} style={{ ...inputStyle, minHeight: 50 }} placeholder="Describe discharge route..." />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Expansion Vessel</div>
-            <label style={labelStyle}>Make / Model</label>
-            <input value={form.expansionMakeModel} onChange={e => s("expansionMakeModel", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Capacity (litres)</label>
-            <input value={form.expansionCapacity} onChange={e => s("expansionCapacity", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Charge Pressure (bar)</label>
-            <input value={form.expansionCharge} onChange={e => s("expansionCharge", e.target.value)} style={inputStyle} />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>PRV, Strainer & Check Valve</div>
-            <label style={labelStyle}>Pressure Reducing Valve Make</label>
-            <input value={form.prvMake} onChange={e => s("prvMake", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Set Pressure (bar)</label>
-            <input value={form.prvSetPressure} onChange={e => s("prvSetPressure", e.target.value)} style={inputStyle} />
-            <div style={checkStyle}><input type="checkbox" checked={form.lineStrainer} onChange={e => s("lineStrainer", e.target.checked)} /><span>Line Strainer Fitted</span></div>
-            <div style={checkStyle}><input type="checkbox" checked={form.checkValve} onChange={e => s("checkValve", e.target.checked)} /><span>Check Valve / Combined Unit Fitted</span></div>
-          </div>
+          <div style={secTitle}>Commissioning Measurements</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Cold Water Supply Pressure (bar)</span><input type="number" step="0.1" value={form.coldPressure} onChange={e => s("coldPressure", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Hot Water Temperature at Outlet (°C)</span><input type="number" step="0.1" value={form.hotTempOutlet} onChange={e => s("hotTempOutlet", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Hot Water Temperature at Cylinder Stat (°C)</span><input type="number" step="0.1" value={form.hotTempCylinder} onChange={e => s("hotTempCylinder", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Expansion Vessel Pre-charge Pressure (bar)</span><input type="number" step="0.1" value={form.expansionPrecharge} onChange={e => s("expansionPrecharge", e.target.value)} style={inputStyle} /></div>
+          <div style={checkStyle}><input type="checkbox" checked={form.tpLiftTest} onChange={e => s("tpLiftTest", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>T&P Valve Lift Test Performed</span></div>
+          <div style={checkStyle}><input type="checkbox" checked={form.tundishDischarge} onChange={e => s("tundishDischarge", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Tundish Discharge Observed</span></div>
+          <div style={secTitle}>Building Control Notification</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Method</span><select value={form.buildingControlMethod} onChange={e => s("buildingControlMethod", e.target.value)} style={selectStyle}><option>Self-certification via CPS</option><option>Building Notice submitted</option></select></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Reference Number</span><input value={form.buildingControlRef} onChange={e => s("buildingControlRef", e.target.value)} style={inputStyle} /></div>
+          <div style={checkStyle}><input type="checkbox" checked={form.instructionsGiven} onChange={e => s("instructionsGiven", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Operating Instructions Given to Customer</span></div>
         </>}
-
-        {/* Step 4: Commissioning Measurements */}
         {step === 4 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Commissioning Measurements</div>
-            <label style={labelStyle}>Cold Water Supply Pressure (bar)</label>
-            <input type="number" step="0.1" value={form.coldPressure} onChange={e => s("coldPressure", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Hot Water Temperature at Outlet (°C)</label>
-            <input type="number" step="0.1" value={form.hotTempOutlet} onChange={e => s("hotTempOutlet", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Hot Water Temperature at Cylinder Stat (°C)</label>
-            <input type="number" step="0.1" value={form.hotTempCylinder} onChange={e => s("hotTempCylinder", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Expansion Vessel Pre-charge Pressure (bar)</label>
-            <input type="number" step="0.1" value={form.expansionPrecharge} onChange={e => s("expansionPrecharge", e.target.value)} style={inputStyle} />
-            <div style={checkStyle}><input type="checkbox" checked={form.tpLiftTest} onChange={e => s("tpLiftTest", e.target.checked)} /><span>T&P Valve Lift Test Performed</span></div>
-            <div style={checkStyle}><input type="checkbox" checked={form.tundishDischarge} onChange={e => s("tundishDischarge", e.target.checked)} /><span>Tundish Discharge Observed</span></div>
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Building Control Notification</div>
-            <label style={labelStyle}>Method</label>
-            <select value={form.buildingControlMethod} onChange={e => s("buildingControlMethod", e.target.value)} style={selectStyle}>
-              <option>Self-certification via CPS</option><option>Building Notice submitted</option>
-            </select>
-            <label style={labelStyle}>Reference Number</label>
-            <input value={form.buildingControlRef} onChange={e => s("buildingControlRef", e.target.value)} style={inputStyle} />
-            <div style={checkStyle}><input type="checkbox" checked={form.instructionsGiven} onChange={e => s("instructionsGiven", e.target.checked)} /><span>Operating Instructions Given to Customer</span></div>
-          </div>
+          <div style={secTitle}>Result</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Overall Result</span><select value={form.result} onChange={e => s("result", e.target.value)} style={selectStyle}><option>Satisfactory</option><option>Unsatisfactory</option></select></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Notes</span><textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 60 }} /></div>
+          <div style={secTitle}>Declaration & Signature</div>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.5, marginBottom: 12 }}>I confirm that this unvented hot water system has been installed and commissioned in accordance with Building Regulations Approved Document G3 and BS EN 12897.</p>
+          <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
         </>}
-
-        {/* Step 5: Result & Declaration */}
-        {step === 5 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Result</div>
-            <label style={labelStyle}>Overall Result</label>
-            <select value={form.result} onChange={e => s("result", e.target.value)} style={selectStyle}>
-              <option>Satisfactory</option><option>Unsatisfactory</option>
-            </select>
-            <label style={labelStyle}>Notes</label>
-            <textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Declaration & Signature</div>
-            <p style={{ fontSize: 12, color: "#666", lineHeight: 1.5, marginBottom: 12 }}>I confirm that this unvented hot water system has been installed and commissioned in accordance with Building Regulations Approved Document G3 and BS EN 12897.</p>
-            <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
-          </div>
-        </>}
-
-        {navButtons}
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+        {step > 0 && (<button onClick={() => setStep(sv => sv-1)} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>)}
+        {step < STEPS.length - 1 ? (
+          <button onClick={() => setStep(sv => sv+1)} style={{ flex:1, padding:"13px", borderRadius:12, background:"#00b4d8", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
+        ) : (
+          <>
+            <button onClick={handleSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save Certificate</button>
+            <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"13px", borderRadius:12, background:"rgba(255,255,255,0.1)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -27602,12 +27427,11 @@ function PlumbingTMVForm({ onBack, onSave, currentUser }) {
   const [showPDF, setShowPDF] = useState(false);
   const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: "#334", marginBottom: 4 };
-  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #d0d5dd", borderRadius: 8, fontSize: 14, boxSizing: "border-box", marginBottom: 12 };
-  const sectionStyle = { background: "#fff", borderRadius: 14, padding: 16, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" };
-  const sectionTitleStyle = { fontSize: 15, fontWeight: 700, color: "#0d1f2d", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 };
-  const checkStyle = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13 };
-  const selectStyle = { ...inputStyle, background: "#fff" };
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none", marginBottom:12 };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4, display:"block" };
+  const secTitle = { color:"#00b4d8", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(0,180,216,0.3)", paddingBottom:6 };
+  const checkStyle = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13, color:"rgba(255,255,255,0.75)" };
 
   if (showPDF) {
     return <PlumbingPDFPreview certType="tmv" certTitle="TMV Service Record (HTM 04-01)" certData={form} onClose={() => setShowPDF(false)} />;
@@ -27629,129 +27453,75 @@ function PlumbingTMVForm({ onBack, onSave, currentUser }) {
   const removeValve = (i) => { const a = [...form.valves]; a.splice(i, 1); s("valves", a); };
 
   return (
-    <div style={{ minHeight: "100dvh", background: "#f0f2f5", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div style={{ background: "linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-        <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 10, background: "#1e3044", border: "1px solid #2a4058", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#8b9db0", flexShrink: 0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6" /></svg>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>TMV Service Record</div>
-          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>NHS HTM 04-01 / TMV2 / TMV3</div>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <div style={{ flex:1 }}>
+          <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", margin:0 }}>TMV Service Record</h2>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>HTM 04-01</div>
         </div>
       </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+        <div style={secTitle}>Service Details</div>
+        <div style={{ marginBottom:12 }}><span style={labelSt}>Service Report No.</span><input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} /></div>
+        <div style={{ marginBottom:12 }}><span style={labelSt}>Date</span><input type="date" value={form.date} onChange={e => s("date", e.target.value)} style={inputStyle} /></div>
+        <div style={{ marginBottom:12 }}><span style={labelSt}>Engineer Name</span><input value={form.engineerName} onChange={e => s("engineerName", e.target.value)} style={inputStyle} /></div>
+        <div style={{ marginBottom:12 }}><span style={labelSt}>Company</span><input value={form.company} onChange={e => s("company", e.target.value)} style={inputStyle} /></div>
 
-      <div style={{ padding: "12px 16px 100px", maxWidth: 600, margin: "0 auto" }}>
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>Service Details</div>
-          <label style={labelStyle}>Service Report No.</label>
-          <input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} />
-          <label style={labelStyle}>Date</label>
-          <input type="date" value={form.date} onChange={e => s("date", e.target.value)} style={inputStyle} />
-          <label style={labelStyle}>Engineer Name</label>
-          <input value={form.engineerName} onChange={e => s("engineerName", e.target.value)} style={inputStyle} />
-          <label style={labelStyle}>Company</label>
-          <input value={form.company} onChange={e => s("company", e.target.value)} style={inputStyle} />
-        </div>
+        <div style={secTitle}>Client / Site Details</div>
+        <div style={{ marginBottom:12 }}><span style={labelSt}>Client Name</span><input value={form.clientName} onChange={e => s("clientName", e.target.value)} style={inputStyle} /></div>
+        <div style={{ marginBottom:12 }}><span style={labelSt}>Site / Building</span><input value={form.siteName} onChange={e => s("siteName", e.target.value)} style={inputStyle} /></div>
+        <div style={{ marginBottom:12 }}><span style={labelSt}>Address</span><input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} /></div>
 
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>Client / Site Details</div>
-          <label style={labelStyle}>Client Name</label>
-          <input value={form.clientName} onChange={e => s("clientName", e.target.value)} style={inputStyle} />
-          <label style={labelStyle}>Site / Building</label>
-          <input value={form.siteName} onChange={e => s("siteName", e.target.value)} style={inputStyle} />
-          <label style={labelStyle}>Address</label>
-          <input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} />
-        </div>
-
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>TMV Valves</div>
-          <div style={{ fontSize: 11, color: "#666", marginBottom: 12 }}>Healthcare range: 38-44°C. Failsafe: outlet must drop/shut off when either supply is isolated.</div>
-          {form.valves.map((v, i) => (
-            <div key={i} style={{ background: "#f8f9fa", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid #e0e0e0" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ fontWeight: 700, fontSize: 14, color: "#4A7CFF" }}>Valve {i + 1}</span>
-                {form.valves.length > 1 && <button onClick={() => removeValve(i)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Remove</button>}
-              </div>
-              <label style={labelStyle}>Location</label>
-              <input value={v.location} onChange={e => updateValve(i, "location", e.target.value)} style={inputStyle} placeholder="e.g. En-suite basin" />
-              <div style={{ display: "flex", gap: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>TMV Make / Model</label>
-                  <input value={v.makeModel} onChange={e => updateValve(i, "makeModel", e.target.value)} style={inputStyle} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Serial No.</label>
-                  <input value={v.serialNo} onChange={e => updateValve(i, "serialNo", e.target.value)} style={inputStyle} />
-                </div>
-              </div>
-              <label style={labelStyle}>TMV Approval</label>
-              <select value={v.approval} onChange={e => updateValve(i, "approval", e.target.value)} style={selectStyle}>
-                <option>TMV2</option><option>TMV3</option>
-              </select>
-              <div style={{ display: "flex", gap: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Hot Inlet (°C)</label>
-                  <input type="number" step="0.1" value={v.hotInlet} onChange={e => updateValve(i, "hotInlet", e.target.value)} style={inputStyle} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Cold Inlet (°C)</label>
-                  <input type="number" step="0.1" value={v.coldInlet} onChange={e => updateValve(i, "coldInlet", e.target.value)} style={inputStyle} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Mixed Outlet (°C)</label>
-                  <input type="number" step="0.1" value={v.mixedOutlet} onChange={e => updateValve(i, "mixedOutlet", e.target.value)} style={inputStyle} />
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Specified Range</label>
-                  <input value={v.specifiedRange} onChange={e => updateValve(i, "specifiedRange", e.target.value)} style={inputStyle} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Within Range</label>
-                  <select value={v.withinRange} onChange={e => updateValve(i, "withinRange", e.target.value)} style={selectStyle}>
-                    <option>Yes</option><option>No</option>
-                  </select>
-                </div>
-              </div>
-              <div style={checkStyle}><input type="checkbox" checked={v.strainerPresent} onChange={e => updateValve(i, "strainerPresent", e.target.checked)} /><span>Strainer Present</span></div>
-              <div style={checkStyle}><input type="checkbox" checked={v.strainerCleaned} onChange={e => updateValve(i, "strainerCleaned", e.target.checked)} /><span>Strainer Cleaned</span></div>
-              <div style={{ fontWeight: 600, fontSize: 12, color: "#334", marginBottom: 6, marginTop: 6 }}>Failsafe Tests</div>
-              <div style={checkStyle}><input type="checkbox" checked={v.failsafeCold} onChange={e => updateValve(i, "failsafeCold", e.target.checked)} /><span>Cold supply isolation — outlet drops/shuts off</span></div>
-              <div style={checkStyle}><input type="checkbox" checked={v.failsafeHot} onChange={e => updateValve(i, "failsafeHot", e.target.checked)} /><span>Hot supply isolation — outlet drops/shuts off</span></div>
-              <label style={labelStyle}>Service/Calibration Performed</label>
-              <select value={v.servicePerformed} onChange={e => updateValve(i, "servicePerformed", e.target.value)} style={selectStyle}>
-                <option>Yes</option><option>No</option>
-              </select>
-              <label style={labelStyle}>Comments / Remedial Actions</label>
-              <textarea value={v.comments} onChange={e => updateValve(i, "comments", e.target.value)} style={{ ...inputStyle, minHeight: 50 }} />
+        <div style={secTitle}>TMV Valves</div>
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginBottom: 12 }}>Healthcare range: 38-44°C. Failsafe: outlet must drop/shut off when either supply is isolated.</div>
+        {form.valves.map((v, i) => (
+          <div key={i} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontWeight: 700, fontSize: 14, color: "#00b4d8" }}>Valve {i + 1}</span>
+              {form.valves.length > 1 && <button onClick={() => removeValve(i)} style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Remove</button>}
             </div>
-          ))}
-          <button onClick={addValve} style={{ background: "#4A7CFF", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>+ Add Valve</button>
-        </div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Location</span><input value={v.location} onChange={e => updateValve(i, "location", e.target.value)} style={inputStyle} placeholder="e.g. En-suite basin" /></div>
+            <div style={{ display: "grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+              <div><span style={labelSt}>TMV Make / Model</span><input value={v.makeModel} onChange={e => updateValve(i, "makeModel", e.target.value)} style={inputStyle} /></div>
+              <div><span style={labelSt}>Serial No.</span><input value={v.serialNo} onChange={e => updateValve(i, "serialNo", e.target.value)} style={inputStyle} /></div>
+            </div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>TMV Approval</span><select value={v.approval} onChange={e => updateValve(i, "approval", e.target.value)} style={selectStyle}><option>TMV2</option><option>TMV3</option></select></div>
+            <div style={{ display: "grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:12 }}>
+              <div><span style={labelSt}>Hot Inlet (°C)</span><input type="number" step="0.1" value={v.hotInlet} onChange={e => updateValve(i, "hotInlet", e.target.value)} style={inputStyle} /></div>
+              <div><span style={labelSt}>Cold Inlet (°C)</span><input type="number" step="0.1" value={v.coldInlet} onChange={e => updateValve(i, "coldInlet", e.target.value)} style={inputStyle} /></div>
+              <div><span style={labelSt}>Mixed Outlet (°C)</span><input type="number" step="0.1" value={v.mixedOutlet} onChange={e => updateValve(i, "mixedOutlet", e.target.value)} style={inputStyle} /></div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+              <div><span style={labelSt}>Specified Range</span><input value={v.specifiedRange} onChange={e => updateValve(i, "specifiedRange", e.target.value)} style={inputStyle} /></div>
+              <div><span style={labelSt}>Within Range</span><select value={v.withinRange} onChange={e => updateValve(i, "withinRange", e.target.value)} style={selectStyle}><option>Yes</option><option>No</option></select></div>
+            </div>
+            <div style={checkStyle}><input type="checkbox" checked={v.strainerPresent} onChange={e => updateValve(i, "strainerPresent", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Strainer Present</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={v.strainerCleaned} onChange={e => updateValve(i, "strainerCleaned", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Strainer Cleaned</span></div>
+            <div style={{ fontWeight: 600, fontSize: 12, color: "rgba(255,255,255,0.6)", marginBottom: 6, marginTop: 6, textTransform:"uppercase", letterSpacing:0.5 }}>Failsafe Tests</div>
+            <div style={checkStyle}><input type="checkbox" checked={v.failsafeCold} onChange={e => updateValve(i, "failsafeCold", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Cold supply isolation — outlet drops/shuts off</span></div>
+            <div style={checkStyle}><input type="checkbox" checked={v.failsafeHot} onChange={e => updateValve(i, "failsafeHot", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Hot supply isolation — outlet drops/shuts off</span></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Service/Calibration Performed</span><select value={v.servicePerformed} onChange={e => updateValve(i, "servicePerformed", e.target.value)} style={selectStyle}><option>Yes</option><option>No</option></select></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Comments / Remedial Actions</span><textarea value={v.comments} onChange={e => updateValve(i, "comments", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 50 }} /></div>
+          </div>
+        ))}
+        <button onClick={addValve} style={{ background: "#00b4d8", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%" }}>+ Add Valve</button>
 
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>Result & Notes</div>
-          <label style={labelStyle}>Overall Result</label>
-          <select value={form.result} onChange={e => s("result", e.target.value)} style={selectStyle}>
-            <option>Satisfactory</option><option>Unsatisfactory</option>
-          </select>
-          <label style={labelStyle}>Next Service Due</label>
-          <input type="date" value={form.nextServiceDue} onChange={e => s("nextServiceDue", e.target.value)} style={inputStyle} />
-          <label style={labelStyle}>Notes</label>
-          <textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
-        </div>
+        <div style={secTitle}>Result & Notes</div>
+        <div style={{ marginBottom:12 }}><span style={labelSt}>Overall Result</span><select value={form.result} onChange={e => s("result", e.target.value)} style={selectStyle}><option>Satisfactory</option><option>Unsatisfactory</option></select></div>
+        <div style={{ marginBottom:12 }}><span style={labelSt}>Next Service Due</span><input type="date" value={form.nextServiceDue} onChange={e => s("nextServiceDue", e.target.value)} style={inputStyle} /></div>
+        <div style={{ marginBottom:12 }}><span style={labelSt}>Notes</span><textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 60 }} /></div>
 
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>Declaration & Signature</div>
-          <p style={{ fontSize: 12, color: "#666", lineHeight: 1.5, marginBottom: 12 }}>I confirm that the TMV service has been carried out in accordance with NHS Estates HTM 04-01 and the relevant TMV scheme requirements.</p>
-          <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
-        </div>
-
-        <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-          <button onClick={handleSave} style={{ flex: 1, padding: "14px 0", background: "#00b4d8", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Save Record</button>
-          <button onClick={() => setShowPDF(true)} style={{ flex: 1, padding: "14px 0", background: "#0d1f2d", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Generate PDF</button>
-        </div>
+        <div style={secTitle}>Declaration & Signature</div>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.5, marginBottom: 12 }}>I confirm that the TMV service has been carried out in accordance with NHS Estates HTM 04-01 and the relevant TMV scheme requirements.</p>
+        <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+        <button onClick={handleSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save Record</button>
+        <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"13px", borderRadius:12, background:"rgba(255,255,255,0.1)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
       </div>
     </div>
   );
@@ -27759,8 +27529,9 @@ function PlumbingTMVForm({ onBack, onSave, currentUser }) {
 
 // ── RPZ Valve Test Certificate (WRAS) — Multi-Step Wizard ───────────────────
 function PlumbingRPZForm({ onBack, onSave, currentUser }) {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const totalSteps = 5;
+  const STEPS = ["Tester & Client","Device Details","Pre-Test Checks","Test Results","Remedial & Declaration"];
   const [form, setForm] = useState({
     certRef: "RPZ-" + Date.now().toString(36).toUpperCase(),
     date: new Date().toISOString().slice(0, 10),
@@ -27791,12 +27562,11 @@ function PlumbingRPZForm({ onBack, onSave, currentUser }) {
   const [showPDF, setShowPDF] = useState(false);
   const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: "#334", marginBottom: 4 };
-  const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #d0d5dd", borderRadius: 8, fontSize: 14, boxSizing: "border-box", marginBottom: 12 };
-  const sectionStyle = { background: "#fff", borderRadius: 14, padding: 16, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" };
-  const sectionTitleStyle = { fontSize: 15, fontWeight: 700, color: "#0d1f2d", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 };
-  const checkStyle = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13 };
-  const selectStyle = { ...inputStyle, background: "#fff" };
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none", marginBottom:12 };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const labelSt = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4, display:"block" };
+  const secTitle = { color:"#00b4d8", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(0,180,216,0.3)", paddingBottom:6 };
+  const checkStyle = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13, color:"rgba(255,255,255,0.75)" };
 
   if (showPDF) {
     return <PlumbingPDFPreview certType="rpz" certTitle="RPZ Valve Test Certificate (WRAS)" certData={form} onClose={() => setShowPDF(false)} />;
@@ -27812,190 +27582,116 @@ function PlumbingRPZForm({ onBack, onSave, currentUser }) {
   const cv1Pass = form.cv1Pressure && parseFloat(form.cv1Pressure) >= 5;
   const cv1Result = form.cv1Pressure ? (cv1Pass ? "PASS" : "FAIL") : "";
 
-  const progressBar = (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
-      {Array.from({ length: totalSteps }, (_, i) => (
-        <div key={i} style={{ flex: 1, height: 6, borderRadius: 3, background: i + 1 <= step ? "#4A7CFF" : "#e0e0e0", transition: "background 0.2s" }} />
-      ))}
-      <span style={{ fontSize: 11, color: "#666", fontWeight: 600, flexShrink: 0 }}>Step {step}/{totalSteps}</span>
-    </div>
-  );
-
-  const navButtons = (
-    <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-      {step > 1 && <button onClick={() => setStep(step - 1)} style={{ flex: 1, padding: "14px 0", background: "#e0e0e0", color: "#333", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Back</button>}
-      {step < totalSteps && <button onClick={() => setStep(step + 1)} style={{ flex: 1, padding: "14px 0", background: "#4A7CFF", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Next</button>}
-      {step === totalSteps && (
-        <>
-          <button onClick={handleSave} style={{ flex: 1, padding: "14px 0", background: "#00b4d8", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Save</button>
-          <button onClick={() => setShowPDF(true)} style={{ flex: 1, padding: "14px 0", background: "#0d1f2d", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Generate PDF</button>
-        </>
-      )}
-    </div>
-  );
-
   return (
-    <div style={{ minHeight: "100dvh", background: "#f0f2f5", fontFamily: "'Segoe UI',sans-serif" }}>
-      <div style={{ background: "linear-gradient(135deg,#0d1f2d,#1a3a4a)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-        <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 10, background: "#1e3044", border: "1px solid #2a4058", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#8b9db0", flexShrink: 0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6" /></svg>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>RPZ Valve Test</div>
-          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>WRAS / Water Fittings Regs 1999</div>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <div style={{ flex:1 }}>
+          <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", margin:0 }}>RPZ Valve Test Certificate</h2>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>WRAS Standards</div>
         </div>
+        <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", background:"rgba(255,255,255,0.06)", borderRadius:8, padding:"4px 8px" }}>{step+1}/{STEPS.length}</div>
       </div>
-
-      <div style={{ padding: "12px 16px 100px", maxWidth: 600, margin: "0 auto" }}>
-        {progressBar}
-
-        {/* Step 1: Tester & Client */}
+      <div style={{ overflowX:"auto", display:"flex", gap:6, padding:"10px 16px", flexShrink:0, scrollbarWidth:"none" }}>
+        {STEPS.map((st,i) => (
+          <button key={i} onClick={() => setStep(i)}
+            style={{ flexShrink:0, padding:"5px 12px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", border:"1px solid", borderColor: i===step?"#00b4d8":i<step?"rgba(34,197,94,0.4)":"rgba(255,255,255,0.12)", background: i===step?"rgba(0,180,216,0.2)":i<step?"rgba(34,197,94,0.08)":"rgba(255,255,255,0.04)", color: i===step?"#00b4d8":i<step?"#22c55e":"rgba(255,255,255,0.45)" }}>
+            {i<step?"✓ ":""}{st}
+          </button>
+        ))}
+      </div>
+      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+        {step === 0 && <>
+          <div style={secTitle}>Tester Details</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Certificate No.</span><input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Test Date</span><input type="date" value={form.date} onChange={e => s("date", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Tester Name</span><input value={form.testerName} onChange={e => s("testerName", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Company</span><input value={form.testerCompany} onChange={e => s("testerCompany", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>WRAS-Approved Tester No.</span><input value={form.wrasApprovedNo} onChange={e => s("wrasApprovedNo", e.target.value)} style={inputStyle} /></div>
+          <div style={secTitle}>Client / Site Details</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Client Name</span><input value={form.clientName} onChange={e => s("clientName", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Site Address</span><input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Postcode</span><input value={form.sitePostcode} onChange={e => s("sitePostcode", e.target.value)} style={inputStyle} /></div>
+        </>}
         {step === 1 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Tester Details</div>
-            <label style={labelStyle}>Certificate No.</label>
-            <input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Test Date</label>
-            <input type="date" value={form.date} onChange={e => s("date", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Tester Name</label>
-            <input value={form.testerName} onChange={e => s("testerName", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Company</label>
-            <input value={form.testerCompany} onChange={e => s("testerCompany", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>WRAS-Approved Tester No.</label>
-            <input value={form.wrasApprovedNo} onChange={e => s("wrasApprovedNo", e.target.value)} style={inputStyle} />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Client / Site Details</div>
-            <label style={labelStyle}>Client Name</label>
-            <input value={form.clientName} onChange={e => s("clientName", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Site Address</label>
-            <input value={form.siteAddress} onChange={e => s("siteAddress", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Postcode</label>
-            <input value={form.sitePostcode} onChange={e => s("sitePostcode", e.target.value)} style={inputStyle} />
-          </div>
+          <div style={secTitle}>Device Details</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Make</span><input value={form.deviceMake} onChange={e => s("deviceMake", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Model</span><input value={form.deviceModel} onChange={e => s("deviceModel", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Serial No.</span><input value={form.deviceSerial} onChange={e => s("deviceSerial", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Size</span><input value={form.deviceSize} onChange={e => s("deviceSize", e.target.value)} style={inputStyle} placeholder="e.g. 15mm, 25mm, 50mm" /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Location</span><input value={form.deviceLocation} onChange={e => s("deviceLocation", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Date of Installation</span><input type="date" value={form.installDate} onChange={e => s("installDate", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Date of Last Test</span><input type="date" value={form.lastTestDate} onChange={e => s("lastTestDate", e.target.value)} style={inputStyle} /></div>
         </>}
-
-        {/* Step 2: Device Details */}
         {step === 2 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Device Details</div>
-            <label style={labelStyle}>Make</label>
-            <input value={form.deviceMake} onChange={e => s("deviceMake", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Model</label>
-            <input value={form.deviceModel} onChange={e => s("deviceModel", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Serial No.</label>
-            <input value={form.deviceSerial} onChange={e => s("deviceSerial", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Size</label>
-            <input value={form.deviceSize} onChange={e => s("deviceSize", e.target.value)} style={inputStyle} placeholder="e.g. 15mm, 25mm, 50mm" />
-            <label style={labelStyle}>Location</label>
-            <input value={form.deviceLocation} onChange={e => s("deviceLocation", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Date of Installation</label>
-            <input type="date" value={form.installDate} onChange={e => s("installDate", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Date of Last Test</label>
-            <input type="date" value={form.lastTestDate} onChange={e => s("lastTestDate", e.target.value)} style={inputStyle} />
-          </div>
+          <div style={secTitle}>Pre-Test Checks</div>
+          <div style={checkStyle}><input type="checkbox" checked={form.isoValve1Tight} onChange={e => s("isoValve1Tight", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Isolating Valve No.1 Tight</span></div>
+          <div style={checkStyle}><input type="checkbox" checked={form.isoValve2Tight} onChange={e => s("isoValve2Tight", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Isolating Valve No.2 Tight</span></div>
+          <div style={checkStyle}><input type="checkbox" checked={form.strainerPresent} onChange={e => s("strainerPresent", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Strainer Present</span></div>
+          <div style={checkStyle}><input type="checkbox" checked={form.strainerCleaned} onChange={e => s("strainerCleaned", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Strainer Cleaned</span></div>
+          <div style={checkStyle}><input type="checkbox" checked={form.accessibility} onChange={e => s("accessibility", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Accessibility Acceptable</span></div>
         </>}
-
-        {/* Step 3: Pre-Test Checks */}
         {step === 3 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Pre-Test Checks</div>
-            <div style={checkStyle}><input type="checkbox" checked={form.isoValve1Tight} onChange={e => s("isoValve1Tight", e.target.checked)} /><span>Isolating Valve No.1 Tight</span></div>
-            <div style={checkStyle}><input type="checkbox" checked={form.isoValve2Tight} onChange={e => s("isoValve2Tight", e.target.checked)} /><span>Isolating Valve No.2 Tight</span></div>
-            <div style={checkStyle}><input type="checkbox" checked={form.strainerPresent} onChange={e => s("strainerPresent", e.target.checked)} /><span>Strainer Present</span></div>
-            <div style={checkStyle}><input type="checkbox" checked={form.strainerCleaned} onChange={e => s("strainerCleaned", e.target.checked)} /><span>Strainer Cleaned</span></div>
-            <div style={checkStyle}><input type="checkbox" checked={form.accessibility} onChange={e => s("accessibility", e.target.checked)} /><span>Accessibility Acceptable</span></div>
+          <div style={secTitle}>Test Results</div>
+          <div style={{ background: "rgba(0,180,216,0.08)", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid rgba(0,180,216,0.2)" }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#e8edf2", marginBottom: 8 }}>First (Upstream) Check Valve</div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Differential Pressure Reading (PSID)</span><input type="number" step="0.1" value={form.cv1Pressure} onChange={e => s("cv1Pressure", e.target.value)} style={inputStyle} placeholder="Must be >= 5 PSID" /></div>
+            {cv1Result && (
+              <div style={{ padding: "6px 12px", borderRadius: 6, background: cv1Pass ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: cv1Pass ? "#22c55e" : "#ef4444", fontWeight: 700, fontSize: 13, textAlign: "center", border: cv1Pass ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(239,68,68,0.3)" }}>{cv1Result} {cv1Pass ? "(>= 5 PSID)" : "(< 5 PSID - FAIL)"}</div>
+            )}
           </div>
+          <div style={{ background: "rgba(0,180,216,0.08)", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid rgba(0,180,216,0.2)" }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#e8edf2", marginBottom: 8 }}>Second (Downstream) Check Valve</div>
+            <div style={checkStyle}><input type="checkbox" checked={form.cv2HoldsTight} onChange={e => s("cv2HoldsTight", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Holds Tight</span></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Result</span><select value={form.cv2Result} onChange={e => s("cv2Result", e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select></div>
+          </div>
+          <div style={{ background: "rgba(0,180,216,0.08)", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid rgba(0,180,216,0.2)" }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#e8edf2", marginBottom: 8 }}>Relief Valve</div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Opens at Differential (PSID)</span><input type="number" step="0.1" value={form.reliefValvePSID} onChange={e => s("reliefValvePSID", e.target.value)} style={inputStyle} placeholder="Must be <= 2 PSID below CV1 reading" /></div>
+            <div style={{ marginBottom:12 }}><span style={labelSt}>Result</span><select value={form.reliefValveResult} onChange={e => s("reliefValveResult", e.target.value)} style={selectStyle}><option>Pass</option><option>Fail</option></select></div>
+          </div>
+          <div style={{ background: "rgba(0,180,216,0.08)", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid rgba(0,180,216,0.2)" }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#e8edf2", marginBottom: 8 }}>Downstream Isolation Valve</div>
+            <div style={checkStyle}><input type="checkbox" checked={form.downstreamIsoTight} onChange={e => s("downstreamIsoTight", e.target.checked)} style={{ accentColor:"#00b4d8" }}/><span>Tight</span></div>
+          </div>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, marginTop: 8, color:"#e8edf2" }}>Overall Result</div>
+          <select value={form.overallResult} onChange={e => s("overallResult", e.target.value)} style={{ ...selectStyle, fontSize: 16, fontWeight: 700, textAlign: "center" }}>
+            <option>PASS</option><option>FAIL</option>
+          </select>
+          <div style={secTitle}>Test Equipment</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Make</span><input value={form.testEquipMake} onChange={e => s("testEquipMake", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Model</span><input value={form.testEquipModel} onChange={e => s("testEquipModel", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Serial No.</span><input value={form.testEquipSerial} onChange={e => s("testEquipSerial", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Calibration Date</span><input type="date" value={form.testEquipCalDate} onChange={e => s("testEquipCalDate", e.target.value)} style={inputStyle} /></div>
         </>}
-
-        {/* Step 4: Test Results */}
         {step === 4 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Test Results</div>
-
-            <div style={{ background: "#f0f4ff", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid #d0d8f0" }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: "#333", marginBottom: 8 }}>First (Upstream) Check Valve</div>
-              <label style={labelStyle}>Differential Pressure Reading (PSID)</label>
-              <input type="number" step="0.1" value={form.cv1Pressure} onChange={e => s("cv1Pressure", e.target.value)} style={inputStyle} placeholder="Must be >= 5 PSID" />
-              {cv1Result && (
-                <div style={{ padding: "6px 12px", borderRadius: 6, background: cv1Pass ? "#d1fae5" : "#fee2e2", color: cv1Pass ? "#065f46" : "#991b1b", fontWeight: 700, fontSize: 13, textAlign: "center" }}>{cv1Result} {cv1Pass ? "(>= 5 PSID)" : "(< 5 PSID - FAIL)"}</div>
-              )}
-            </div>
-
-            <div style={{ background: "#f0f4ff", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid #d0d8f0" }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: "#333", marginBottom: 8 }}>Second (Downstream) Check Valve</div>
-              <div style={checkStyle}><input type="checkbox" checked={form.cv2HoldsTight} onChange={e => s("cv2HoldsTight", e.target.checked)} /><span>Holds Tight</span></div>
-              <label style={labelStyle}>Result</label>
-              <select value={form.cv2Result} onChange={e => s("cv2Result", e.target.value)} style={selectStyle}>
-                <option>Pass</option><option>Fail</option>
-              </select>
-            </div>
-
-            <div style={{ background: "#f0f4ff", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid #d0d8f0" }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: "#333", marginBottom: 8 }}>Relief Valve</div>
-              <label style={labelStyle}>Opens at Differential (PSID)</label>
-              <input type="number" step="0.1" value={form.reliefValvePSID} onChange={e => s("reliefValvePSID", e.target.value)} style={inputStyle} placeholder="Must be <= 2 PSID below CV1 reading" />
-              <label style={labelStyle}>Result</label>
-              <select value={form.reliefValveResult} onChange={e => s("reliefValveResult", e.target.value)} style={selectStyle}>
-                <option>Pass</option><option>Fail</option>
-              </select>
-            </div>
-
-            <div style={{ background: "#f0f4ff", borderRadius: 10, padding: 12, marginBottom: 12, border: "1px solid #d0d8f0" }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: "#333", marginBottom: 8 }}>Downstream Isolation Valve</div>
-              <div style={checkStyle}><input type="checkbox" checked={form.downstreamIsoTight} onChange={e => s("downstreamIsoTight", e.target.checked)} /><span>Tight</span></div>
-            </div>
-
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, marginTop: 8 }}>Overall Result</div>
-            <select value={form.overallResult} onChange={e => s("overallResult", e.target.value)} style={{ ...selectStyle, fontSize: 16, fontWeight: 700, textAlign: "center" }}>
-              <option>PASS</option><option>FAIL</option>
-            </select>
-          </div>
-
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Test Equipment</div>
-            <label style={labelStyle}>Make</label>
-            <input value={form.testEquipMake} onChange={e => s("testEquipMake", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Model</label>
-            <input value={form.testEquipModel} onChange={e => s("testEquipModel", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Serial No.</label>
-            <input value={form.testEquipSerial} onChange={e => s("testEquipSerial", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Calibration Date</label>
-            <input type="date" value={form.testEquipCalDate} onChange={e => s("testEquipCalDate", e.target.value)} style={inputStyle} />
-          </div>
+          <div style={secTitle}>Remedial Work</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Remedial Work Performed (if any)</span><textarea value={form.remedialWork} onChange={e => s("remedialWork", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 60 }} /></div>
+          <div style={secTitle}>Permissions</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Permission to Turn Off Supply — Name</span><input value={form.permOffName} onChange={e => s("permOffName", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Permission to Turn On Supply — Name</span><input value={form.permOnName} onChange={e => s("permOnName", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Copy To</span><input value={form.copyTo} onChange={e => s("copyTo", e.target.value)} style={inputStyle} /></div>
+          <div style={secTitle}>Result</div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Next Test Due</span><input type="date" value={form.nextTestDue} onChange={e => s("nextTestDue", e.target.value)} style={inputStyle} /></div>
+          <div style={{ marginBottom:12 }}><span style={labelSt}>Notes</span><textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, resize:"vertical", minHeight: 60 }} /></div>
+          <div style={secTitle}>Declaration & Signature</div>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.5, marginBottom: 12 }}>I confirm that this RPZ valve has been tested in accordance with the Water Supply (Water Fittings) Regulations 1999 and WRAS requirements.</p>
+          <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
         </>}
-
-        {/* Step 5: Permissions, Remedial & Declaration */}
-        {step === 5 && <>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Remedial Work</div>
-            <label style={labelStyle}>Remedial Work Performed (if any)</label>
-            <textarea value={form.remedialWork} onChange={e => s("remedialWork", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Permissions</div>
-            <label style={labelStyle}>Permission to Turn Off Supply — Name</label>
-            <input value={form.permOffName} onChange={e => s("permOffName", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Permission to Turn On Supply — Name</label>
-            <input value={form.permOnName} onChange={e => s("permOnName", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Copy To</label>
-            <input value={form.copyTo} onChange={e => s("copyTo", e.target.value)} style={inputStyle} />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Result</div>
-            <label style={labelStyle}>Next Test Due</label>
-            <input type="date" value={form.nextTestDue} onChange={e => s("nextTestDue", e.target.value)} style={inputStyle} />
-            <label style={labelStyle}>Notes</label>
-            <textarea value={form.notes} onChange={e => s("notes", e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
-          </div>
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Declaration & Signature</div>
-            <p style={{ fontSize: 12, color: "#666", lineHeight: 1.5, marginBottom: 12 }}>I confirm that this RPZ valve has been tested in accordance with the Water Supply (Water Fittings) Regulations 1999 and WRAS requirements.</p>
-            <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
-          </div>
-        </>}
-
-        {navButtons}
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+        {step > 0 && (<button onClick={() => setStep(sv => sv-1)} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>)}
+        {step < STEPS.length - 1 ? (
+          <button onClick={() => setStep(sv => sv+1)} style={{ flex:1, padding:"13px", borderRadius:12, background:"#00b4d8", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
+        ) : (
+          <>
+            <button onClick={handleSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save Certificate</button>
+            <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"13px", borderRadius:12, background:"rgba(255,255,255,0.1)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -28949,30 +28645,44 @@ function OilCertForm({ certType, certTitle, onBack, currentUser }) {
   const [generating, setGenerating] = useState(false);
 
   const set = (k, v) => setFormData(p => ({ ...p, [k]: v }));
-  const inputStyle = { width: "100%", padding: "10px 12px", border: "2px solid #e5e7eb", borderRadius: 10, fontSize: 14, boxSizing: "border-box", fontFamily: "inherit", outline: "none", background: "#fff" };
-  const selectStyle = { ...inputStyle, appearance: "auto" };
-  const labelStyle = { fontSize: 12, fontWeight: 700, color: "#555", marginBottom: 4, display: "block" };
-  const sectionStyle = { background: "#2d6a4f", color: "#fff", padding: "8px 14px", borderRadius: 10, fontSize: 14, fontWeight: 700, margin: "16px 0 10px", letterSpacing: 0.3 };
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #2a4058", background:"#1e3044", color:"#e8edf2", fontSize:14, fontFamily:"'Segoe UI',sans-serif", boxSizing:"border-box", outline:"none" };
+  const selectStyle = { ...inputStyle, appearance:"none", backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b9db0' stroke-width='1.5'/%3E%3C/svg%3E\")", backgroundRepeat:"no-repeat", backgroundPosition:"right 12px center" };
+  const labelStyle = { color:"rgba(255,255,255,0.6)", fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5, marginBottom:4, display:"block" };
+  const sectionStyle = { color:"#2d6a4f", fontSize:14, fontWeight:700, textTransform:"uppercase", letterSpacing:0.8, marginBottom:8, marginTop:20, borderBottom:"1px solid rgba(45,106,79,0.3)", paddingBottom:6 };
   const passFailOpts = ["Pass", "Fail", "Advisory", "N/A"];
 
   const PassFailWithComment = ({ label, field }) => (
-    <div style={{ marginBottom: 10 }}>
-      <label style={labelStyle}>{label}</label>
-      <div style={{ display: "flex", gap: 6 }}>
-        <select value={formData[field]} onChange={e => set(field, e.target.value)} style={{ ...selectStyle, flex: "0 0 110px", borderColor: formData[field] === "Pass" ? "#22c55e" : formData[field] === "Fail" ? "#ef4444" : formData[field] === "Advisory" ? "#f59e0b" : "#e5e7eb" }}>
-          {passFailOpts.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
-        <input value={formData[field + "Comment"] || ""} onChange={e => set(field + "Comment", e.target.value)} placeholder="Comments..." style={{ ...inputStyle, flex: 1 }} />
+    <div style={{ padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+      <label style={{ ...labelStyle, color:"rgba(255,255,255,0.8)", fontSize:12, textTransform:"none", fontWeight:600, marginBottom:6 }}>{label}</label>
+      <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+        {passFailOpts.map(v => (
+          <button key={v} onClick={() => set(field, v)} style={{
+            flex:1, padding:"8px", borderRadius:8, fontSize:12, fontWeight:700, cursor:"pointer",
+            border:"1px solid",
+            borderColor: formData[field] === v ? (v==="Pass" ? "#22c55e" : v==="Fail" ? "#ef4444" : v==="Advisory" ? "#f59e0b" : "rgba(255,255,255,0.3)") : "rgba(255,255,255,0.12)",
+            background: formData[field] === v ? (v==="Pass" ? "rgba(34,197,94,0.15)" : v==="Fail" ? "rgba(239,68,68,0.15)" : v==="Advisory" ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.08)") : "rgba(255,255,255,0.04)",
+            color: formData[field] === v ? (v==="Pass" ? "#22c55e" : v==="Fail" ? "#ef4444" : v==="Advisory" ? "#f59e0b" : "rgba(255,255,255,0.6)") : "rgba(255,255,255,0.45)"
+          }}>{v}</button>
+        ))}
       </div>
+      <input value={formData[field + "Comment"] || ""} onChange={e => set(field + "Comment", e.target.value)} placeholder="Comments..." style={{ ...inputStyle, marginTop:6 }} />
     </div>
   );
 
   const PassFailSelect = ({ label, field }) => (
-    <div style={{ marginBottom: 10 }}>
-      <label style={labelStyle}>{label}</label>
-      <select value={formData[field]} onChange={e => set(field, e.target.value)} style={{ ...selectStyle, borderColor: formData[field] === "Pass" ? "#22c55e" : formData[field] === "Fail" ? "#ef4444" : formData[field] === "Advisory" ? "#f59e0b" : "#e5e7eb" }}>
-        {passFailOpts.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
+    <div style={{ padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+      <label style={{ ...labelStyle, color:"rgba(255,255,255,0.8)", fontSize:12, textTransform:"none", fontWeight:600, marginBottom:6 }}>{label}</label>
+      <div style={{ display:"flex", gap:6 }}>
+        {passFailOpts.map(v => (
+          <button key={v} onClick={() => set(field, v)} style={{
+            flex:1, padding:"8px", borderRadius:8, fontSize:12, fontWeight:700, cursor:"pointer",
+            border:"1px solid",
+            borderColor: formData[field] === v ? (v==="Pass" ? "#22c55e" : v==="Fail" ? "#ef4444" : v==="Advisory" ? "#f59e0b" : "rgba(255,255,255,0.3)") : "rgba(255,255,255,0.12)",
+            background: formData[field] === v ? (v==="Pass" ? "rgba(34,197,94,0.15)" : v==="Fail" ? "rgba(239,68,68,0.15)" : v==="Advisory" ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.08)") : "rgba(255,255,255,0.04)",
+            color: formData[field] === v ? (v==="Pass" ? "#22c55e" : v==="Fail" ? "#ef4444" : v==="Advisory" ? "#f59e0b" : "rgba(255,255,255,0.6)") : "rgba(255,255,255,0.45)"
+          }}>{v}</button>
+        ))}
+      </div>
     </div>
   );
 
@@ -29006,15 +28716,15 @@ function OilCertForm({ certType, certTitle, onBack, currentUser }) {
     const onMove = (e) => { if (!drawing.current) return; e.preventDefault(); const c = canvasRef.current, ctx = c.getContext("2d"), rect = c.getBoundingClientRect(); const pt = e.touches ? e.touches[0] : e; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#222"; ctx.lineTo(pt.clientX - rect.left, pt.clientY - rect.top); ctx.stroke(); };
     const onEnd = () => { drawing.current = false; };
     return (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }} onClick={() => setShowSigPad(false)}>
-        <div style={{ background: "#fff", borderRadius: 16, padding: 20, width: "100%", maxWidth: 400 }} onClick={e => e.stopPropagation()}>
-          <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 700 }}>Sign Below</h3>
-          <canvas ref={canvasRef} width={360} height={150} style={{ border: "2px solid #e5e7eb", borderRadius: 10, width: "100%", touchAction: "none" }}
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }} onClick={() => setShowSigPad(false)}>
+        <div style={{ background: "#1e3044", borderRadius: 16, padding: 20, width: "100%", maxWidth: 400, border:"1px solid #2a4058" }} onClick={e => e.stopPropagation()}>
+          <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 700, color:"#e8edf2" }}>Sign Below</h3>
+          <canvas ref={canvasRef} width={360} height={150} style={{ border: "1px solid #2a4058", borderRadius: 10, width: "100%", touchAction: "none", background:"#fff" }}
             onMouseDown={onStart} onMouseMove={onMove} onMouseUp={onEnd} onMouseLeave={onEnd}
             onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd} />
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <button onClick={() => { const c = canvasRef.current; c.getContext("2d").clearRect(0, 0, c.width, c.height); }}
-              style={{ flex: 1, padding: 10, background: "#f3f4f6", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>Clear</button>
+              style={{ flex: 1, padding: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, fontWeight: 600, cursor: "pointer", color:"#e8edf2" }}>Clear</button>
             <button onClick={() => { set("signatureData", canvasRef.current.toDataURL()); setShowSigPad(false); }}
               style={{ flex: 1, padding: 10, background: "#2d6a4f", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }}>Confirm</button>
           </div>
@@ -29684,44 +29394,52 @@ function OilCertForm({ certType, certTitle, onBack, currentUser }) {
   }
 
   return (
-    <div style={{ minHeight: "100dvh", background: "#f5f6fa", fontFamily: "'Segoe UI',sans-serif" }}>
+    <div style={{ minHeight: "100dvh", background: "linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", fontFamily: "'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
       {/* Header */}
-      <div style={{ background: "linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%)", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-        <button onClick={() => step > 0 ? setStep(step - 1) : onBack()} style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.15)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", flexShrink: 0 }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6" /></svg>
+      <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:10, background:"#1e3044", border:"1px solid #2a4058", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#8b9db0", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>{certTitle}</div>
-          <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>Ref: {formData.certRef} | Step {step + 1} of {totalSteps}</div>
+        <img src={APP_LOGO_SVG} style={{ height:32, objectFit:"contain" }} alt="Logo"/>
+        <div style={{ flex:1 }}>
+          <h2 style={{ fontSize:15, fontWeight:700, color:"#e8edf2", margin:0 }}>{certTitle}</h2>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>Ref: {formData.certRef} · Step {step + 1} of {totalSteps}</div>
         </div>
+        <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", background:"rgba(255,255,255,0.06)", borderRadius:8, padding:"4px 8px" }}>{step+1}/{totalSteps}</div>
       </div>
 
-      {/* Progress Bar */}
-      <div style={{ padding: "8px 16px 0" }}>
-        <div style={{ display: "flex", gap: 3, marginBottom: 4 }}>
-          {steps.map((s, i) => (
-            <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= step ? "#2d6a4f" : "#e5e7eb", transition: "background 0.2s" }} />
-          ))}
-        </div>
-        <div style={{ fontSize: 11, color: "#888", fontWeight: 600, marginBottom: 4 }}>{steps[step]}</div>
+      {/* Step Pills */}
+      <div style={{ overflowX:"auto", display:"flex", gap:6, padding:"10px 16px", flexShrink:0, scrollbarWidth:"none" }}>
+        {steps.map((s, i) => (
+          <button key={i} onClick={() => setStep(i)}
+            style={{ flexShrink:0, padding:"5px 12px", borderRadius:20, fontSize:11, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap",
+              border:"1px solid",
+              borderColor: i===step ? "#2d6a4f" : i<step ? "rgba(34,197,94,0.4)" : "rgba(255,255,255,0.12)",
+              background: i===step ? "rgba(45,106,79,0.2)" : i<step ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.04)",
+              color: i===step ? "#2d6a4f" : i<step ? "#22c55e" : "rgba(255,255,255,0.45)"
+            }}>
+            {i<step?"✓ ":""}{s}
+          </button>
+        ))}
       </div>
 
-      <div style={{ padding: "4px 16px 120px", maxWidth: 480, margin: "0 auto" }}>
+      {/* Content Area */}
+      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
         {renderStepContent()}
       </div>
 
       {/* Bottom navigation */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", borderTop: "1px solid #e5e7eb", padding: "10px 16px", display: "flex", gap: 10, zIndex: 100 }}>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:100 }}>
         {step > 0 && (
-          <button onClick={() => setStep(step - 1)} style={{ flex: 1, padding: 14, background: "#f3f4f6", color: "#333", border: "1px solid #e5e7eb", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Back</button>
+          <button onClick={() => setStep(step - 1)} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>
         )}
         {!isLastStep && (
-          <button onClick={() => setStep(step + 1)} style={{ flex: 2, padding: 14, background: "#2d6a4f", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Next</button>
+          <button onClick={() => setStep(step + 1)} style={{ flex:1, padding:"13px", borderRadius:12, background:"#2d6a4f", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
         )}
         {isLastStep && (
           <>
-            <button onClick={handleSave} style={{ flex: 1, padding: 14, background: "#2d6a4f", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Save</button>
-            <button onClick={handlePDF} disabled={generating} style={{ flex: 1, padding: 14, background: "#1a1a2e", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", opacity: generating ? 0.6 : 1 }}>{generating ? "Generating..." : "PDF"}</button>
+            <button onClick={handleSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save Certificate</button>
+            <button onClick={handlePDF} disabled={generating} style={{ flex:1, padding:"13px", borderRadius:12, background:"rgba(255,255,255,0.1)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer", opacity: generating ? 0.6 : 1 }}>{generating ? "Generating..." : "Generate PDF"}</button>
           </>
         )}
       </div>
