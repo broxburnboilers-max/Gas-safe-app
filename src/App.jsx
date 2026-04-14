@@ -490,7 +490,7 @@ function Header({ title, onBack, right }) {
 
 function BottomBar({ onHome, onNext, onOptions, nextLabel="Next" }) {
   return (
-    <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
+    <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
       <button onClick={onHome} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>Home</button>
       {onOptions ? (
         <button onClick={onOptions} style={{ flex:1, padding:"13px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>Options</button>
@@ -6143,8 +6143,8 @@ const GENERIC_CERT_CONFIGS = {
       { key:"applianceLoc",  label:"Appliance Location" },
       { key:"applianceType", label:"Appliance Type / Make / Model" },
       { key:"inspResult",    label:"Inspection Result (Safe / Unsafe / AR / ID)" },
-      { key:"coReading",     label:"CO Reading (ppm)" },
-      { key:"co2Reading",    label:"CO₂ Reading (%)" },
+      { key:"coReading",     label:"CO Reading (ppm)", inputMode:"decimal" },
+      { key:"co2Reading",    label:"CO₂ Reading (%)", inputMode:"decimal" },
       { key:"flueType",      label:"Flue Type (OF / RS / Fan)" },
       { key:"nextInspDate",  label:"Next Inspection Due", type:"date" },
       { key:"notes",         label:"Notes / Defects",          multiline:true },
@@ -6164,7 +6164,7 @@ const GENERIC_CERT_CONFIGS = {
       { key:"regulatorTest", label:"Regulator Test (Pass / Fail)" },
       { key:"tightnessTest", label:"Tightness Test (Pass / Fail)" },
       { key:"inspResult",    label:"Appliance Safe to Use (Yes / No)" },
-      { key:"coReading",     label:"CO Reading (ppm)" },
+      { key:"coReading",     label:"CO Reading (ppm)", inputMode:"decimal" },
       { key:"nextInspDate",  label:"Next Inspection Due", type:"date" },
       { key:"notes",         label:"Notes / Defects",          multiline:true },
     ],
@@ -6207,9 +6207,9 @@ const GENERIC_CERT_CONFIGS = {
       { key:"applianceLoc",  label:"Appliance Location" },
       { key:"applianceType", label:"Appliance Type / Make / Model / Serial" },
       { key:"inspResult",    label:"Inspection Result (Safe / Unsafe / AR / ID)" },
-      { key:"opPressure",    label:"Operating Pressure (mbar)" },
-      { key:"coReading",     label:"CO Reading (ppm)" },
-      { key:"co2Reading",    label:"CO₂ Reading (%)" },
+      { key:"opPressure",    label:"Operating Pressure (mbar)", inputMode:"decimal" },
+      { key:"coReading",     label:"CO Reading (ppm)", inputMode:"decimal" },
+      { key:"co2Reading",    label:"CO₂ Reading (%)", inputMode:"decimal" },
       { key:"flueType",      label:"Flue Type (OF / RS / Fan)" },
       { key:"safetyDevices", label:"Safety Devices Correct (Yes / No / NA)" },
       { key:"nextInspDate",  label:"Next Inspection Due", type:"date" },
@@ -6417,7 +6417,7 @@ function LPGStepAppliances({ data, onChange, onNext, onBack, onHome }) {
     onChange({...data, appliances: apps});
   };
   const apps = data.appliances || Array(ROWS).fill(null).map(()=>({}));
-  const inp = (i,key,ph) => <input value={apps[i][key]||""} onChange={e=>update(i,key,e.target.value)} placeholder={ph||""}
+  const inp = (i,key,ph,im) => <input value={apps[i][key]||""} onChange={e=>update(i,key,e.target.value)} placeholder={ph||""} inputMode={im||undefined}
     style={{ width:"100%", padding:"7px 8px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, boxSizing:"border-box", background:"#1e3044", color:"#e8edf2" }}/>;
 
   if(mmPicker) {
@@ -6449,14 +6449,14 @@ function LPGStepAppliances({ data, onChange, onNext, onBack, onHome }) {
               <div>{lbl("Appliance Type")}{inp(i,"type","e.g. Central Heating Boiler")}</div>
               <div>{lbl("Make")}{mmInp(i,"make")}</div>
               <div>{lbl("Model")}{mmInp(i,"model")}</div>
-              <div>{lbl("CO₂ Reading")}{inp(i,"co2Reading","CO₂ %")}</div>
-              <div>{lbl("CO Reading (ppm)")}{inp(i,"coReading","ppm")}</div>
+              <div>{lbl("CO₂ Reading")}{inp(i,"co2Reading","CO₂ %","decimal")}</div>
+              <div>{lbl("CO Reading (ppm)")}{inp(i,"coReading","ppm","decimal")}</div>
               <div>{lbl("Flue Type (OF/RS/FL)")}{sel(i,"flueType",flueOpts)}</div>
               <div>{lbl("Appliance Inspected (YES/NO/NA)")}{sel(i,"applianceInspected",ynaOpts)}</div>
-              <div>{lbl("Combustion Analysis Reading")}{inp(i,"combustionReading","CO/CO₂")}</div>
-              <div>{lbl("Operating Pressure (mbar)")}{inp(i,"opPressure","mbar")}</div>
+              <div>{lbl("Combustion Analysis Reading")}{inp(i,"combustionReading","CO/CO₂","decimal")}</div>
+              <div>{lbl("Operating Pressure (mbar)")}{inp(i,"opPressure","mbar","decimal")}</div>
               <div>{lbl("Landlord's Appliance (YES/NO/NA)")}{sel(i,"landlordsAppliance",ynaOpts)}</div>
-              <div>{lbl("Heat Input (kW)")}{inp(i,"heatInput","kW")}</div>
+              <div>{lbl("Heat Input (kW)")}{inp(i,"heatInput","kW","decimal")}</div>
               <div>{lbl("Safety Device(s) Correct Operation")}{sel(i,"safetyDevices",ynaOpts)}</div>
               <div>{lbl("Ventilation Provision Satisfactory")}{sel(i,"ventilation",ynOpts)}</div>
               <div>{lbl("Visual Condition of Flue & Termination")}{sel(i,"flueCondition",ynaOpts)}</div>
@@ -8345,7 +8345,7 @@ function CGSCStepAppliances({ data, onChange, onNext, onBack, onHome }) {
     return <PickerScreen title={isMake?"Make":"Model"} options={isMake?ALL_MAKES:(makeVal?getModelsForMake(makeVal):[])} onSelect={v=>{update(mmPicker.row,mmPicker.field,v);if(isMake)update(mmPicker.row,"model","");setMmPicker(null);}} onBack={()=>setMmPicker(null)} allowCustom={true} onSaveCustom={v=>rememberApplianceValue(mmPicker.field,v)}/>;
   }
 
-  const inp = (i,key,ph) => <input value={apps[i][key]||""} onChange={e=>update(i,key,e.target.value)} placeholder={ph||""}
+  const inp = (i,key,ph,im) => <input value={apps[i][key]||""} onChange={e=>update(i,key,e.target.value)} placeholder={ph||""} inputMode={im||undefined}
     style={{ width:"100%", padding:"7px 8px", border:"1px solid #2a4058", borderRadius:6, fontSize:12, boxSizing:"border-box", background:"#1e3044", color:"#e8edf2" }}/>;
   const mmInp = (i, key) => (
     <div onClick={()=>setMmPicker({row:i,field:key})}
@@ -8361,9 +8361,9 @@ function CGSCStepAppliances({ data, onChange, onNext, onBack, onHome }) {
   const lbl = (t) => <div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.6)", marginBottom:2, textTransform:"uppercase", letterSpacing:0.5 }}>{t}</div>;
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+    <div style={{ display:"flex", flexDirection:"column", minHeight:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Appliance & Inspection Details" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:12, paddingBottom:80 }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:12, paddingBottom:80 }}>
         <div style={{ fontSize:12, color:"#888", marginBottom:10 }}>Enter details for up to 5 appliances</div>
         {Array(ROWS).fill(null).map((_,i)=>(
           <div key={i} style={{ background:"rgba(255,255,255,0.04)", borderRadius:10, padding:12, marginBottom:8, border:"1px solid rgba(255,255,255,0.08)" }}>
@@ -8373,14 +8373,14 @@ function CGSCStepAppliances({ data, onChange, onNext, onBack, onHome }) {
               <div>{lbl("Appliance Type")}{inp(i,"type","e.g. Gas Fired Cylinder")}</div>
               <div>{lbl("Make")}{mmInp(i,"make")}</div>
               <div>{lbl("Model")}{mmInp(i,"model")}</div>
-              <div>{lbl("CO₂ Reading %")}{inp(i,"co2Reading","CO₂ %")}</div>
-              <div>{lbl("CO Reading (ppm)")}{inp(i,"coReading","ppm")}</div>
+              <div>{lbl("CO₂ Reading %")}{inp(i,"co2Reading","CO₂ %","decimal")}</div>
+              <div>{lbl("CO Reading (ppm)")}{inp(i,"coReading","ppm","decimal")}</div>
               <div>{lbl("Flue Type (OF/RS/FL)")}{sel(i,"flueType",flueOpts)}</div>
               <div>{lbl("Appliance Inspected (YES/NO/NA)")}{sel(i,"applianceInspected",ynaOpts)}</div>
-              <div>{lbl("Combustion Analysis Reading")}{inp(i,"combustionReading","CO/CO₂")}</div>
+              <div>{lbl("Combustion Analysis Reading")}{inp(i,"combustionReading","CO/CO₂","decimal")}</div>
               <div>{lbl("Landlord's Appliance (YES/NO/NA)")}{sel(i,"landlordsAppliance",ynaOpts)}</div>
-              <div>{lbl("Operating Pressure (mbar)")}{inp(i,"opPressure","mbar")}</div>
-              <div>{lbl("Heat Input (kW)")}{inp(i,"heatInput","kW")}</div>
+              <div>{lbl("Operating Pressure (mbar)")}{inp(i,"opPressure","mbar","decimal")}</div>
+              <div>{lbl("Heat Input (kW)")}{inp(i,"heatInput","kW","decimal")}</div>
               <div>{lbl("Safety Device(s) Correct Operation")}{sel(i,"safetyDevices",ynaOpts)}</div>
               <div>{lbl("Ventilation Provision Satisfactory")}{sel(i,"ventilation",ynOpts)}</div>
               <div>{lbl("Visual Condition of Flue & Termination")}{sel(i,"flueCondition",ynaOpts)}</div>
@@ -10973,7 +10973,7 @@ function GenericCertScreen({ certLabel, engineerData, onBack, onHome, onSave }) 
             ? <textarea value={form[field.key]} onChange={e=>set(field.key,e.target.value)} style={{...GAS_INPUT, resize:"vertical", minHeight:60}} rows={2}/>
             : field.type === "date"
               ? <input type="date" value={form[field.key]} onChange={e=>set(field.key,e.target.value)} style={GAS_INPUT}/>
-              : <input type="text" value={form[field.key]} onChange={e=>set(field.key,e.target.value)} style={GAS_INPUT}/>
+              : <input type="text" value={form[field.key]} onChange={e=>set(field.key,e.target.value)} inputMode={field.inputMode||undefined} style={GAS_INPUT}/>
           }
         </div>
       ))}
@@ -11459,7 +11459,7 @@ function AttachmentsStep({ data, onChange, onNext, onBack, onHome, accentColor="
             <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>Photos & Documents</div>
           </div>
         </div>
-        <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+        <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"4px 16px 100px" }}>
           <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)", marginBottom:16, lineHeight:1.5 }}>
             Attach photos from your camera or import PDF files. These will be added as extra pages in the certificate PDF.
           </div>
@@ -11503,7 +11503,7 @@ function AttachmentsStep({ data, onChange, onNext, onBack, onHome, accentColor="
             </div>
           )}
         </div>
-        <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+        <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
           <button onClick={onBack} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>
           <button onClick={onNext} style={{ flex:1, padding:"13px", borderRadius:12, background:accentColor, color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>{nextLabel}</button>
         </div>
@@ -11512,9 +11512,9 @@ function AttachmentsStep({ data, onChange, onNext, onBack, onHome, accentColor="
   }
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
+    <div style={{ display:"flex", flexDirection:"column", minHeight:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
       <Header title="Attach Evidence" onBack={onBack} onHome={onHome}/>
-      <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:16, paddingBottom:80 }}>
         <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:16, marginBottom:12, border:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ fontSize:14, color:"#555", marginBottom:16, lineHeight:1.5 }}>
             Attach photos from your camera or import PDF files from flue gas analysers, manometers, etc. These will be added as extra pages in the certificate PDF.
@@ -14499,7 +14499,7 @@ function StepApplianceForm({ appliance, index, onSave, onBack }) {
         </div>
         <button onClick={()=>onSave(a)} style={{ background:GAS_ACCENT, border:"none", borderRadius:8, padding:"8px 18px", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>Done</button>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }} onClick={e => { if(!e.target.closest("[data-keypad-field]")) {} }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"4px 16px 100px" }} onClick={e => { if(!e.target.closest("[data-keypad-field]")) {} }}>
         <div style={GAS_SECTION}>Appliance Details</div>
         <PickField label="Location" field="location" />
         <PickField label="Type" field="type" />
@@ -14573,7 +14573,7 @@ function StepFaultForm({ fault, index, onSave, onBack }) {
         </div>
         <button onClick={()=>onSave(f)} style={{ background:GAS_ACCENT, border:"none", borderRadius:8, padding:"8px 18px", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>Done</button>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"4px 16px 100px" }}>
         <GASTextarea label="Details Of Any Faults" value={f.details} onChange={v=>setF(p=>({...p,details:v}))} maxLength={200} placeholder="Describe the fault..."/>
         <GASTextarea label="Remedial Action Taken" value={f.remedial} onChange={v=>setF(p=>({...p,remedial:v}))} maxLength={200} placeholder="Describe remedial action..."/>
         <div style={GAS_SECTION}>Warning Notice</div>
@@ -19762,7 +19762,7 @@ function BSStepNotes({ data, onChange, onNext, onBack, onHome }) {
       <div style={GAS_SECTION}>Notes & Spares</div>
       <GASTextarea label="Additional Notes" value={data.additionalNotes} onChange={v=>onChange({...data,additionalNotes:v})} placeholder="Additional notes..."/>
       <GASTextarea label="Spares Required" value={data.sparesRequired} onChange={v=>onChange({...data,sparesRequired:v})} placeholder="List spares..."/>
-      <GASInput label="CO/CO2 Ratio" value={data.coCo2Ratio} onChange={v=>onChange({...data,coCo2Ratio:v})} placeholder="CO/CO2 ratio"/>
+      <GASInput label="CO/CO2 Ratio" value={data.coCo2Ratio} onChange={v=>onChange({...data,coCo2Ratio:v})} placeholder="CO/CO2 ratio" inputMode="decimal"/>
     </GasFormShell>
   );
 }
@@ -23528,12 +23528,12 @@ function EICRForm({ onBack, onSave, currentUser }) {
       </div>
 
       {/* Content */}
-      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"4px 16px 100px" }}>
         {stepRenderers[step]()}
       </div>
 
       {/* Bottom navigation */}
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+      <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
         {step > 0 && (
           <button onClick={() => setStep(s => s-1)} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>
         )}
@@ -23835,8 +23835,8 @@ function EICForm({ onBack, onSave, currentUser }) {
           {STEPS.map((s, i) => <button key={i} onClick={() => setStep(i)} style={{ padding:"6px 10px", borderRadius:8, border:"none", fontSize:10, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", background: i === step ? "#3b82f6" : i < step ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.08)", color: i === step ? "#fff" : i < step ? "#4ade80" : "rgba(255,255,255,0.4)" }}>{i+1}. {s}</button>)}
         </div>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 120px" }}>{renderStep()}</div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:8 }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"0 16px 100px" }}>{renderStep()}</div>
+      <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
         {step > 0 && <button onClick={() => setStep(step - 1)} style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Back</button>}
         {step < STEPS.length - 1 ? (
           <button onClick={() => setStep(step + 1)} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
@@ -24036,8 +24036,8 @@ function MinorWorksForm({ onBack, onSave, currentUser }) {
           {STEPS.map((s, i) => <button key={i} onClick={() => setStep(i)} style={{ padding:"6px 10px", borderRadius:8, border:"none", fontSize:10, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", background: i === step ? "#3b82f6" : i < step ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.08)", color: i === step ? "#fff" : i < step ? "#4ade80" : "rgba(255,255,255,0.4)" }}>{i+1}. {s}</button>)}
         </div>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 120px" }}>{renderStep()}</div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:8 }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"0 16px 100px" }}>{renderStep()}</div>
+      <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
         {step > 0 && <button onClick={() => setStep(step - 1)} style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Back</button>}
         {step < STEPS.length - 1 ? (
           <button onClick={() => setStep(step + 1)} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
@@ -24220,8 +24220,8 @@ function EVChargerForm({ onBack, onSave, currentUser }) {
           {STEPS.map((s, i) => <button key={i} onClick={() => setStep(i)} style={{ padding:"6px 10px", borderRadius:8, border:"none", fontSize:10, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", background: i === step ? "#3b82f6" : i < step ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.08)", color: i === step ? "#fff" : i < step ? "#4ade80" : "rgba(255,255,255,0.4)" }}>{i+1}. {s}</button>)}
         </div>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 120px" }}>{renderStep()}</div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:8 }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"0 16px 100px" }}>{renderStep()}</div>
+      <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
         {step > 0 && <button onClick={() => setStep(step - 1)} style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Back</button>}
         {step < STEPS.length - 1 ? (
           <button onClick={() => setStep(step + 1)} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
@@ -24380,8 +24380,8 @@ function PATTestingForm({ onBack, onSave, currentUser }) {
           {STEPS.map((s, i) => <button key={i} onClick={() => setStep(i)} style={{ padding:"6px 10px", borderRadius:8, border:"none", fontSize:10, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", background: i === step ? "#3b82f6" : i < step ? "rgba(34,197,94,0.2)" : "rgba(255,255,255,0.08)", color: i === step ? "#fff" : i < step ? "#4ade80" : "rgba(255,255,255,0.4)" }}>{i+1}. {s}</button>)}
         </div>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 120px" }}>{renderStep()}</div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:8 }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"0 16px 100px" }}>{renderStep()}</div>
+      <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"12px 16px", background:"linear-gradient(0deg, #0d1f2d 0%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
         {step > 0 && <button onClick={() => setStep(step - 1)} style={{ padding:"14px 16px", borderRadius:12, background:"rgba(255,255,255,0.12)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Back</button>}
         {step < STEPS.length - 1 ? (
           <button onClick={() => setStep(step + 1)} style={{ flex:1, padding:"14px", borderRadius:12, background:"#3b82f6", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
@@ -25038,10 +25038,10 @@ function FireFormShell({ title, step, totalSteps, stepLabels, onBack, onPrev, on
           </button>
         ))}
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"4px 16px 100px" }}>
         {children}
       </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+      <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
         {step > 0 && (
           <button onClick={onPrev} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>
         )}
@@ -25154,10 +25154,10 @@ function GasFormShell({ title, subtitle, step, totalSteps, stepLabels, onBack, o
           ))}
         </div>
       )}
-      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"4px 16px 100px" }}>
         {children}
       </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+      <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
         {step > 0 && onPrev && (
           <button onClick={onPrev} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>
         )}
@@ -25179,8 +25179,8 @@ function GasFormShell({ title, subtitle, step, totalSteps, stepLabels, onBack, o
 function GASField({ label, children }) {
   return <div style={{ marginBottom:12 }}><span style={GAS_LABEL}>{label}</span>{children}</div>;
 }
-function GASInput({ label, value, onChange, type, placeholder }) {
-  return <GASField label={label}><input type={type || "text"} style={GAS_INPUT} value={value||""} onChange={e => onChange(e.target.value)} placeholder={placeholder}/></GASField>;
+function GASInput({ label, value, onChange, type, placeholder, inputMode: im }) {
+  return <GASField label={label}><input type={type || "text"} style={GAS_INPUT} value={value||""} onChange={e => onChange(e.target.value)} placeholder={placeholder} inputMode={im||undefined}/></GASField>;
 }
 function GASSelect({ label, value, onChange, options }) {
   return <GASField label={label}><select style={GAS_SELECT} value={value||""} onChange={e => onChange(e.target.value)}><option value="">Select...</option>{options.map(o => <option key={o} value={o}>{o}</option>)}</select></GASField>;
@@ -26922,7 +26922,7 @@ function PlumbingLRAForm({ onBack, onSave, currentUser }) {
       </div>
 
       {/* Content */}
-      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"4px 16px 100px" }}>
 
         {/* Step 0: Executive Summary & Assessor */}
         {step === 0 && <>
@@ -27102,7 +27102,7 @@ function PlumbingLRAForm({ onBack, onSave, currentUser }) {
       </div>
 
       {/* Bottom navigation */}
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+      <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
         {step > 0 && (
           <button onClick={() => setStep(sv => sv-1)} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>
         )}
@@ -27176,7 +27176,7 @@ function PlumbingTempLogForm({ onBack, onSave, currentUser }) {
       </div>
 
       {/* Content */}
-      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"4px 16px 100px" }}>
         <div style={secTitle}>Site Details</div>
           <div style={{ marginBottom:12 }}><span style={labelSt}>Reference</span><input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} /></div>
           <div style={{ marginBottom:12 }}><span style={labelSt}>Site Name</span><input value={form.siteName} onChange={e => s("siteName", e.target.value)} style={inputStyle} /></div>
@@ -27222,7 +27222,7 @@ function PlumbingTempLogForm({ onBack, onSave, currentUser }) {
       </div>
 
       {/* Bottom navigation */}
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+      <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
         <button onClick={handleSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save Log</button>
         <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"13px", borderRadius:12, background:"rgba(255,255,255,0.1)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
       </div>
@@ -27304,7 +27304,7 @@ function PlumbingG3Form({ onBack, onSave, currentUser }) {
           </button>
         ))}
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"4px 16px 100px" }}>
         {step === 0 && <>
           <div style={secTitle}>Installer Details</div>
           <div style={{ marginBottom:12 }}><span style={labelSt}>Certificate Reference</span><input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} /></div>
@@ -27374,7 +27374,7 @@ function PlumbingG3Form({ onBack, onSave, currentUser }) {
           <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
         </>}
       </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+      <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
         {step > 0 && (<button onClick={() => setStep(sv => sv-1)} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>)}
         {step < STEPS.length - 1 ? (
           <button onClick={() => setStep(sv => sv+1)} style={{ flex:1, padding:"13px", borderRadius:12, background:"#00b4d8", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
@@ -27445,7 +27445,7 @@ function PlumbingTMVForm({ onBack, onSave, currentUser }) {
           <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:1 }}>HTM 04-01</div>
         </div>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"4px 16px 100px" }}>
         <div style={secTitle}>Service Details</div>
         <div style={{ marginBottom:12 }}><span style={labelSt}>Service Report No.</span><input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} /></div>
         <div style={{ marginBottom:12 }}><span style={labelSt}>Date</span><input type="date" value={form.date} onChange={e => s("date", e.target.value)} style={inputStyle} /></div>
@@ -27500,7 +27500,7 @@ function PlumbingTMVForm({ onBack, onSave, currentUser }) {
         <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.5, marginBottom: 12 }}>I confirm that the TMV service has been carried out in accordance with NHS Estates HTM 04-01 and the relevant TMV scheme requirements.</p>
         <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
       </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+      <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
         <button onClick={handleSave} style={{ flex:1, padding:"13px", borderRadius:12, background:"#22c55e", color:"#fff", fontWeight:700, fontSize:14, border:"none", cursor:"pointer" }}>Save Record</button>
         <button onClick={() => setShowPDF(true)} style={{ flex:1, padding:"13px", borderRadius:12, background:"rgba(255,255,255,0.1)", color:"#fff", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.25)", cursor:"pointer" }}>Generate PDF</button>
       </div>
@@ -27584,7 +27584,7 @@ function PlumbingRPZForm({ onBack, onSave, currentUser }) {
           </button>
         ))}
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"4px 16px 100px" }}>
         {step === 0 && <>
           <div style={secTitle}>Tester Details</div>
           <div style={{ marginBottom:12 }}><span style={labelSt}>Certificate No.</span><input value={form.certRef} onChange={e => s("certRef", e.target.value)} style={inputStyle} /></div>
@@ -27663,7 +27663,7 @@ function PlumbingRPZForm({ onBack, onSave, currentUser }) {
           <PlumbingSigPad onSign={dataUrl => s("signatureData", dataUrl)} />
         </>}
       </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8 }}>
+      <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
         {step > 0 && (<button onClick={() => setStep(sv => sv-1)} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>)}
         {step < STEPS.length - 1 ? (
           <button onClick={() => setStep(sv => sv+1)} style={{ flex:1, padding:"13px", borderRadius:12, background:"#00b4d8", color:"#fff", fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>Next</button>
@@ -28669,10 +28669,10 @@ function OilCertForm({ certType, certTitle, onBack, currentUser, onSave }) {
     </div>
   );
 
-  const Field = ({ label, field, type = "text", placeholder = "" }) => (
+  const Field = ({ label, field, type = "text", placeholder = "", inputMode: im }) => (
     <div style={{ marginBottom: 10 }}>
       <label style={labelStyle}>{label}</label>
-      <input type={type} value={formData[field] || ""} onChange={e => set(field, e.target.value)} placeholder={placeholder} style={inputStyle} />
+      <input type={type} value={formData[field] || ""} onChange={e => set(field, e.target.value)} placeholder={placeholder} inputMode={im||undefined} style={inputStyle} />
     </div>
   );
 
@@ -28823,7 +28823,7 @@ function OilCertForm({ certType, certTitle, onBack, currentUser, onSave }) {
         <Field label="Net Temperature (\u00b0C)" field="netTemp" type="number" />
         <Field label="CO\u2082 (%)" field="co2Percent" type="number" />
         <Field label="CO (ppm)" field="coPPM" type="number" />
-        <Field label="CO/CO\u2082 Ratio" field="coCo2Ratio" />
+        <Field label="CO/CO\u2082 Ratio" field="coCo2Ratio" inputMode="decimal" />
         <Field label="Smoke No. (0-9)" field="smokeNumber" type="number" />
         <Field label="Efficiency (%)" field="efficiency" type="number" />
         <Field label="Oil Pressure (bar/psi)" field="oilPressure" />
@@ -29107,7 +29107,7 @@ function OilCertForm({ certType, certTitle, onBack, currentUser, onSave }) {
         <Field label="Net Temperature (\u00b0C)" field="netTemp" type="number" />
         <Field label="CO\u2082 (%)" field="co2Percent" type="number" />
         <Field label="CO (ppm)" field="coPPM" type="number" />
-        <Field label="CO/CO\u2082 Ratio" field="coCo2Ratio" />
+        <Field label="CO/CO\u2082 Ratio" field="coCo2Ratio" inputMode="decimal" />
         <Field label="Smoke No. (0-9)" field="smokeNumber" type="number" />
         <Field label="Efficiency (%)" field="efficiency" type="number" />
         <Field label="Oil Pressure (bar)" field="oilPressure" />
@@ -29410,12 +29410,12 @@ function OilCertForm({ certType, certTitle, onBack, currentUser, onSave }) {
       </div>
 
       {/* Content Area */}
-      <div style={{ flex:1, overflowY:"auto", padding:"4px 16px 120px" }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"4px 16px 100px" }}>
         {renderStepContent()}
       </div>
 
       {/* Bottom navigation */}
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:100 }}>
+      <div style={{ position:"sticky", bottom:0, left:0, right:0, padding:"10px 16px 16px", background:"linear-gradient(0deg, #0d1f2d 70%, transparent 100%)", display:"flex", gap:8, zIndex:10 }}>
         {step > 0 && (
           <button onClick={() => setStep(step - 1)} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.08)", color:"#e8edf2", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.15)", cursor:"pointer" }}>Back</button>
         )}
