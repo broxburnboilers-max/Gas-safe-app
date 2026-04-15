@@ -5350,7 +5350,7 @@ function HomeScreen({ onNew, onSelectCertType, onRecords, onReport, onLogout, cu
               <div style={{ color:"rgba(255,255,255,0.7)", fontSize:12 }}>Select gas certificate type</div>
             </div>
           </div>
-          <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+          <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 88px", display:"flex", flexDirection:"column", alignItems:"center", gap:24 }}>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Safety Certificate"); }} label="Gas Safety Certificate" color="#fff200" iconBg="#0d3320">
               <span style={{ fontSize:28 }}>🛡️</span>
             </PillBtn>
@@ -24606,7 +24606,7 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
               <div style={{ color:"rgba(255,255,255,0.7)", fontSize:12 }}>Select electrical certificate type</div>
             </div>
           </div>
-          <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+          <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 88px", display:"flex", flexDirection:"column", alignItems:"center", gap:24 }}>
             <ElecPillBtn onClick={() => { setShowNewJobFolder(false); setElecScreen("eicr"); }} label="New EICR" color="#3b82f6" iconBg="#1d4ed8">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
             </ElecPillBtn>
@@ -26255,7 +26255,7 @@ function FireSafetyDashboard({ onBack, currentUser, onSaveCert, onRecords, onRep
               <div style={{ color:"rgba(255,255,255,0.7)", fontSize:12 }}>Select fire safety certificate type</div>
             </div>
           </div>
-          <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+          <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 88px", display:"flex", flexDirection:"column", alignItems:"center", gap:24 }}>
             <FirePillBtn onClick={() => { setShowNewJobFolder(false); setFireScreen("fra"); }} label="Fire Risk Assessment" color="#ef4444" iconBg="#991b1b">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM8 15h8v2H8v-2zm0-4h8v2H8v-2z"/></svg>
             </FirePillBtn>
@@ -27990,7 +27990,7 @@ function PlumbingDashboard({ onBack, currentUser, onNewJob, onRecords, onReport,
               <div style={{ color:"rgba(255,255,255,0.7)", fontSize:12 }}>Select plumbing certificate type</div>
             </div>
           </div>
-          <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+          <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 88px", display:"flex", flexDirection:"column", alignItems:"center", gap:24 }}>
             <PlumbPillBtn onClick={() => { setShowNewJobFolder(false); setPlumbScreen("lra"); }} label="Legionella Risk Assessment" color="#00b4d8" iconBg="#0077b6">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
             </PlumbPillBtn>
@@ -29766,7 +29766,7 @@ function OilRenewablesDashboard({ onBack, currentUser, onNewJob, onRecords, onRe
               <div style={{ color:"rgba(255,255,255,0.7)", fontSize:12 }}>Select oil & renewables certificate type</div>
             </div>
           </div>
-          <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+          <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 88px", display:"flex", flexDirection:"column", alignItems:"center", gap:24 }}>
             <OilPillBtn onClick={() => { setShowNewJobFolder(false); setOilScreen("oilCD11"); }} label="OFTEC CD/11 Service" color="#2d6a4f" iconBg="#1b4332">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
             </OilPillBtn>
