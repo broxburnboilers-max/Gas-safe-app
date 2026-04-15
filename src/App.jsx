@@ -5136,7 +5136,7 @@ function HomeScreen({ onNew, onSelectCertType, onRecords, onReport, onLogout, cu
             : `0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)`,
           transition:"all 0.16s ease",
           transform: hov ? "translateY(-2px) scale(1.018)" : "translateY(0) scale(1)",
-          position:"relative", width:"100%", maxWidth:360, height:76,
+          position:"relative", width:"100%", maxWidth:360, height:76, minHeight:76, flexShrink:0,
         }}>
         {/* Icon circle with gradient */}
         <div style={{
@@ -24467,7 +24467,7 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
           boxShadow: hov ? "0 8px 28px rgba(0,0,0,0.42), 0 2px 10px rgba(0,0,0,0.22)" : "0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)",
           transition:"all 0.16s ease",
           transform: hov ? "translateY(-2px) scale(1.018)" : "translateY(0) scale(1)",
-          position:"relative", width:"100%", maxWidth:360, height:76,
+          position:"relative", width:"100%", maxWidth:360, height:76, minHeight:76, flexShrink:0,
         }}>
         <div style={{
           width:58, height:58, borderRadius:"50%", flexShrink:0,
@@ -26112,7 +26112,7 @@ function FireSafetyDashboard({ onBack, currentUser, onSaveCert, onRecords, onRep
           boxShadow: hov ? "0 8px 28px rgba(0,0,0,0.42), 0 2px 10px rgba(0,0,0,0.22)" : "0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)",
           transition:"all 0.16s ease",
           transform: hov ? "translateY(-2px) scale(1.018)" : "translateY(0) scale(1)",
-          position:"relative", width:"100%", maxWidth:360, height:76,
+          position:"relative", width:"100%", maxWidth:360, height:76, minHeight:76, flexShrink:0,
         }}>
         <div style={{
           width:58, height:58, borderRadius:"50%", flexShrink:0,
@@ -27825,7 +27825,7 @@ function PlumbingDashboard({ onBack, currentUser, onNewJob, onRecords, onReport,
           boxShadow: hov ? "0 8px 28px rgba(0,0,0,0.42), 0 2px 10px rgba(0,0,0,0.22)" : "0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)",
           transition:"all 0.16s ease",
           transform: hov ? "translateY(-2px) scale(1.018)" : "translateY(0) scale(1)",
-          position:"relative", width:"100%", maxWidth:360, height:76,
+          position:"relative", width:"100%", maxWidth:360, height:76, minHeight:76, flexShrink:0,
         }}>
         <div style={{
           width:58, height:58, borderRadius:"50%", flexShrink:0,
