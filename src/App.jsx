@@ -5000,12 +5000,13 @@ function EngineerManagementScreen({ onBack, onHome }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 
-function HomeScreen({ onNew, onSelectCertType, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine, onAdminDashboard, onPSC, onBankStatements, onGasRateCalc, onJobSheets, onEngineerManagement, onBackToTrades }) {
+function HomeScreen({ onNew, onSelectCertType, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine, onAdminDashboard, onPSC, onBankStatements, onGasRateCalc, onJobSheets, onEngineerManagement, onBackToTrades, initialShowNewJob, onClearNewJobFlag }) {
   const trialStatus = getTrialStatus();
   const daysLeft = getTrialDaysLeft();
   const [showFeedback, setShowFeedback] = useState(false);
   const [showFeatureSuggest, setShowFeatureSuggest] = useState(false);
-  const [showNewJobFolder, setShowNewJobFolder] = useState(false);
+  const [showNewJobFolder, setShowNewJobFolder] = useState(!!initialShowNewJob);
+  useEffect(() => { if (initialShowNewJob && onClearNewJobFlag) onClearNewJobFlag(); }, []);
 
   // Contacts pulse — show pulsing button until user has imported at least one contact
   const hasContacts = (() => { try { return JSON.parse(localStorage.getItem(sk("client_contacts")) || "[]").length > 0; } catch { return false; } })();
@@ -5288,7 +5289,7 @@ function HomeScreen({ onNew, onSelectCertType, onRecords, onReport, onLogout, cu
         <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, marginBottom:4, textAlign:"center", letterSpacing:0.3, textTransform:"uppercase", fontWeight:600 }}>What would you like to do?</p>
 
         {/* New Job folder pill at top — opens sub-view with all gas cert types */}
-        <PillBtn onClick={() => setShowNewJobFolder(true)} label="New Job" color="#f59e0b" iconBg="#92400e">
+        <PillBtn onClick={() => setShowNewJobFolder(true)} label="New Job" color="#eab308" iconBg="#a16207">
           <svg width="28" height="28" viewBox="0 0 52 52" fill="none"><rect x="22" y="4" width="8" height="44" rx="4" fill="#fff"/><rect x="4" y="22" width="44" height="8" rx="4" fill="#fff"/></svg>
         </PillBtn>
         <PillBtn onClick={onPSC} label="Property Safety Check" color="#dc2626" iconBg="#991b1b">
@@ -5297,30 +5298,30 @@ function HomeScreen({ onNew, onSelectCertType, onRecords, onReport, onLogout, cu
         <PillBtn onClick={onGasRateCalc} label="Gas Rate Calculator" color="#3b82f6" iconBg="#1d4ed8">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c.83 0 1.5.67 1.5 1.5S12.83 8 12 8s-1.5-.67-1.5-1.5S11.17 5 12 5zm-1 14v-2h2v2h-2zm2.5-4.5c0 .28-.22.5-.5.5h-2c-.28 0-.5-.22-.5-.5v-5c0-.28.22-.5.5-.5h2c.28 0 .5.22.5.5v5z" fill="white"/><path d="M8 13l4-6 4 6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/><circle cx="12" cy="15" r="2" fill="#fff"/></svg>
         </PillBtn>
-        <PillBtn onClick={onRecords} label="Records" color="#f59e0b" iconBg="#92400e">
-          <svg width="30" height="26" viewBox="0 0 56 48" fill="none"><rect x="2" y="10" width="52" height="36" rx="5" fill="white"/><rect x="2" y="6" width="22" height="14" rx="5" fill="white"/><rect x="8" y="18" width="40" height="24" rx="3" fill="rgba(245,158,11,0.3)"/></svg>
+        <PillBtn onClick={onRecords} label="Records" color="#eab308" iconBg="#a16207">
+          <svg width="30" height="26" viewBox="0 0 56 48" fill="none"><rect x="2" y="10" width="52" height="36" rx="5" fill="white"/><rect x="2" y="6" width="22" height="14" rx="5" fill="white"/><rect x="8" y="18" width="40" height="24" rx="3" fill="rgba(234,179,8,0.3)"/></svg>
         </PillBtn>
-        <PillBtn onClick={onReport} label="Reports" color="#f59e0b" iconBg="#92400e">
+        <PillBtn onClick={onReport} label="Reports" color="#eab308" iconBg="#a16207">
           <svg width="30" height="30" viewBox="0 0 52 52" fill="none"><rect x="10" y="28" width="8" height="16" rx="2" fill="white"/><rect x="22" y="18" width="8" height="26" rx="2" fill="white"/><rect x="34" y="10" width="8" height="34" rx="2" fill="white"/></svg>
         </PillBtn>
-        <PillBtn onClick={onBankStatements} label="Bank Statements" color="#f59e0b" iconBg="#92400e">
+        <PillBtn onClick={onBankStatements} label="Bank Statements" color="#eab308" iconBg="#a16207">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="white" strokeWidth="1.8"/><path d="M3 10H21" stroke="white" strokeWidth="1.8"/><rect x="6" y="13" width="5" height="3" rx="1" fill="white"/></svg>
         </PillBtn>
-        <PillBtn onClick={onProfile} label="My Profile" color="#f59e0b" iconBg="#92400e">
+        <PillBtn onClick={onProfile} label="My Profile" color="#eab308" iconBg="#a16207">
           <img src={getCompanyLogo()} style={{ width:38, height:38, objectFit:"contain", borderRadius:6 }} alt="Company Logo"/>
         </PillBtn>
 
         {getUserPlan() === "proplus" && (
-          <PillBtn onClick={onEngineerManagement} label="My Engineers" color="#f59e0b" iconBg="#92400e">
+          <PillBtn onClick={onEngineerManagement} label="My Engineers" color="#eab308" iconBg="#a16207">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="3" stroke="white" strokeWidth="1.8"/><circle cx="17" cy="9" r="2.5" stroke="white" strokeWidth="1.5"/><path d="M2 20c0-3.31 2.69-6 6-6h2c3.31 0 6 2.69 6 6" stroke="white" strokeWidth="1.8" strokeLinecap="round"/><path d="M17 14c2.21 0 4 1.79 4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </PillBtn>
         )}
-        <PillBtn onClick={onCombine} label="Combine Certs / Reports" color="#f59e0b" iconBg="#92400e">
+        <PillBtn onClick={onCombine} label="Combine Certs / Reports" color="#eab308" iconBg="#a16207">
           <svg width="30" height="28" viewBox="0 0 52 48" fill="none">
             <rect x="4" y="4" width="26" height="34" rx="3" fill="rgba(255,255,255,0.35)" stroke="white" strokeWidth="2"/>
             <rect x="16" y="10" width="26" height="34" rx="3" fill="rgba(255,255,255,0.6)" stroke="white" strokeWidth="2"/>
             <rect x="22" y="6" width="26" height="34" rx="3" fill="white" stroke="white" strokeWidth="1"/>
-            <polyline points="29,20 35,26 42,16" fill="none" stroke="#92400e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+            <polyline points="29,20 35,26 42,16" fill="none" stroke="#a16207" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </PillBtn>
         {/* Admin Dashboard — only visible to admin user */}
@@ -5350,46 +5351,43 @@ function HomeScreen({ onNew, onSelectCertType, onRecords, onReport, onLogout, cu
             </div>
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Safety Certificate"); }} label="Gas Safety Certificate" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Safety Certificate"); }} label="Gas Safety Certificate" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:24 }}>🛡️</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Boiler Service"); }} label="Boiler Service" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Boiler Service"); }} label="Boiler Service" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:24 }}>🔩</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Warning Notice"); }} label="Warning Notice" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Warning Notice"); }} label="Warning Notice" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:24 }}>🚨</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Leisure Industry Gas Safety Record"); }} label="Leisure Industry GSR" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Leisure Industry Gas Safety Record"); }} label="Leisure Industry GSR" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:24 }}>🏗️</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Benchmark Commissioning Checklist"); }} label="Benchmark Commissioning" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Benchmark Commissioning Checklist"); }} label="Benchmark Commissioning" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:24 }}>📋</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Liquified Petroleum Gas Safety Record"); }} label="LPG Safety Record" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Liquified Petroleum Gas Safety Record"); }} label="LPG Safety Record" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:24 }}>🔶</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Commercial Gas Safety Certificate"); }} label="Commercial GSC" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Commercial Gas Safety Certificate"); }} label="Commercial GSC" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:24 }}>🏛️</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Installation Safety Report"); }} label="Gas Install Report" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Installation Safety Report"); }} label="Gas Install Report" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:24 }}>📐</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Commercial Catering Inspection Record"); }} label="Catering Inspection" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Commercial Catering Inspection Record"); }} label="Catering Inspection" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:24 }}>🍴</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Testing and Purging Record"); }} label="Gas Testing & Purging" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Testing and Purging Record"); }} label="Gas Testing & Purging" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:24 }}>⚗️</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onGasRateCalc(); }} label="Gas Rate Calculator" color="#3b82f6" iconBg="#1d4ed8">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c.83 0 1.5.67 1.5 1.5S12.83 8 12 8s-1.5-.67-1.5-1.5S11.17 5 12 5zm-1 14v-2h2v2h-2zm2.5-4.5c0 .28-.22.5-.5.5h-2c-.28 0-.5-.22-.5-.5v-5c0-.28.22-.5.5-.5h2c.28 0 .5.22.5.5v5z" fill="white"/><path d="M8 13l4-6 4 6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/><circle cx="12" cy="15" r="2" fill="#fff"/></svg>
-            </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Invoice"); }} label="Invoice" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Invoice"); }} label="Invoice" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:24 }}>💼</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Quote"); }} label="Quote" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Quote"); }} label="Quote" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:24 }}>📄</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#eab308" iconBg="#a16207">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </PillBtn>
           </div>
@@ -6133,54 +6131,6 @@ function FeatureLockedScreen({ feature, requiredPlan, onBack, onHome }) {
   );
 }
 
-// 3. New Job menu
-const JOB_TYPES = [
-  { label:"Gas Safety Certificate", icon:"🛡️" },
-  { label:"Boiler Service", icon:"🔩" },
-  { label:"Warning Notice", icon:"🚨" },
-  { label:"Leisure Industry Gas Safety Record", icon:"🏗️" },
-  { label:"Benchmark Commissioning Checklist", icon:"📋" },
-  { label:"Liquified Petroleum Gas Safety Record", icon:"🔶" },
-  { label:"7 Day Cooling Off Period Exemption", icon:"📅" },
-  { label:"Commercial Gas Safety Certificate", icon:"🏛️" },
-  { label:"Gas Installation Safety Report", icon:"📐" },
-  { label:"Commercial Catering Inspection Record", icon:"🍴" },
-  { label:"Gas Testing and Purging Record", icon:"⚗️" },
-  { label:"Invoice", icon:"💼" },
-  { label:"Quote", icon:"📄" },
-];
-
-function NewJobScreen({ onSelect, onBack, onHome }) {
-  function JobRow({ label, icon, onClick }) {
-    const [hov, setHov] = useState(false);
-    return (
-      <button onClick={onClick} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-        style={{ display:"flex", alignItems:"center", gap:16, padding:"16px 20px", borderRadius:14, border:`2px solid ${hov?BLUE:"#e8eaf0"}`, background:hov?"rgba(29,74,46,0.05)":"#fafafa", cursor:"pointer", width:"100%", textAlign:"left", transition:"all 0.15s", marginBottom:10 }}>
-        <div style={{ width:48, height:48, borderRadius:12, background:hov?BLUE:"#eef2ee", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"background 0.15s", fontSize:24 }}>
-          {icon}
-        </div>
-        <span style={{ fontSize:16, fontWeight:600, color:hov?BLUE:"#222", fontFamily:"'Segoe UI',sans-serif", transition:"color 0.15s" }}>{label}</span>
-        <svg style={{ marginLeft:"auto", opacity:hov?1:0.3 }} width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke={BLUE} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-      </button>
-    );
-  }
-  return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:`linear-gradient(160deg,${DARK_BLUE} 0%,${BLUE} 60%,${DARK_BLUE} 100%)`, fontFamily:"'Segoe UI',sans-serif" }}>
-      <div style={{ padding:"28px 24px 20px", display:"flex", alignItems:"center", gap:12 }}>
-        <button onClick={onBack} style={{ background:"rgba(255,255,255,0.18)", border:"none", borderRadius:"50%", width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11 3L5 9L11 15" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </button>
-        <img src={APP_LOGO_SVG} style={{ height:28, objectFit:"contain" }} alt="Gas Safety App"/>
-        <div><div style={{ color:"#fff", fontWeight:800, fontSize:18 }}>New Job</div><div style={{ color:"rgba(255,255,255,0.7)", fontSize:12 }}>Select job type</div></div>
-      </div>
-      <div style={{ flex:1, margin:"0 20px 20px", background:"#fff", borderRadius:24, boxShadow:"0 20px 60px rgba(0,0,0,0.25)", overflowY:"auto", padding:"20px 20px 88px" }}>
-        <p style={{ color:"#888", fontSize:14, marginBottom:16, textAlign:"center" }}>Choose a job type to continue</p>
-        {JOB_TYPES.map(j => <JobRow key={j.label} label={j.label} icon={j.icon} onClick={()=>onSelect(j.label)}/>)}
-      </div>
-      <p style={{ color:"rgba(255,255,255,0.65)", fontSize:13, textAlign:"center", paddingBottom:24 }}>Gas Safety App · Gas Safe Register</p>
-    </div>
-  );
-}
 
 // ── GENERIC CERTIFICATE SCREEN ───────────────────────────────────────────────
 // Handles: Leisure, LPG, 7-day cooling off, Commercial GSC,
@@ -21106,7 +21056,7 @@ function TradeHomeScreen({ currentUser, onSelectTrade, onLogout, onPayment, onCl
   })();
 
   const trades = [
-    { id: "gas", name: "Gas", color: "#f59e0b", active: true, badge: gasBadge,
+    { id: "gas", name: "Gas", color: "#eab308", active: true, badge: gasBadge,
       icon: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 5 10 5 15C5 18.87 8.13 22 12 22C15.87 22 19 18.87 19 15C19 10 12 2 12 2Z"/></svg> },
     { id: "electrical", name: "Electrical", color: "#3b82f6", active: true, badge: 0,
       icon: <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg> },
@@ -30133,6 +30083,8 @@ function App({ onLogout }) {
   const currentUser = getCurrentUser();
 
   const [screen, setScreen] = useState("home");
+  const [openNewJobOnHome, setOpenNewJobOnHome] = useState(false);
+  const goBackToNewJob = () => { setOpenNewJobOnHome(true); setScreen("home"); };
   const [activeTrade, setActiveTrade] = useState(null);
   const [subScreen, setSubScreen] = useState(null);
   const [wnSubScreen, setWnSubScreen] = useState(null);
@@ -30514,7 +30466,7 @@ function App({ onLogout }) {
       if (target) {
         setScreen(target);
       } else {
-        setScreen("newJob");
+        goBackToNewJob();
       }
     }
   }
@@ -30857,7 +30809,7 @@ function App({ onLogout }) {
 
   // ── Electrical Dashboard ────────────────────────────────────────────────
   if (screen === "home" && activeTrade === "electrical") return <ElectricalDashboard onBack={goTradeHome} currentUser={currentUser}
-    onNewJob={()=>setScreen("newJob")} onRecords={()=>setScreen("electricalRecords")} onReport={()=>setScreen("report")}
+    onNewJob={()=>goBackToNewJob()} onRecords={()=>setScreen("electricalRecords")} onReport={()=>setScreen("report")}
     onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")}
     onClientDetails={()=>setScreen("contacts")} onBankStatements={()=>setScreen("bankStatements")}
     onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}
@@ -30875,7 +30827,7 @@ function App({ onLogout }) {
     records={records} invoices={invoices} quotes={quotes} accountReports={accountReports} yearlyReports={yearlyReports} />;
   // ── Plumbing & Legionella Dashboard ─────────────────────────────────────
   if (screen === "home" && activeTrade === "plumbing") return <PlumbingDashboard onBack={goTradeHome} currentUser={currentUser}
-    onNewJob={()=>setScreen("newJob")} onRecords={()=>setScreen("plumbingRecords")} onReport={()=>setScreen("report")}
+    onNewJob={()=>goBackToNewJob()} onRecords={()=>setScreen("plumbingRecords")} onReport={()=>setScreen("report")}
     onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")}
     onClientDetails={()=>setScreen("contacts")} onBankStatements={()=>setScreen("bankStatements")}
     onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}
@@ -30885,7 +30837,7 @@ function App({ onLogout }) {
 
   // ── Oil & Renewables Dashboard ─────────────────────────────────────────
   if (screen === "home" && activeTrade === "oil") return <OilRenewablesDashboard onBack={goTradeHome} currentUser={currentUser}
-    onNewJob={()=>setScreen("newJob")} onRecords={()=>setScreen("oilRecords")} onReport={()=>setScreen("report")}
+    onNewJob={()=>goBackToNewJob()} onRecords={()=>setScreen("oilRecords")} onReport={()=>setScreen("report")}
     onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")}
     onClientDetails={()=>setScreen("contacts")} onBankStatements={()=>setScreen("bankStatements")}
     onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")}
@@ -30895,7 +30847,7 @@ function App({ onLogout }) {
 
 
   // ── Gas Dashboard (existing HomeScreen with back button) ────────────────
-  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onSelectCertType={(job) => { if(job==="Gas Safety Certificate") { setScreen("gsc"); setSubScreen("fileRef"); } else if(job==="Boiler Service") { setScreen("bs"); setBsSubScreen("fileRef"); } else if(job==="Warning Notice") { setScreen("warningNotice"); setWnSubScreen("fileRef"); } else if(job==="Invoice") { setInvoiceWizardOpen(true); } else if(job==="Quote") { setQuoteWizardOpen(true); } else if(job === "Leisure Industry Gas Safety Record") { setScreen("leisureRecord"); } else if(job === "Benchmark Commissioning Checklist") { setScreen("benchmark"); } else if(job === "Liquified Petroleum Gas Safety Record") { setScreen("lpgRecord"); } else if(job === "Commercial Gas Safety Certificate") { setScreen("commercialGSC"); } else if(job === "Gas Installation Safety Report") { setScreen("gasInstallReport"); } else if(job === "Commercial Catering Inspection Record") { setScreen("cateringInspection"); } else if(job === "Gas Testing and Purging Record") { setScreen("gasTestPurge"); } else { setScreen("newJob"); } }} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("\u2705 "+n+" demo records added!\n\nGo to Records \u2192 Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")} onAdminDashboard={()=>setScreen("adminDashboard")} onPSC={()=>setScreen("psc")} onBankStatements={()=>setScreen("bankStatements")} onGasRateCalc={()=>setScreen("gasRateCalc")} onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")} onBackToTrades={goTradeHome}/>;
+  if (screen === "home") return <HomeScreen onNew={()=>{setOpenNewJobOnHome(true);}} onSelectCertType={(job) => { if(job==="Gas Safety Certificate") { setScreen("gsc"); setSubScreen("fileRef"); } else if(job==="Boiler Service") { setScreen("bs"); setBsSubScreen("fileRef"); } else if(job==="Warning Notice") { setScreen("warningNotice"); setWnSubScreen("fileRef"); } else if(job==="Invoice") { setInvoiceWizardOpen(true); } else if(job==="Quote") { setQuoteWizardOpen(true); } else if(job === "Leisure Industry Gas Safety Record") { setScreen("leisureRecord"); } else if(job === "Benchmark Commissioning Checklist") { setScreen("benchmark"); } else if(job === "Liquified Petroleum Gas Safety Record") { setScreen("lpgRecord"); } else if(job === "Commercial Gas Safety Certificate") { setScreen("commercialGSC"); } else if(job === "Gas Installation Safety Report") { setScreen("gasInstallReport"); } else if(job === "Commercial Catering Inspection Record") { setScreen("cateringInspection"); } else if(job === "Gas Testing and Purging Record") { setScreen("gasTestPurge"); } else { alert(`${job} coming soon`); } }} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("\u2705 "+n+" demo records added!\n\nGo to Records \u2192 Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")} onAdminDashboard={()=>setScreen("adminDashboard")} onPSC={()=>setScreen("psc")} onBankStatements={()=>setScreen("bankStatements")} onGasRateCalc={()=>setScreen("gasRateCalc")} onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")} onBackToTrades={goTradeHome} initialShowNewJob={openNewJobOnHome} onClearNewJobFlag={()=>setOpenNewJobOnHome(false)}/>;
   if (screen === "psc") return <PSCScreen onHome={goHome} engineerData={profileDefaults()} onSave={(rec)=>{ setRecords(prev=>[...prev, rec]); }}/>;
   if (screen === "adminDashboard") return <AdminDashboardScreen onBack={()=>setScreen("home")} onHome={goHome} records={records} invoices={invoices} quotes={quotes}/>;
   if (screen === "contacts") return <ClientContactsScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
@@ -30933,85 +30885,77 @@ function App({ onLogout }) {
   if (screen === "jobSheets") return <JobSheetsScreen onBack={()=>setScreen("home")} onHome={goHome} onNewJobSheet={()=>{setEditJobSheetId(null);setScreen("jobSheetWizard");}} onEditJobSheet={(id)=>{setEditJobSheetId(id);setScreen("jobSheetWizard");}}/>;
   if (screen === "jobSheetWizard") return <JobSheetWizardScreen onBack={()=>setScreen("jobSheets")} onHome={goHome} editJobSheetId={editJobSheetId}/>;
   if (screen === "engineerManagement") return <EngineerManagementScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
-  if (quoteWizardOpen) return <QuoteWizard sourceRecord={null} onSave={(qData)=>{ setQuotes(prev=>[...prev,qData]); alert("✅ Quote saved to Quotes folder!"); setQuoteWizardOpen(false); goHome(); }} onClose={()=>{ setQuoteWizardOpen(false); setScreen("newJob"); }} profile={userProfile}/>;
-  if (invoiceWizardOpen) return <InvoiceWizard sourceRecord={null} onSave={(invData)=>{ setInvoices(prev=>[...prev, invData]); alert("✅ Invoice saved to Invoices folder!"); setInvoiceWizardOpen(false); goHome(); }} onClose={()=>{ setInvoiceWizardOpen(false); setScreen("newJob"); }} invoiceRecords={invoices} profile={userProfile}/>;
+  if (quoteWizardOpen) return <QuoteWizard sourceRecord={null} onSave={(qData)=>{ setQuotes(prev=>[...prev,qData]); alert("✅ Quote saved to Quotes folder!"); setQuoteWizardOpen(false); goHome(); }} onClose={()=>{ setQuoteWizardOpen(false); goBackToNewJob(); }} profile={userProfile}/>;
+  if (invoiceWizardOpen) return <InvoiceWizard sourceRecord={null} onSave={(invData)=>{ setInvoices(prev=>[...prev, invData]); alert("✅ Invoice saved to Invoices folder!"); setInvoiceWizardOpen(false); goHome(); }} onClose={()=>{ setInvoiceWizardOpen(false); goBackToNewJob(); }} invoiceRecords={invoices} profile={userProfile}/>;
   if (screen === "benchmark") return <BenchmarkScreen
     engineerData={engineerData}
     initialData={renewInitData}
-    onBack={()=>{ setRenewInitData(null); setScreen("newJob"); }}
+    onBack={()=>{ setRenewInitData(null); goBackToNewJob(); }}
     onHome={()=>{ setRenewInitData(null); goHome(); }}
     onSave={(rec)=>{ setRenewInitData(null); setRecords(prev=>[...prev, rec]); checkAndTriggerWN(rec); checkAndTriggerBS(rec); }}
   />;
   if (screen === "leisureRecord") return <LeisureScreen
     engineerData={engineerData}
     initialData={renewInitData}
-    onBack={()=>{ setRenewInitData(null); setScreen("newJob"); }}
+    onBack={()=>{ setRenewInitData(null); goBackToNewJob(); }}
     onHome={()=>{ setRenewInitData(null); goHome(); }}
     onSave={(rec)=>{ setRenewInitData(null); setRecords(prev=>[...prev, rec]); checkAndTriggerWN(rec); checkAndTriggerBS(rec); }}
   />;
   if (screen === "lpgRecord") return <LPGScreen
     engineerData={engineerData}
     initialData={renewInitData}
-    onBack={()=>{ setRenewInitData(null); setScreen("newJob"); }}
+    onBack={()=>{ setRenewInitData(null); goBackToNewJob(); }}
     onHome={()=>{ setRenewInitData(null); goHome(); }}
     onSave={(rec)=>{ setRenewInitData(null); setRecords(prev=>[...prev, rec]); checkAndTriggerWN(rec); checkAndTriggerBS(rec); }}
   />;
   if (screen === "coolingOff") return <CoolOffScreen
     engineerData={engineerData}
     initialData={renewInitData}
-    onBack={()=>{ setRenewInitData(null); setScreen("newJob"); }}
+    onBack={()=>{ setRenewInitData(null); goBackToNewJob(); }}
     onHome={()=>{ setRenewInitData(null); goHome(); }}
     onSave={(rec)=>{ setRenewInitData(null); setRecords(prev=>[...prev, rec]); checkAndTriggerWN(rec); checkAndTriggerBS(rec); }}
   />;
   if (screen === "commercialGSC") return <CommercialGSCScreen
     engineerData={engineerData}
     initialData={renewInitData}
-    onBack={()=>{ setRenewInitData(null); setScreen("newJob"); }}
+    onBack={()=>{ setRenewInitData(null); goBackToNewJob(); }}
     onHome={()=>{ setRenewInitData(null); goHome(); }}
     onSave={(rec)=>{ setRenewInitData(null); setRecords(prev=>[...prev, rec]); checkAndTriggerWN(rec); checkAndTriggerBS(rec); }}
   />;
   if (screen === "gasInstallReport") return <GasInstallReportScreen
     engineerData={engineerData}
     initialData={renewInitData}
-    onBack={()=>{ setRenewInitData(null); setScreen("newJob"); }}
+    onBack={()=>{ setRenewInitData(null); goBackToNewJob(); }}
     onHome={()=>{ setRenewInitData(null); goHome(); }}
     onSave={(rec)=>{ setRenewInitData(null); setRecords(prev=>[...prev, rec]); checkAndTriggerWN(rec); checkAndTriggerBS(rec); }}
   />;
   if (screen === "cateringInspection") return <CateringInspectionScreen
     engineerData={engineerData}
     initialData={renewInitData}
-    onBack={()=>{ setRenewInitData(null); setScreen("newJob"); }}
+    onBack={()=>{ setRenewInitData(null); goBackToNewJob(); }}
     onHome={()=>{ setRenewInitData(null); goHome(); }}
     onSave={(rec)=>{ setRenewInitData(null); setRecords(prev=>[...prev, rec]); checkAndTriggerWN(rec); checkAndTriggerBS(rec); }}
   />;
   if (screen === "gasTestPurge") return <GasTestPurgeScreen
     engineerData={engineerData}
     initialData={renewInitData}
-    onBack={()=>{ setRenewInitData(null); setScreen("newJob"); }}
+    onBack={()=>{ setRenewInitData(null); goBackToNewJob(); }}
     onHome={()=>{ setRenewInitData(null); goHome(); }}
     onSave={(rec)=>{ setRenewInitData(null); setRecords(prev=>[...prev, rec]); checkAndTriggerWN(rec); checkAndTriggerBS(rec); }}
   />;
   if (screen === "genericCert" && genericCertLabel) return <GenericCertScreen
     certLabel={genericCertLabel}
     engineerData={engineerData}
-    onBack={()=>setScreen("newJob")}
+    onBack={()=>goBackToNewJob()}
     onHome={goHome}
     onSave={(rec)=>{ setRecords(prev=>[...prev, rec]); }}
   />;
 
-  if (screen === "newJob") {
-    const _plan = getUserPlan();
-    const _limit = PLAN_CERT_LIMITS[_plan] || Infinity;
-    const _count = getMonthCertCount(records);
-    if (_count >= _limit) return <UpgradeLimitScreen currentPlan={_plan} certCount={_count} certLimit={_limit} onBack={()=>setScreen("home")} onUpgrade={()=>setScreen("home")}/>;
-    return <NewJobScreen onBack={()=>setScreen("home")} onHome={goHome}
-    onSelect={job => { if(job==="Gas Safety Certificate") { setScreen("gsc"); setSubScreen("fileRef"); } else if(job==="Boiler Service") { setScreen("bs"); setBsSubScreen("fileRef"); } else if(job==="Gas Works") { setScreen("gasWorks"); setGwSubScreen("fileRef"); } else if(job==="Gas Isolation") { setScreen("gasIsolation"); setGiSubScreen("form"); } else if(job==="Invoice") { setInvoiceWizardOpen(true); } else if(job==="Quote") { setQuoteWizardOpen(true); } else if(job==="Warning Notice") { setScreen("warningNotice"); setWnSubScreen("fileRef"); } else if(job === "Leisure Industry Gas Safety Record") { setScreen("leisureRecord"); } else if(job === "Benchmark Commissioning Checklist") { setScreen("benchmark"); } else if(job === "Liquified Petroleum Gas Safety Record") { setScreen("lpgRecord"); } else if(job === "7 Day Cooling Off Period Exemption") { setScreen("coolingOff"); } else if(job === "Commercial Gas Safety Certificate") { setScreen("commercialGSC"); } else if(job === "Gas Installation Safety Report") { setScreen("gasInstallReport"); } else if(job === "Commercial Catering Inspection Record") { setScreen("cateringInspection"); } else if(job === "Gas Testing and Purging Record") { setScreen("gasTestPurge"); } else if(Object.keys(GENERIC_CERT_CONFIGS).includes(job)) { setGenericCertLabel(job); setScreen("genericCert"); } else alert(`${job} coming soon`); }}/>;
-  }
 
   if (screen === "gasWorks") {
     if (gwSubScreen === "fileRef") return (
       <div style={{ display:"flex", flexDirection:"column", height:"100dvh", background:LIGHT_BG, fontFamily:"'Segoe UI',sans-serif" }}>
-        <Header title="Gas Works Record" onBack={()=>setScreen("newJob")}/>
+        <Header title="Gas Works Record" onBack={()=>goBackToNewJob()}/>
         <div style={{ flex:1, overflowY:"auto", padding:24, paddingBottom:80 }}>
           <p style={{ color:"#888", fontSize:15, marginBottom:20, textAlign:"center" }}>Please enter a file reference</p>
           <input value={gwData.project} onChange={e=>setGwData(d=>({...d,project:e.target.value,address:e.target.value}))} placeholder="Project Reference"
@@ -31026,14 +30970,14 @@ function App({ onLogout }) {
 
 
   if (screen === "gasIsolation") {
-    if (giSubScreen === "form") return <GasIsolationForm data={giData} onBack={()=>setScreen("newJob")} onHome={goHome}
+    if (giSubScreen === "form") return <GasIsolationForm data={giData} onBack={()=>goBackToNewJob()} onHome={goHome}
       onSave={(giFinal)=>{ const savedAt = new Date().toISOString(); setRecords(r=>[...r,{type:"gi",giData:giFinal,savedAt}]); alert("\u2705 Gas Isolation certificate saved to Records!"); setScreen("home"); setGiSubScreen(null); }}/>;
   }
 
   // Warning Notice flow
   if (screen === "warningNotice") {
     if (wnShowPDF) return <WNPDFPreview wnFormData={{...wnFormData, issueDate:wnEngData.issueDate, issueTime:wnEngData.issueTime}} wnEngData={wnEngData} wnSigData={wnSigData} onClose={()=>setWnShowPDF(false)} attachments={wnAttachments}/>;
-    if (wnSubScreen === "fileRef") return <WNStepFileRef data={wnFormData} onChange={setWnFormData} onBack={()=>setScreen("newJob")} onHome={goHome} onNext={()=>setWnSubScreen("clientDetails")}/>;
+    if (wnSubScreen === "fileRef") return <WNStepFileRef data={wnFormData} onChange={setWnFormData} onBack={()=>goBackToNewJob()} onHome={goHome} onNext={()=>setWnSubScreen("clientDetails")}/>;
     if (wnSubScreen === "clientDetails") return <WNStepClientDetails data={wnFormData} onChange={setWnFormData} engData={wnEngData} onEngChange={setWnEngData} onBack={()=>setWnSubScreen("fileRef")} onHome={goHome} onNext={()=>setWnSubScreen("noticeDetails")}/>;
     if (wnSubScreen === "noticeDetails") return <WNStepNoticeDetails data={wnFormData} onChange={setWnFormData} onBack={()=>setWnSubScreen("clientDetails")} onHome={goHome} onNext={()=>setWnSubScreen("attachments")}/>;
     if (wnSubScreen === "attachments") return <AttachmentsStep data={{attachments:wnAttachments}} onChange={d=>setWnAttachments(d.attachments||[])} onBack={()=>setWnSubScreen("noticeDetails")} onHome={goHome} onNext={()=>setWnSubScreen("signature")} nextLabel="Next: Signatures"/>;
@@ -31072,7 +31016,7 @@ function App({ onLogout }) {
     const gscCurrentStep = gscStepMap[subScreen] !== undefined ? gscStepMap[subScreen] : 0;
     const gscNavTo = (i) => { const screens = ["fileRef","clientDetails","applianceList","faultList","finalChecks","attachments","signature","engineerDetails"]; if (screens[i]) setSubScreen(screens[i]); };
 
-    if (subScreen === "fileRef") return <StepFileRef data={certData} onChange={setCertData} onBack={()=>setScreen("newJob")} onHome={goHome} onNext={()=>setSubScreen("clientDetails")} gscStep={0} gscTotalSteps={GSC_TOTAL} gscStepLabels={GSC_STEP_LABELS} onSetGscStep={gscNavTo}/>;
+    if (subScreen === "fileRef") return <StepFileRef data={certData} onChange={setCertData} onBack={()=>goBackToNewJob()} onHome={goHome} onNext={()=>setSubScreen("clientDetails")} gscStep={0} gscTotalSteps={GSC_TOTAL} gscStepLabels={GSC_STEP_LABELS} onSetGscStep={gscNavTo}/>;
     if (subScreen === "clientDetails") return <StepClientDetails data={certData} onChange={setCertData} engData={engineerData} onEngChange={setEngineerData} onBack={()=>setSubScreen("fileRef")} onHome={goHome} onNext={()=>setSubScreen("applianceList")} gscStep={1} gscTotalSteps={GSC_TOTAL} gscStepLabels={GSC_STEP_LABELS} onSetGscStep={gscNavTo}/>;
     if (subScreen === "applianceList") return (
       <>
@@ -31149,7 +31093,7 @@ function App({ onLogout }) {
   // BS flow
   if (screen === "bs") {
     if (bsShowPDF) return <BSPDFPreview serviceData={serviceData} engineerData={bsEngData} signatureData={bsSigData} onClose={()=>setBsShowPDF(false)} attachments={bsAttachments}/>;
-    if (bsSubScreen === "fileRef") return <BSStepFileRef data={serviceData} onChange={setServiceData} onBack={()=>setScreen("newJob")} onHome={goHome} onNext={()=>setBsSubScreen("clientDetails")}/>;
+    if (bsSubScreen === "fileRef") return <BSStepFileRef data={serviceData} onChange={setServiceData} onBack={()=>goBackToNewJob()} onHome={goHome} onNext={()=>setBsSubScreen("clientDetails")}/>;
     if (bsSubScreen === "clientDetails") return <BSStepClientDetails data={serviceData} onChange={setServiceData} engData={bsEngData} onEngChange={setBsEngData} onBack={()=>setBsSubScreen("fileRef")} onHome={goHome} onNext={()=>setBsSubScreen("applianceDetails")}/>;
     if (bsSubScreen === "applianceDetails") return <BSStepApplianceDetails data={serviceData} onChange={setServiceData} onBack={()=>setBsSubScreen("clientDetails")} onHome={goHome} onNext={()=>setBsSubScreen("prelimChecks")}/>;
     if (bsSubScreen === "prelimChecks") return <BSStepPrelimChecks data={serviceData} onChange={setServiceData} onBack={()=>setBsSubScreen("applianceDetails")} onHome={goHome} onNext={()=>setBsSubScreen("notes")}/>;
