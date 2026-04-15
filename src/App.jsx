@@ -5107,10 +5107,13 @@ function HomeScreen({ onNew, onSelectCertType, onRecords, onReport, onLogout, cu
     setTicketStep(1); setTicketType(""); setTicketScreen(""); setTicketDesc(""); setTicketSteps(""); setTicketExpected(""); setTicketEmail(""); setTicketName(""); setTicketPhone(""); setTicketScreenshots([]); setTicketDone(false); setTicketRef("");
   }
 
-  function PillBtn({ onClick, label, color=BLUE, iconBg, children }) {
+  function PillBtn({ onClick, label, color=BLUE, iconBg, children, big }) {
     const [hov, setHov] = useState(false);
     const textColor = color === "#fff200" ? "#111" : "#fff";
     const circleBg = iconBg || color;
+    const pillH = big ? 92 : 76;
+    const circleSize = big ? 68 : 58;
+    const labelSize = big ? 17 : 15;
     // Vertical gradient: top highlight → solid mid → bottom shadow
     const btnGradient = `linear-gradient(180deg,
       rgba(255,255,255,0.30) 0%,
@@ -5136,11 +5139,11 @@ function HomeScreen({ onNew, onSelectCertType, onRecords, onReport, onLogout, cu
             : `0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)`,
           transition:"all 0.16s ease",
           transform: hov ? "translateY(-2px) scale(1.018)" : "translateY(0) scale(1)",
-          position:"relative", width:"100%", maxWidth:360, height:76,
+          position:"relative", width:"100%", maxWidth:360, height:pillH,
         }}>
         {/* Icon circle with gradient */}
         <div style={{
-          width:58, height:58, borderRadius:"50%", flexShrink:0,
+          width:circleSize, height:circleSize, borderRadius:"50%", flexShrink:0,
           background: circleGradient,
           border:`2.5px solid rgba(255,255,255,0.45)`,
           display:"flex", alignItems:"center", justifyContent:"center",
@@ -5152,7 +5155,7 @@ function HomeScreen({ onNew, onSelectCertType, onRecords, onReport, onLogout, cu
         </div>
         {/* Label */}
         <span style={{
-          flex:1, color: textColor, fontSize:15, fontWeight:800,
+          flex:1, color: textColor, fontSize:labelSize, fontWeight:800,
           fontFamily:"'Segoe UI',sans-serif",
           paddingLeft:18, paddingRight:8,
           letterSpacing:0.8, textTransform:"uppercase",
@@ -5351,43 +5354,43 @@ function HomeScreen({ onNew, onSelectCertType, onRecords, onReport, onLogout, cu
             </div>
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Safety Certificate"); }} label="Gas Safety Certificate" color="#eab308" iconBg="#a16207">
+            <PillBtn big onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Safety Certificate"); }} label="Gas Safety Certificate" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:28 }}>🛡️</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Boiler Service"); }} label="Boiler Service" color="#eab308" iconBg="#a16207">
+            <PillBtn big onClick={() => { setShowNewJobFolder(false); onSelectCertType("Boiler Service"); }} label="Boiler Service" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:28 }}>🔩</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Warning Notice"); }} label="Warning Notice" color="#eab308" iconBg="#a16207">
+            <PillBtn big onClick={() => { setShowNewJobFolder(false); onSelectCertType("Warning Notice"); }} label="Warning Notice" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:28 }}>🚨</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Leisure Industry Gas Safety Record"); }} label="Leisure Industry GSR" color="#eab308" iconBg="#a16207">
+            <PillBtn big onClick={() => { setShowNewJobFolder(false); onSelectCertType("Leisure Industry Gas Safety Record"); }} label="Leisure Industry GSR" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:28 }}>🏗️</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Benchmark Commissioning Checklist"); }} label="Benchmark Commissioning" color="#eab308" iconBg="#a16207">
+            <PillBtn big onClick={() => { setShowNewJobFolder(false); onSelectCertType("Benchmark Commissioning Checklist"); }} label="Benchmark Commissioning" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:28 }}>📋</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Liquified Petroleum Gas Safety Record"); }} label="LPG Safety Record" color="#eab308" iconBg="#a16207">
+            <PillBtn big onClick={() => { setShowNewJobFolder(false); onSelectCertType("Liquified Petroleum Gas Safety Record"); }} label="LPG Safety Record" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:28 }}>🔶</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Commercial Gas Safety Certificate"); }} label="Commercial GSC" color="#eab308" iconBg="#a16207">
+            <PillBtn big onClick={() => { setShowNewJobFolder(false); onSelectCertType("Commercial Gas Safety Certificate"); }} label="Commercial GSC" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:28 }}>🏛️</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Installation Safety Report"); }} label="Gas Install Report" color="#eab308" iconBg="#a16207">
+            <PillBtn big onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Installation Safety Report"); }} label="Gas Install Report" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:28 }}>📐</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Commercial Catering Inspection Record"); }} label="Catering Inspection" color="#eab308" iconBg="#a16207">
+            <PillBtn big onClick={() => { setShowNewJobFolder(false); onSelectCertType("Commercial Catering Inspection Record"); }} label="Catering Inspection" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:28 }}>🍴</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Testing and Purging Record"); }} label="Gas Testing & Purging" color="#eab308" iconBg="#a16207">
+            <PillBtn big onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Testing and Purging Record"); }} label="Gas Testing & Purging" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:28 }}>⚗️</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Invoice"); }} label="Invoice" color="#eab308" iconBg="#a16207">
+            <PillBtn big onClick={() => { setShowNewJobFolder(false); onSelectCertType("Invoice"); }} label="Invoice" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:28 }}>💼</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Quote"); }} label="Quote" color="#eab308" iconBg="#a16207">
+            <PillBtn big onClick={() => { setShowNewJobFolder(false); onSelectCertType("Quote"); }} label="Quote" color="#eab308" iconBg="#a16207">
               <span style={{ fontSize:28 }}>📄</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#eab308" iconBg="#a16207">
+            <PillBtn big onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#eab308" iconBg="#a16207">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </PillBtn>
           </div>
@@ -24450,10 +24453,13 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
   if (elecScreen === "pat") return <PATTestingForm onBack={() => setElecScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
 
   // Reuse the PillBtn pattern inline for electrical
-  function ElecPillBtn({ onClick, label, color="#fff200", iconBg, children }) {
+  function ElecPillBtn({ onClick, label, color="#fff200", iconBg, children, big }) {
     const [hov, setHov] = useState(false);
     const textColor = color === "#fff200" ? "#111" : "#fff";
     const circleBg = iconBg || color;
+    const pillH = big ? 92 : 76;
+    const circleSize = big ? 68 : 58;
+    const labelSize = big ? 17 : 15;
     const btnGradient = `linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, ${color} 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), ${color}`;
     const circleGradient = `linear-gradient(180deg, rgba(255,255,255,0.22) 0%, ${circleBg} 50%, rgba(0,0,0,0.22) 100%)`;
     return (
@@ -24464,10 +24470,10 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
           boxShadow: hov ? "0 8px 28px rgba(0,0,0,0.42), 0 2px 10px rgba(0,0,0,0.22)" : "0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)",
           transition:"all 0.16s ease",
           transform: hov ? "translateY(-2px) scale(1.018)" : "translateY(0) scale(1)",
-          position:"relative", width:"100%", maxWidth:360, height:76,
+          position:"relative", width:"100%", maxWidth:360, height:pillH,
         }}>
         <div style={{
-          width:58, height:58, borderRadius:"50%", flexShrink:0,
+          width:circleSize, height:circleSize, borderRadius:"50%", flexShrink:0,
           background: circleGradient,
           border:"2.5px solid rgba(255,255,255,0.45)",
           display:"flex", alignItems:"center", justifyContent:"center",
@@ -24602,22 +24608,22 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
             </div>
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-            <ElecPillBtn onClick={() => { setShowNewJobFolder(false); setElecScreen("eicr"); }} label="New EICR" color="#3b82f6" iconBg="#1d4ed8">
+            <ElecPillBtn big onClick={() => { setShowNewJobFolder(false); setElecScreen("eicr"); }} label="New EICR" color="#3b82f6" iconBg="#1d4ed8">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
             </ElecPillBtn>
-            <ElecPillBtn onClick={() => { setShowNewJobFolder(false); setElecScreen("eic"); }} label="New EIC" color="#3b82f6" iconBg="#1d4ed8">
+            <ElecPillBtn big onClick={() => { setShowNewJobFolder(false); setElecScreen("eic"); }} label="New EIC" color="#3b82f6" iconBg="#1d4ed8">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M9 12l2 2 4-4M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
             </ElecPillBtn>
-            <ElecPillBtn onClick={() => { setShowNewJobFolder(false); setElecScreen("minorWorks"); }} label="Minor Works Certificate" color="#3b82f6" iconBg="#1d4ed8">
+            <ElecPillBtn big onClick={() => { setShowNewJobFolder(false); setElecScreen("minorWorks"); }} label="Minor Works Certificate" color="#3b82f6" iconBg="#1d4ed8">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
             </ElecPillBtn>
-            <ElecPillBtn onClick={() => { setShowNewJobFolder(false); setElecScreen("evCharger"); }} label="EV Charger Certificate" color="#3b82f6" iconBg="#1d4ed8">
+            <ElecPillBtn big onClick={() => { setShowNewJobFolder(false); setElecScreen("evCharger"); }} label="EV Charger Certificate" color="#3b82f6" iconBg="#1d4ed8">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
             </ElecPillBtn>
-            <ElecPillBtn onClick={() => { setShowNewJobFolder(false); setElecScreen("pat"); }} label="PAT Testing" color="#3b82f6" iconBg="#1d4ed8">
+            <ElecPillBtn big onClick={() => { setShowNewJobFolder(false); setElecScreen("pat"); }} label="PAT Testing" color="#3b82f6" iconBg="#1d4ed8">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
             </ElecPillBtn>
-            <ElecPillBtn onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#3b82f6" iconBg="#1d4ed8">
+            <ElecPillBtn big onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#3b82f6" iconBg="#1d4ed8">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </ElecPillBtn>
           </div>
@@ -26093,10 +26099,13 @@ function FireSafetyDashboard({ onBack, currentUser, onSaveCert, onRecords, onRep
   if (fireScreen === "fireAlarm") return <FireAlarmServiceForm onBack={() => setFireScreen(null)} onSave={onSaveCert} currentUser={currentUser} />;
   if (fireScreen === "fireDoor") return <FireDoorInspectionForm onBack={() => setFireScreen(null)} onSave={onSaveCert} currentUser={currentUser} />;
 
-  function FirePillBtn({ onClick, label, color="#ff6b35", iconBg, children }) {
+  function FirePillBtn({ onClick, label, color="#ff6b35", iconBg, children, big }) {
     const [hov, setHov] = useState(false);
     const textColor = color === "#fff200" ? "#111" : "#fff";
     const circleBg = iconBg || color;
+    const pillH = big ? 92 : 76;
+    const circleSize = big ? 68 : 58;
+    const labelSize = big ? 17 : 15;
     const btnGradient = `linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, ${color} 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), ${color}`;
     const circleGradient = `linear-gradient(180deg, rgba(255,255,255,0.22) 0%, ${circleBg} 50%, rgba(0,0,0,0.22) 100%)`;
     return (
@@ -26107,10 +26116,10 @@ function FireSafetyDashboard({ onBack, currentUser, onSaveCert, onRecords, onRep
           boxShadow: hov ? "0 8px 28px rgba(0,0,0,0.42), 0 2px 10px rgba(0,0,0,0.22)" : "0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)",
           transition:"all 0.16s ease",
           transform: hov ? "translateY(-2px) scale(1.018)" : "translateY(0) scale(1)",
-          position:"relative", width:"100%", maxWidth:360, height:76,
+          position:"relative", width:"100%", maxWidth:360, height:pillH,
         }}>
         <div style={{
-          width:58, height:58, borderRadius:"50%", flexShrink:0,
+          width:circleSize, height:circleSize, borderRadius:"50%", flexShrink:0,
           background: circleGradient,
           border:"2.5px solid rgba(255,255,255,0.45)",
           display:"flex", alignItems:"center", justifyContent:"center",
@@ -26249,22 +26258,22 @@ function FireSafetyDashboard({ onBack, currentUser, onSaveCert, onRecords, onRep
             </div>
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-            <FirePillBtn onClick={() => { setShowNewJobFolder(false); setFireScreen("fra"); }} label="Fire Risk Assessment" color="#ef4444" iconBg="#991b1b">
+            <FirePillBtn big onClick={() => { setShowNewJobFolder(false); setFireScreen("fra"); }} label="Fire Risk Assessment" color="#ef4444" iconBg="#991b1b">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM8 15h8v2H8v-2zm0-4h8v2H8v-2z"/></svg>
             </FirePillBtn>
-            <FirePillBtn onClick={() => { setShowNewJobFolder(false); setFireScreen("extinguisher"); }} label="Fire Extinguisher Service" color="#ef4444" iconBg="#991b1b">
+            <FirePillBtn big onClick={() => { setShowNewJobFolder(false); setFireScreen("extinguisher"); }} label="Fire Extinguisher Service" color="#ef4444" iconBg="#991b1b">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C12 2 5 10 5 15C5 18.87 8.13 22 12 22C15.87 22 19 18.87 19 15C19 10 12 2 12 2Z"/></svg>
             </FirePillBtn>
-            <FirePillBtn onClick={() => { setShowNewJobFolder(false); setFireScreen("emergencyLighting"); }} label="Emergency Lighting Test" color="#ef4444" iconBg="#991b1b">
+            <FirePillBtn big onClick={() => { setShowNewJobFolder(false); setFireScreen("emergencyLighting"); }} label="Emergency Lighting Test" color="#ef4444" iconBg="#991b1b">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
             </FirePillBtn>
-            <FirePillBtn onClick={() => { setShowNewJobFolder(false); setFireScreen("fireAlarm"); }} label="Fire Alarm Service" color="#ef4444" iconBg="#991b1b">
+            <FirePillBtn big onClick={() => { setShowNewJobFolder(false); setFireScreen("fireAlarm"); }} label="Fire Alarm Service" color="#ef4444" iconBg="#991b1b">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
             </FirePillBtn>
-            <FirePillBtn onClick={() => { setShowNewJobFolder(false); setFireScreen("fireDoor"); }} label="Fire Door Inspection" color="#ef4444" iconBg="#991b1b">
+            <FirePillBtn big onClick={() => { setShowNewJobFolder(false); setFireScreen("fireDoor"); }} label="Fire Door Inspection" color="#ef4444" iconBg="#991b1b">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M19 19V5c0-1.1-.9-2-2-2H7c-1.1 0-2 .9-2 2v14H3v2h18v-2h-2zm-4-6h-2v-2h2v2z"/></svg>
             </FirePillBtn>
-            <FirePillBtn onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#ef4444" iconBg="#991b1b">
+            <FirePillBtn big onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#ef4444" iconBg="#991b1b">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </FirePillBtn>
           </div>
@@ -27804,10 +27813,13 @@ function PlumbingDashboard({ onBack, currentUser, onNewJob, onRecords, onReport,
   if (plumbScreen === "rpz") return <PlumbingRPZForm onBack={()=>setPlumbScreen(null)} onSave={handleSaveCert} currentUser={currentUser} />;
 
   // PillBtn (same pattern as ElectricalDashboard)
-  function PlumbPillBtn({ onClick, label, color="#00b4d8", iconBg, children }) {
+  function PlumbPillBtn({ onClick, label, color="#00b4d8", iconBg, children, big }) {
     const [hov, setHov] = useState(false);
     const textColor = "#fff";
     const circleBg = iconBg || color;
+    const pillH = big ? 92 : 76;
+    const circleSize = big ? 68 : 58;
+    const labelSize = big ? 17 : 15;
     const btnGradient = `linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, ${color} 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), ${color}`;
     const circleGradient = `linear-gradient(180deg, rgba(255,255,255,0.22) 0%, ${circleBg} 50%, rgba(0,0,0,0.22) 100%)`;
     return (
@@ -27818,10 +27830,10 @@ function PlumbingDashboard({ onBack, currentUser, onNewJob, onRecords, onReport,
           boxShadow: hov ? "0 8px 28px rgba(0,0,0,0.42), 0 2px 10px rgba(0,0,0,0.22)" : "0 5px 18px rgba(0,0,0,0.34), 0 1px 4px rgba(0,0,0,0.18)",
           transition:"all 0.16s ease",
           transform: hov ? "translateY(-2px) scale(1.018)" : "translateY(0) scale(1)",
-          position:"relative", width:"100%", maxWidth:360, height:76,
+          position:"relative", width:"100%", maxWidth:360, height:pillH,
         }}>
         <div style={{
-          width:58, height:58, borderRadius:"50%", flexShrink:0,
+          width:circleSize, height:circleSize, borderRadius:"50%", flexShrink:0,
           background: circleGradient,
           border:"2.5px solid rgba(255,255,255,0.45)",
           display:"flex", alignItems:"center", justifyContent:"center",
@@ -27982,22 +27994,22 @@ function PlumbingDashboard({ onBack, currentUser, onNewJob, onRecords, onReport,
             </div>
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-            <PlumbPillBtn onClick={() => { setShowNewJobFolder(false); setPlumbScreen("lra"); }} label="Legionella Risk Assessment" color="#00b4d8" iconBg="#0077b6">
+            <PlumbPillBtn big onClick={() => { setShowNewJobFolder(false); setPlumbScreen("lra"); }} label="Legionella Risk Assessment" color="#00b4d8" iconBg="#0077b6">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
             </PlumbPillBtn>
-            <PlumbPillBtn onClick={() => { setShowNewJobFolder(false); setPlumbScreen("tempLog"); }} label="Water Temperature Log" color="#00b4d8" iconBg="#0077b6">
+            <PlumbPillBtn big onClick={() => { setShowNewJobFolder(false); setPlumbScreen("tempLog"); }} label="Water Temperature Log" color="#00b4d8" iconBg="#0077b6">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M15 13V5c0-1.66-1.34-3-3-3S9 3.34 9 5v8c-1.21.91-2 2.37-2 4 0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.63-.79-3.09-2-4zm-4-8c0-.55.45-1 1-1s1 .45 1 1h-1v1h1v2h-1v1h1v2h-2V5z"/></svg>
             </PlumbPillBtn>
-            <PlumbPillBtn onClick={() => { setShowNewJobFolder(false); setPlumbScreen("g3"); }} label="G3 Unvented Cylinder" color="#00b4d8" iconBg="#0077b6">
+            <PlumbPillBtn big onClick={() => { setShowNewJobFolder(false); setPlumbScreen("g3"); }} label="G3 Unvented Cylinder" color="#00b4d8" iconBg="#0077b6">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.65 0-3 1.35-3 3s1.35 3 3 3 3-1.35 3-3-1.35-3-3-3z"/></svg>
             </PlumbPillBtn>
-            <PlumbPillBtn onClick={() => { setShowNewJobFolder(false); setPlumbScreen("tmv"); }} label="TMV Service Record" color="#00b4d8" iconBg="#0077b6">
+            <PlumbPillBtn big onClick={() => { setShowNewJobFolder(false); setPlumbScreen("tmv"); }} label="TMV Service Record" color="#00b4d8" iconBg="#0077b6">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M17 6.1H7c-.6 0-1 .4-1 1s.4 1 1 1h3.1v2.5c-3.1.4-5.6 2.8-6 5.9-.1.6.4 1.1 1 1.1h13.8c.6 0 1.1-.5 1-1.1-.4-3.1-2.9-5.5-6-5.9V8.1H17c.6 0 1-.4 1-1s-.4-1-1-1zM12 4c.8 0 1.5-.7 1.5-1.5S12.8 1 12 1s-1.5.7-1.5 1.5S11.2 4 12 4z"/></svg>
             </PlumbPillBtn>
-            <PlumbPillBtn onClick={() => { setShowNewJobFolder(false); setPlumbScreen("rpz"); }} label="RPZ Valve Test Certificate" color="#00b4d8" iconBg="#0077b6">
+            <PlumbPillBtn big onClick={() => { setShowNewJobFolder(false); setPlumbScreen("rpz"); }} label="RPZ Valve Test Certificate" color="#00b4d8" iconBg="#0077b6">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
             </PlumbPillBtn>
-            <PlumbPillBtn onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#00b4d8" iconBg="#0077b6">
+            <PlumbPillBtn big onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#00b4d8" iconBg="#0077b6">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </PlumbPillBtn>
           </div>
@@ -29573,10 +29585,13 @@ function OilRenewablesDashboard({ onBack, currentUser, onNewJob, onRecords, onRe
   }
 
   // PillBtn matching Electrical style exactly
-  function OilPillBtn({ onClick, label, color = "#2d6a4f", iconBg, children }) {
+  function OilPillBtn({ onClick, label, color = "#2d6a4f", iconBg, children, big }) {
     const [hov, setHov] = useState(false);
     const textColor = "#fff";
     const circleBg = iconBg || color;
+    const pillH = big ? 92 : 76;
+    const circleSize = big ? 68 : 58;
+    const labelSize = big ? 17 : 15;
     const btnGradient = `linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 40%, ${color} 50%, rgba(0,0,0,0.12) 70%, rgba(0,0,0,0.28) 100%), ${color}`;
     const circleGradient = `linear-gradient(180deg, rgba(255,255,255,0.22) 0%, ${circleBg} 50%, rgba(0,0,0,0.22) 100%)`;
     return (
@@ -29756,28 +29771,28 @@ function OilRenewablesDashboard({ onBack, currentUser, onNewJob, onRecords, onRe
             </div>
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-            <OilPillBtn onClick={() => { setShowNewJobFolder(false); setOilScreen("oilCD11"); }} label="OFTEC CD/11 Service" color="#2d6a4f" iconBg="#1b4332">
+            <OilPillBtn big onClick={() => { setShowNewJobFolder(false); setOilScreen("oilCD11"); }} label="OFTEC CD/11 Service" color="#2d6a4f" iconBg="#1b4332">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
             </OilPillBtn>
-            <OilPillBtn onClick={() => { setShowNewJobFolder(false); setOilScreen("oilCD10"); }} label="OFTEC CD/10 Install" color="#2d6a4f" iconBg="#1b4332">
+            <OilPillBtn big onClick={() => { setShowNewJobFolder(false); setOilScreen("oilCD10"); }} label="OFTEC CD/10 Install" color="#2d6a4f" iconBg="#1b4332">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
             </OilPillBtn>
-            <OilPillBtn onClick={() => { setShowNewJobFolder(false); setOilScreen("oilCD12"); }} label="OFTEC CD/12 Landlord" color="#2d6a4f" iconBg="#1b4332">
+            <OilPillBtn big onClick={() => { setShowNewJobFolder(false); setOilScreen("oilCD12"); }} label="OFTEC CD/12 Landlord" color="#2d6a4f" iconBg="#1b4332">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
             </OilPillBtn>
-            <OilPillBtn onClick={() => { setShowNewJobFolder(false); setOilScreen("oilCD14"); }} label="OFTEC CD/14 Warning" color="#dc2626" iconBg="#991b1b">
+            <OilPillBtn big onClick={() => { setShowNewJobFolder(false); setOilScreen("oilCD14"); }} label="OFTEC CD/14 Warning" color="#dc2626" iconBg="#991b1b">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
             </OilPillBtn>
-            <OilPillBtn onClick={() => { setShowNewJobFolder(false); setOilScreen("oilTI133D"); }} label="Tank Risk TI/133D" color="#2d6a4f" iconBg="#1b4332">
+            <OilPillBtn big onClick={() => { setShowNewJobFolder(false); setOilScreen("oilTI133D"); }} label="Tank Risk TI/133D" color="#2d6a4f" iconBg="#1b4332">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
             </OilPillBtn>
-            <OilPillBtn onClick={() => { setShowNewJobFolder(false); setOilScreen("oilHeatPump"); }} label="MCS Heat Pump" color="#2d6a4f" iconBg="#1b4332">
+            <OilPillBtn big onClick={() => { setShowNewJobFolder(false); setOilScreen("oilHeatPump"); }} label="MCS Heat Pump" color="#2d6a4f" iconBg="#1b4332">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9z"/></svg>
             </OilPillBtn>
-            <OilPillBtn onClick={() => { setShowNewJobFolder(false); setOilScreen("oilSolarThermal"); }} label="Solar Thermal" color="#2d6a4f" iconBg="#1b4332">
+            <OilPillBtn big onClick={() => { setShowNewJobFolder(false); setOilScreen("oilSolarThermal"); }} label="Solar Thermal" color="#2d6a4f" iconBg="#1b4332">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="#fff" strokeWidth="1.5" fill="none"/></svg>
             </OilPillBtn>
-            <OilPillBtn onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#2d6a4f" iconBg="#1b4332">
+            <OilPillBtn big onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#2d6a4f" iconBg="#1b4332">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </OilPillBtn>
           </div>
