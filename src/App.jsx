@@ -22744,8 +22744,15 @@ function ElectricalPDFPreview({ certData, certType, certTitle, onClose }) {
               </div>
               <div style={sectionStyle}>
                 <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Observations</div>
-                <div style={valueStyle}>{certData.observations || "—"}</div>
-                {renderField("Classification", certData.observationCode)}
+                {Array.isArray(certData.observations) && certData.observations.length > 0
+                  ? certData.observations.map((obs, i) => (
+                    <div key={obs.id || i} style={{ marginBottom: i < certData.observations.length - 1 ? 8 : 0 }}>
+                      <div style={valueStyle}>{obs.observationText || obs.text || obs.observation || "—"}</div>
+                      {obs.classification && <div style={{ ...labelStyle, marginTop:2 }}>Classification: {obs.classification}</div>}
+                    </div>
+                  ))
+                  : <div style={valueStyle}>{typeof certData.observations === "string" ? certData.observations : "—"}</div>
+                }
               </div>
               <div style={sectionStyle}>
                 <div style={{ fontSize:13, fontWeight:700, color:"#3b82f6", marginBottom:8, textTransform:"uppercase" }}>Overall Result</div>
