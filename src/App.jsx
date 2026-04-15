@@ -5352,40 +5352,40 @@ function HomeScreen({ onNew, onSelectCertType, onRecords, onReport, onLogout, cu
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Safety Certificate"); }} label="Gas Safety Certificate" color="#eab308" iconBg="#a16207">
-              <span style={{ fontSize:24 }}>🛡️</span>
+              <span style={{ fontSize:28 }}>🛡️</span>
             </PillBtn>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Boiler Service"); }} label="Boiler Service" color="#eab308" iconBg="#a16207">
-              <span style={{ fontSize:24 }}>🔩</span>
+              <span style={{ fontSize:28 }}>🔩</span>
             </PillBtn>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Warning Notice"); }} label="Warning Notice" color="#eab308" iconBg="#a16207">
-              <span style={{ fontSize:24 }}>🚨</span>
+              <span style={{ fontSize:28 }}>🚨</span>
             </PillBtn>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Leisure Industry Gas Safety Record"); }} label="Leisure Industry GSR" color="#eab308" iconBg="#a16207">
-              <span style={{ fontSize:24 }}>🏗️</span>
+              <span style={{ fontSize:28 }}>🏗️</span>
             </PillBtn>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Benchmark Commissioning Checklist"); }} label="Benchmark Commissioning" color="#eab308" iconBg="#a16207">
-              <span style={{ fontSize:24 }}>📋</span>
+              <span style={{ fontSize:28 }}>📋</span>
             </PillBtn>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Liquified Petroleum Gas Safety Record"); }} label="LPG Safety Record" color="#eab308" iconBg="#a16207">
-              <span style={{ fontSize:24 }}>🔶</span>
+              <span style={{ fontSize:28 }}>🔶</span>
             </PillBtn>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Commercial Gas Safety Certificate"); }} label="Commercial GSC" color="#eab308" iconBg="#a16207">
-              <span style={{ fontSize:24 }}>🏛️</span>
+              <span style={{ fontSize:28 }}>🏛️</span>
             </PillBtn>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Installation Safety Report"); }} label="Gas Install Report" color="#eab308" iconBg="#a16207">
-              <span style={{ fontSize:24 }}>📐</span>
+              <span style={{ fontSize:28 }}>📐</span>
             </PillBtn>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Commercial Catering Inspection Record"); }} label="Catering Inspection" color="#eab308" iconBg="#a16207">
-              <span style={{ fontSize:24 }}>🍴</span>
+              <span style={{ fontSize:28 }}>🍴</span>
             </PillBtn>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Testing and Purging Record"); }} label="Gas Testing & Purging" color="#eab308" iconBg="#a16207">
-              <span style={{ fontSize:24 }}>⚗️</span>
+              <span style={{ fontSize:28 }}>⚗️</span>
             </PillBtn>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Invoice"); }} label="Invoice" color="#eab308" iconBg="#a16207">
-              <span style={{ fontSize:24 }}>💼</span>
+              <span style={{ fontSize:28 }}>💼</span>
             </PillBtn>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Quote"); }} label="Quote" color="#eab308" iconBg="#a16207">
-              <span style={{ fontSize:24 }}>📄</span>
+              <span style={{ fontSize:28 }}>📄</span>
             </PillBtn>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#eab308" iconBg="#a16207">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
@@ -18671,9 +18671,9 @@ function RecordsScreen({ records, onBack, onHome, onDelete, onImport, onEditGw, 
       <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:80 }}>
         {folders.map(f => (
           <div key={f.id} onClick={()=>setFolder(f.id)}
-            style={{ background:"#fff", borderRadius:12, padding:"16px 18px", marginBottom:12, boxShadow:"0 2px 10px rgba(0,0,0,0.07)", display:"flex", alignItems:"center", gap:16, cursor:"pointer" }}
-            onMouseEnter={e=>e.currentTarget.style.background="#f0f4f0"}
-            onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+            style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"16px 18px", marginBottom:12, border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", gap:16, cursor:"pointer" }}
+            onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.08)"}
+            onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.04)"}>
             <div style={{ width:52, height:52, borderRadius:12, background:`${f.color}18`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, position:"relative", fontSize:26 }}>
               {f.icon}
               {f.id==="reminders" && dueCount>0 && (
@@ -18683,24 +18683,24 @@ function RecordsScreen({ records, onBack, onHome, onDelete, onImport, onEditGw, 
               )}
             </div>
             <div style={{ flex:1 }}>
-              <div style={{ fontWeight:700, fontSize:15, color:"#222" }}>{f.label}</div>
-              <div style={{ fontSize:13, color: f.id==="reminders" && f.count>0 ? "#c00" : "#888", marginTop:2 }}>
+              <div style={{ fontWeight:700, fontSize:15, color:"#e8edf2" }}>{f.label}</div>
+              <div style={{ fontSize:13, color: f.id==="reminders" && f.count>0 ? "#f87171" : "rgba(255,255,255,0.45)", marginTop:2 }}>
                 {f.desc || `${f.count} record${f.count!==1?"s":""}`}
               </div>
             </div>
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke="#bbb" strokeWidth="2.2" strokeLinecap="round"/></svg>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M6 3L12 9L6 15" stroke="rgba(255,255,255,0.3)" strokeWidth="2.2" strokeLinecap="round"/></svg>
           </div>
         ))}
 
         {/* Transfer records between devices */}
-        <div style={{ marginTop:8, background:"#fff", borderRadius:12, padding:"16px 18px", boxShadow:"0 2px 10px rgba(0,0,0,0.07)" }}>
-          <div style={{ fontWeight:700, fontSize:14, color:"#444", marginBottom:12 }}>📲 Transfer Records</div>
-          <div style={{ fontSize:12, color:"#888", marginBottom:14, lineHeight:1.5 }}>Export <strong>everything</strong> — certificates, invoices, quotes, account reports, yearly reports, GSC folders and reminders — to a file, then import on another device to keep fully in sync.</div>
+        <div style={{ marginTop:8, background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"16px 18px", border:"1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ fontWeight:700, fontSize:14, color:"#e8edf2", marginBottom:12 }}>📲 Transfer Records</div>
+          <div style={{ fontSize:12, color:"rgba(255,255,255,0.45)", marginBottom:14, lineHeight:1.5 }}>Export <strong>everything</strong> — certificates, invoices, quotes, account reports, yearly reports, GSC folders and reminders — to a file, then import on another device to keep fully in sync.</div>
           <div style={{ display:"flex", gap:10 }}>
             <button onClick={exportRecords} style={{ flex:1, padding:"10px", background:BLUE, color:"#fff", border:"none", borderRadius:8, fontWeight:700, fontSize:13, cursor:"pointer" }}>
               ⬇ Export
             </button>
-            <label style={{ flex:1, padding:"10px", background:"#f5f5f5", color:BLUE, border:`2px solid ${BLUE}`, borderRadius:8, fontWeight:700, fontSize:13, cursor:"pointer", textAlign:"center" }}>
+            <label style={{ flex:1, padding:"10px", background:"rgba(255,255,255,0.08)", color:"#93c5fd", border:`2px solid ${BLUE}`, borderRadius:8, fontWeight:700, fontSize:13, cursor:"pointer", textAlign:"center" }}>
               ⬆ Import
               <input type="file" accept=".json" onChange={importRecords} style={{ display:"none" }}/>
             </label>
