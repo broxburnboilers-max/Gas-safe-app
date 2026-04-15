@@ -4111,35 +4111,35 @@ function JobSheetsScreen({ onBack, onHome, onNewJobSheet, onEditJobSheet }) {
   }
 
   return (
-    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
       <Header title="Job Sheets" onBack={onBack}/>
       <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
-        <button onClick={onNewJobSheet} style={{ width:"100%", padding:14, background:BLUE, color:"#fff", border:"none", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", marginBottom:14, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+        <button onClick={onNewJobSheet} style={{ width:"100%", padding:14, background:"#3b82f6", color:"#fff", border:"none", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif", marginBottom:14, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
           <span style={{ fontSize:18 }}>+</span> New Job Sheet
         </button>
         {getUserPlan() === "proplus" && engineers.length > 0 && (
-          <div style={{ margin:"0 0 10px", background:"#fff", borderRadius:10, border:"1px solid #e2e6ea", overflow:"hidden" }}>
-            <select value={filterEngineer} onChange={e=>setFilterEngineer(e.target.value)} style={{ width:"100%", padding:"10px 14px", border:"none", fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#222", background:"transparent" }}>
+          <div style={{ margin:"0 0 10px", background:"rgba(255,255,255,0.08)", borderRadius:10, border:"1px solid rgba(255,255,255,0.15)", overflow:"hidden" }}>
+            <select value={filterEngineer} onChange={e=>setFilterEngineer(e.target.value)} style={{ width:"100%", padding:"10px 14px", border:"none", fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#e8edf2", background:"transparent" }}>
               <option value="">All Engineers</option>
               {engineers.map(eng=><option key={eng.id} value={eng.engineerId}>{eng.name} ({eng.engineerId})</option>)}
             </select>
           </div>
         )}
-        {filtered.length === 0 && <p style={{ textAlign:"center", color:"#888", padding:40 }}>No job sheets yet. Tap "New Job Sheet" to create one.</p>}
+        {filtered.length === 0 && <p style={{ textAlign:"center", color:"rgba(255,255,255,0.5)", padding:40 }}>No job sheets yet. Tap "New Job Sheet" to create one.</p>}
         {filtered.map(s => (
-          <div key={s.id} style={{ background:"#fff", borderRadius:12, padding:"14px 16px", marginBottom:10, boxShadow:"0 1px 6px rgba(0,0,0,0.06)", cursor:"pointer" }} onClick={()=>onEditJobSheet(s.id)}>
+          <div key={s.id} style={{ background:"rgba(255,255,255,0.06)", borderRadius:12, padding:"14px 16px", marginBottom:10, border:"1px solid rgba(255,255,255,0.08)", cursor:"pointer" }} onClick={()=>onEditJobSheet(s.id)}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-              <span style={{ fontWeight:700, color:BLUE, fontSize:14 }}>{s.jobRef}</span>
+              <span style={{ fontWeight:700, color:"#3b82f6", fontSize:14 }}>{s.jobRef}</span>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <span style={{ fontSize:11, padding:"3px 8px", borderRadius:6, fontWeight:600, background: s.status === "Complete" ? "#dcfce7" : "#fef9c3", color: s.status === "Complete" ? "#166534" : "#854d0e" }}>
+                <span style={{ fontSize:11, padding:"3px 8px", borderRadius:6, fontWeight:600, background: s.status === "Complete" ? "rgba(34,197,94,0.15)" : "rgba(234,179,8,0.15)", color: s.status === "Complete" ? "#4ade80" : "#eab308" }}>
                   {s.status || "Incomplete"}
                 </span>
                 <button onClick={e=>{e.stopPropagation();deleteSheet(s.id);}} style={{ background:"none", border:"none", cursor:"pointer", color:"#ef4444", fontSize:14, padding:2 }}>✕</button>
               </div>
             </div>
-            <div style={{ fontSize:13, color:"#444", marginBottom:2 }}>{s.clientName || "No client"}</div>
-            <div style={{ fontSize:12, color:"#888" }}>{s.date ? new Date(s.date).toLocaleDateString("en-GB") : "No date"}</div>
-            {s.assignedEngineer && <div style={{ fontSize:11, color:"#888", marginTop:4 }}>Engineer: {s.assignedEngineerName || s.assignedEngineer}</div>}
+            <div style={{ fontSize:13, color:"rgba(255,255,255,0.7)", marginBottom:2 }}>{s.clientName || "No client"}</div>
+            <div style={{ fontSize:12, color:"rgba(255,255,255,0.45)" }}>{s.date ? new Date(s.date).toLocaleDateString("en-GB") : "No date"}</div>
+            {s.assignedEngineer && <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", marginTop:4 }}>Engineer: {s.assignedEngineerName || s.assignedEngineer}</div>}
           </div>
         ))}
       </div>
@@ -4412,19 +4412,19 @@ function JobSheetWizardScreen({ onBack, onHome, editJobSheetId }) {
   const stepLabels = ["Job Record", "Client Details", "Job Report", "Hours & Status", "Signature", "Preview & Save"];
   const progressPct = (step / 6) * 100;
 
-  const sectionStyle = { margin:"0 0 8px", background:"#fff", borderRadius:12, padding:"14px 16px", boxShadow:"0 1px 6px rgba(0,0,0,0.06)" };
-  const labelStyle = { fontSize:12, color:"#6b7b8d", fontWeight:600, marginBottom:4, display:"block" };
-  const inputStyle = { width:"100%", boxSizing:"border-box", padding:"8px 12px", border:"1px solid #e2e6ea", borderRadius:8, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#222" };
+  const sectionStyle = { margin:"0 0 8px", background:"rgba(255,255,255,0.06)", borderRadius:12, padding:"14px 16px", border:"1px solid rgba(255,255,255,0.08)" };
+  const labelStyle = { fontSize:12, color:"rgba(255,255,255,0.55)", fontWeight:600, marginBottom:4, display:"block" };
+  const inputStyle = { width:"100%", boxSizing:"border-box", padding:"8px 12px", border:"1px solid rgba(255,255,255,0.15)", borderRadius:8, fontSize:14, fontFamily:"'Segoe UI',sans-serif", outline:"none", color:"#e8edf2", background:"rgba(255,255,255,0.08)" };
   const radioGroupStyle = { display:"flex", gap:12, flexWrap:"wrap", marginTop:4 };
   const radioBtn = (active) => ({
-    padding:"8px 16px", borderRadius:8, border:`1px solid ${active ? BLUE : "#ddd"}`,
-    background: active ? BLUE : "#fff", color: active ? "#fff" : "#444",
+    padding:"8px 16px", borderRadius:8, border:`1px solid ${active ? "#3b82f6" : "rgba(255,255,255,0.15)"}`,
+    background: active ? "#3b82f6" : "rgba(255,255,255,0.08)", color: active ? "#fff" : "rgba(255,255,255,0.7)",
     fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif",
   });
 
   // ── Step 1: Job Record ──
   if (step === 1) return (
-    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
       <Header title="Job Sheet" onBack={onBack}/>
       <div style={{ background:BLUE, padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
         <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.2)", borderRadius:2, overflow:"hidden" }}>
@@ -4435,7 +4435,7 @@ function JobSheetWizardScreen({ onBack, onHome, editJobSheetId }) {
       <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
         <div style={sectionStyle}>
           <label style={labelStyle}>Job Reference</label>
-          <input value={data.jobRef} onChange={e=>upd("jobRef",e.target.value)} style={{...inputStyle, background:"#f8f9fa", fontWeight:700}}/>
+          <input value={data.jobRef} onChange={e=>upd("jobRef",e.target.value)} style={{...inputStyle, background:"rgba(255,255,255,0.12)", fontWeight:700}}/>
         </div>
         {engineers.length > 0 && (
           <div style={sectionStyle}>
@@ -4483,7 +4483,7 @@ function JobSheetWizardScreen({ onBack, onHome, editJobSheetId }) {
 
   // ── Step 2: Client Details ──
   if (step === 2) return (
-    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
       <Header title="Job Sheet" onBack={()=>setStep(1)}/>
       <div style={{ background:BLUE, padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
         <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.2)", borderRadius:2, overflow:"hidden" }}>
@@ -4586,7 +4586,7 @@ function JobSheetWizardScreen({ onBack, onHome, editJobSheetId }) {
 
   // ── Step 3: Job Report ──
   if (step === 3) return (
-    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
       <Header title="Job Sheet" onBack={()=>setStep(2)}/>
       <div style={{ background:BLUE, padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
         <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.2)", borderRadius:2, overflow:"hidden" }}>
@@ -4610,7 +4610,7 @@ function JobSheetWizardScreen({ onBack, onHome, editJobSheetId }) {
 
   // ── Step 4: Hours & Status ──
   if (step === 4) return (
-    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
       <Header title="Job Sheet" onBack={()=>setStep(3)}/>
       <div style={{ background:BLUE, padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
         <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.2)", borderRadius:2, overflow:"hidden" }}>
@@ -4695,7 +4695,7 @@ function JobSheetWizardScreen({ onBack, onHome, editJobSheetId }) {
 
   // ── Step 5: Signature ──
   if (step === 5) return (
-    <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+    <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
       <Header title="Job Sheet" onBack={()=>setStep(4)}/>
       <div style={{ background:BLUE, padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
         <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.2)", borderRadius:2, overflow:"hidden" }}>
@@ -4707,7 +4707,7 @@ function JobSheetWizardScreen({ onBack, onHome, editJobSheetId }) {
         <div style={sectionStyle}>
           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
             <input type="checkbox" checked={data.dataProtection} onChange={e=>upd("dataProtection",e.target.checked)} style={{ width:20, height:20, accentColor:BLUE }}/>
-            <span style={{ fontSize:13, color:"#444" }}>I agree to the data protection policy</span>
+            <span style={{ fontSize:13, color:"rgba(255,255,255,0.7)" }}>I agree to the data protection policy</span>
             <button onClick={()=>setShowGdprInfo(true)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, color:BLUE }}>ℹ️</button>
           </div>
         </div>
@@ -4722,7 +4722,7 @@ function JobSheetWizardScreen({ onBack, onHome, editJobSheetId }) {
             <label style={{...labelStyle, margin:0}}>Customer Signature</label>
             <button onClick={()=>clearCanvas(custSigRef)} style={{ background:"#ef4444", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>CLEAN</button>
           </div>
-          <canvas ref={el=>{custCanvasRef.current=el;initCanvas(el,custSigRef);}} style={{ width:"100%", height:120, border:"1px solid #e2e6ea", borderRadius:8, background:"#fafafa", touchAction:"none" }}/>
+          <canvas ref={el=>{custCanvasRef.current=el;initCanvas(el,custSigRef);}} style={{ width:"100%", height:120, border:"1px solid rgba(255,255,255,0.15)", borderRadius:8, background:"#fff", touchAction:"none" }}/>
         </div>
 
         <div style={sectionStyle}>
@@ -4730,7 +4730,7 @@ function JobSheetWizardScreen({ onBack, onHome, editJobSheetId }) {
             <label style={{...labelStyle, margin:0}}>Engineer Signature</label>
             <button onClick={()=>clearCanvas(engSigRef)} style={{ background:"#ef4444", color:"#fff", border:"none", borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:700, cursor:"pointer" }}>CLEAN</button>
           </div>
-          <canvas ref={el=>{engCanvasRef.current=el;initCanvas(el,engSigRef);}} style={{ width:"100%", height:120, border:"1px solid #e2e6ea", borderRadius:8, background:"#fafafa", touchAction:"none" }}/>
+          <canvas ref={el=>{engCanvasRef.current=el;initCanvas(el,engSigRef);}} style={{ width:"100%", height:120, border:"1px solid rgba(255,255,255,0.15)", borderRadius:8, background:"#fff", touchAction:"none" }}/>
         </div>
       </div>
 
@@ -4757,7 +4757,7 @@ function JobSheetWizardScreen({ onBack, onHome, editJobSheetId }) {
   if (step === 6) {
     const profile = (() => { try { return JSON.parse(localStorage.getItem(sk("user_profile")) || "{}"); } catch { return {}; } })();
     return (
-      <div style={{ minHeight:"100dvh", background:"#f0f2f5", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
+      <div style={{ minHeight:"100dvh", background:"linear-gradient(160deg, #0d1f2d 0%, #1a2a3a 60%, #0d1f2d 100%)", fontFamily:"'Segoe UI',sans-serif", display:"flex", flexDirection:"column" }}>
         <Header title="Job Sheet" onBack={()=>setStep(5)}/>
         <div style={{ background:BLUE, padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
           <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.2)", borderRadius:2, overflow:"hidden" }}>
@@ -4767,65 +4767,65 @@ function JobSheetWizardScreen({ onBack, onHome, editJobSheetId }) {
         </div>
         <div style={{ flex:1, overflowY:"auto", padding:"12px 14px 100px" }}>
           {/* Preview Card */}
-          <div style={{ background:"#fff", borderRadius:14, padding:"18px 16px", boxShadow:"0 2px 12px rgba(0,0,0,0.08)", marginBottom:14 }}>
-            <div style={{ textAlign:"center", borderBottom:`2px solid ${BLUE}`, paddingBottom:10, marginBottom:12 }}>
-              <div style={{ fontSize:18, fontWeight:800, color:BLUE }}>Job Record</div>
-              <div style={{ fontSize:12, color:"#888" }}>{data.jobRef} · {data.date ? new Date(data.date).toLocaleDateString("en-GB") : ""}</div>
+          <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:14, padding:"18px 16px", border:"1px solid rgba(255,255,255,0.08)", marginBottom:14 }}>
+            <div style={{ textAlign:"center", borderBottom:"2px solid rgba(255,255,255,0.15)", paddingBottom:10, marginBottom:12 }}>
+              <div style={{ fontSize:18, fontWeight:800, color:"#e8edf2" }}>Job Record</div>
+              <div style={{ fontSize:12, color:"rgba(255,255,255,0.45)" }}>{data.jobRef} · {data.date ? new Date(data.date).toLocaleDateString("en-GB") : ""}</div>
             </div>
 
             <div style={{ display:"flex", gap:10, marginBottom:12 }}>
-              <div style={{ flex:1, border:"1px solid #eee", borderRadius:8, padding:8 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:BLUE, textTransform:"uppercase", marginBottom:4 }}>Installation</div>
-                <div style={{ fontSize:12, color:"#333" }}>{data.instName}</div>
-                <div style={{ fontSize:11, color:"#666" }}>{[data.instAddr1,data.instAddr2,data.instAddr3].filter(Boolean).join(", ")}</div>
-                <div style={{ fontSize:11, color:"#666" }}>{data.instPostcode}</div>
+              <div style={{ flex:1, border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:8 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:"#3b82f6", textTransform:"uppercase", marginBottom:4 }}>Installation</div>
+                <div style={{ fontSize:12, color:"#e8edf2" }}>{data.instName}</div>
+                <div style={{ fontSize:11, color:"rgba(255,255,255,0.55)" }}>{[data.instAddr1,data.instAddr2,data.instAddr3].filter(Boolean).join(", ")}</div>
+                <div style={{ fontSize:11, color:"rgba(255,255,255,0.55)" }}>{data.instPostcode}</div>
               </div>
-              <div style={{ flex:1, border:"1px solid #eee", borderRadius:8, padding:8 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:BLUE, textTransform:"uppercase", marginBottom:4 }}>Client</div>
-                <div style={{ fontSize:12, color:"#333" }}>{data.clientName}</div>
-                <div style={{ fontSize:11, color:"#666" }}>{[data.clientAddr1,data.clientAddr2,data.clientAddr3].filter(Boolean).join(", ")}</div>
-                <div style={{ fontSize:11, color:"#666" }}>{data.clientPostcode}</div>
+              <div style={{ flex:1, border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:8 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:"#3b82f6", textTransform:"uppercase", marginBottom:4 }}>Client</div>
+                <div style={{ fontSize:12, color:"#e8edf2" }}>{data.clientName}</div>
+                <div style={{ fontSize:11, color:"rgba(255,255,255,0.55)" }}>{[data.clientAddr1,data.clientAddr2,data.clientAddr3].filter(Boolean).join(", ")}</div>
+                <div style={{ fontSize:11, color:"rgba(255,255,255,0.55)" }}>{data.clientPostcode}</div>
               </div>
             </div>
 
             {data.jobDescription && (
               <div style={{ marginBottom:10 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:BLUE, textTransform:"uppercase", marginBottom:4 }}>Job Notes</div>
-                <div style={{ fontSize:12, color:"#444", whiteSpace:"pre-wrap" }}>{data.jobDescription}</div>
+                <div style={{ fontSize:10, fontWeight:700, color:"#3b82f6", textTransform:"uppercase", marginBottom:4 }}>Job Notes</div>
+                <div style={{ fontSize:12, color:"rgba(255,255,255,0.7)", whiteSpace:"pre-wrap" }}>{data.jobDescription}</div>
               </div>
             )}
             {data.sparesRequired && (
               <div style={{ marginBottom:10 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:BLUE, textTransform:"uppercase", marginBottom:4 }}>Spares Required</div>
-                <div style={{ fontSize:12, color:"#444", whiteSpace:"pre-wrap" }}>{data.sparesRequired}</div>
+                <div style={{ fontSize:10, fontWeight:700, color:"#3b82f6", textTransform:"uppercase", marginBottom:4 }}>Spares Required</div>
+                <div style={{ fontSize:12, color:"rgba(255,255,255,0.7)", whiteSpace:"pre-wrap" }}>{data.sparesRequired}</div>
               </div>
             )}
 
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6, marginBottom:10, padding:8, background:"#f8f9fa", borderRadius:8 }}>
-              <div><span style={{ fontSize:10, color:"#888" }}>Hours</span><div style={{ fontSize:12, fontWeight:600 }}>{data.hoursUsed}</div></div>
-              <div><span style={{ fontSize:10, color:"#888" }}>Customer Informed</span><div style={{ fontSize:12, fontWeight:600 }}>{data.customerInformed}</div></div>
-              <div><span style={{ fontSize:10, color:"#888" }}>Awaiting Parts</span><div style={{ fontSize:12, fontWeight:600 }}>{data.awaitingParts}</div></div>
-              <div><span style={{ fontSize:10, color:"#888" }}>Job Complete</span><div style={{ fontSize:12, fontWeight:600 }}>{data.jobComplete}</div></div>
-              {data.materialsPurchasedFrom && <div><span style={{ fontSize:10, color:"#888" }}>Materials From</span><div style={{ fontSize:12, fontWeight:600 }}>{data.materialsPurchasedFrom}</div></div>}
-              {data.costExVat && <div><span style={{ fontSize:10, color:"#888" }}>Cost (ex VAT)</span><div style={{ fontSize:12, fontWeight:600 }}>£{data.costExVat}</div></div>}
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6, marginBottom:10, padding:8, background:"rgba(255,255,255,0.04)", borderRadius:8 }}>
+              <div><span style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>Hours</span><div style={{ fontSize:12, fontWeight:600, color:"#e8edf2" }}>{data.hoursUsed}</div></div>
+              <div><span style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>Customer Informed</span><div style={{ fontSize:12, fontWeight:600, color:"#e8edf2" }}>{data.customerInformed}</div></div>
+              <div><span style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>Awaiting Parts</span><div style={{ fontSize:12, fontWeight:600, color:"#e8edf2" }}>{data.awaitingParts}</div></div>
+              <div><span style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>Job Complete</span><div style={{ fontSize:12, fontWeight:600, color:"#e8edf2" }}>{data.jobComplete}</div></div>
+              {data.materialsPurchasedFrom && <div><span style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>Materials From</span><div style={{ fontSize:12, fontWeight:600, color:"#e8edf2" }}>{data.materialsPurchasedFrom}</div></div>}
+              {data.costExVat && <div><span style={{ fontSize:10, color:"rgba(255,255,255,0.45)" }}>Cost (ex VAT)</span><div style={{ fontSize:12, fontWeight:600, color:"#e8edf2" }}>£{data.costExVat}</div></div>}
             </div>
 
-            <div style={{ padding:8, background:"#f8f9fa", borderRadius:8, marginBottom:10 }}>
-              <div style={{ fontSize:10, fontWeight:700, color:BLUE, textTransform:"uppercase", marginBottom:4 }}>Engineer</div>
-              <div style={{ fontSize:12, color:"#333" }}>{data.assignedEngineerName || profile.engineerName || ""}</div>
-              <div style={{ fontSize:11, color:"#666" }}>{profile.companyName || ""} · Gas Safe: {profile.gasSafeNo || ""}</div>
+            <div style={{ padding:8, background:"rgba(255,255,255,0.04)", borderRadius:8, marginBottom:10 }}>
+              <div style={{ fontSize:10, fontWeight:700, color:"#3b82f6", textTransform:"uppercase", marginBottom:4 }}>Engineer</div>
+              <div style={{ fontSize:12, color:"#e8edf2" }}>{data.assignedEngineerName || profile.engineerName || ""}</div>
+              <div style={{ fontSize:11, color:"rgba(255,255,255,0.55)" }}>{profile.companyName || ""} · Gas Safe: {profile.gasSafeNo || ""}</div>
             </div>
           </div>
 
           {/* Action Buttons */}
           <div style={{ display:"flex", flexDirection:"column", gap:8, padding:"0 0 20px" }}>
-            <button onClick={saveJobSheet} style={{ width:"100%", padding:14, background:BLUE, color:"#fff", border:"none", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+            <button onClick={saveJobSheet} style={{ width:"100%", padding:14, background:"#22c55e", color:"#fff", border:"none", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
               Save Job Sheet
             </button>
-            <button onClick={previewPDF} style={{ width:"100%", padding:14, background:"#fff200", color:"#0d1f2d", border:"none", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+            <button onClick={previewPDF} style={{ width:"100%", padding:14, background:"#3b82f6", color:"#fff", border:"none", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
               Preview PDF
             </button>
-            <button onClick={sharePDF} style={{ width:"100%", padding:14, background:"rgba(26,58,74,0.1)", color:BLUE, border:`1px solid ${BLUE}`, borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
+            <button onClick={sharePDF} style={{ width:"100%", padding:14, background:"rgba(255,255,255,0.1)", color:"#fff", border:"1px solid rgba(255,255,255,0.25)", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Segoe UI',sans-serif" }}>
               Share
             </button>
           </div>
@@ -5000,7 +5000,7 @@ function EngineerManagementScreen({ onBack, onHome }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 
-function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine, onAdminDashboard, onPSC, onBankStatements, onGasRateCalc, onJobSheets, onEngineerManagement, onBackToTrades }) {
+function HomeScreen({ onNew, onSelectCertType, onRecords, onReport, onLogout, currentUser, onProfile, onPayment, onClientDetails, onDemo, onResetOnboarding, onAssessment, accountReports, yearlyReports, records, invoices, quotes, onCombine, onAdminDashboard, onPSC, onBankStatements, onGasRateCalc, onJobSheets, onEngineerManagement, onBackToTrades }) {
   const trialStatus = getTrialStatus();
   const daysLeft = getTrialDaysLeft();
   const [showFeedback, setShowFeedback] = useState(false);
@@ -5297,9 +5297,6 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
         <PillBtn onClick={onGasRateCalc} label="Gas Rate Calculator" color="#3b82f6" iconBg="#1d4ed8">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c.83 0 1.5.67 1.5 1.5S12.83 8 12 8s-1.5-.67-1.5-1.5S11.17 5 12 5zm-1 14v-2h2v2h-2zm2.5-4.5c0 .28-.22.5-.5.5h-2c-.28 0-.5-.22-.5-.5v-5c0-.28.22-.5.5-.5h2c.28 0 .5.22.5.5v5z" fill="white"/><path d="M8 13l4-6 4 6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/><circle cx="12" cy="15" r="2" fill="#fff"/></svg>
         </PillBtn>
-        <PillBtn onClick={onJobSheets} label="Job Sheets" color="#f59e0b" iconBg="#92400e">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/><path d="M8 18H11" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
-        </PillBtn>
         <PillBtn onClick={onRecords} label="Records" color="#f59e0b" iconBg="#92400e">
           <svg width="30" height="26" viewBox="0 0 56 48" fill="none"><rect x="2" y="10" width="52" height="36" rx="5" fill="white"/><rect x="2" y="6" width="22" height="14" rx="5" fill="white"/><rect x="8" y="18" width="40" height="24" rx="3" fill="rgba(245,158,11,0.3)"/></svg>
         </PillBtn>
@@ -5353,44 +5350,47 @@ function HomeScreen({ onNew, onRecords, onReport, onLogout, currentUser, onProfi
             </div>
           </div>
           <div style={{ flex:1, overflowY:"auto", padding:"8px 20px 40px", display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onNew(); }} label="Gas Safety Certificate" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Safety Certificate"); }} label="Gas Safety Certificate" color="#f59e0b" iconBg="#92400e">
               <span style={{ fontSize:24 }}>🛡️</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onNew(); }} label="Boiler Service" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Boiler Service"); }} label="Boiler Service" color="#f59e0b" iconBg="#92400e">
               <span style={{ fontSize:24 }}>🔩</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onNew(); }} label="Warning Notice" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Warning Notice"); }} label="Warning Notice" color="#f59e0b" iconBg="#92400e">
               <span style={{ fontSize:24 }}>🚨</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onNew(); }} label="Leisure Industry GSR" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Leisure Industry Gas Safety Record"); }} label="Leisure Industry GSR" color="#f59e0b" iconBg="#92400e">
               <span style={{ fontSize:24 }}>🏗️</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onNew(); }} label="Benchmark Commissioning" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Benchmark Commissioning Checklist"); }} label="Benchmark Commissioning" color="#f59e0b" iconBg="#92400e">
               <span style={{ fontSize:24 }}>📋</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onNew(); }} label="LPG Safety Record" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Liquified Petroleum Gas Safety Record"); }} label="LPG Safety Record" color="#f59e0b" iconBg="#92400e">
               <span style={{ fontSize:24 }}>🔶</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onNew(); }} label="Commercial GSC" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Commercial Gas Safety Certificate"); }} label="Commercial GSC" color="#f59e0b" iconBg="#92400e">
               <span style={{ fontSize:24 }}>🏛️</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onNew(); }} label="Gas Install Report" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Installation Safety Report"); }} label="Gas Install Report" color="#f59e0b" iconBg="#92400e">
               <span style={{ fontSize:24 }}>📐</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onNew(); }} label="Catering Inspection" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Commercial Catering Inspection Record"); }} label="Catering Inspection" color="#f59e0b" iconBg="#92400e">
               <span style={{ fontSize:24 }}>🍴</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onNew(); }} label="Gas Testing & Purging" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Gas Testing and Purging Record"); }} label="Gas Testing & Purging" color="#f59e0b" iconBg="#92400e">
               <span style={{ fontSize:24 }}>⚗️</span>
             </PillBtn>
             <PillBtn onClick={() => { setShowNewJobFolder(false); onGasRateCalc(); }} label="Gas Rate Calculator" color="#3b82f6" iconBg="#1d4ed8">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c.83 0 1.5.67 1.5 1.5S12.83 8 12 8s-1.5-.67-1.5-1.5S11.17 5 12 5zm-1 14v-2h2v2h-2zm2.5-4.5c0 .28-.22.5-.5.5h-2c-.28 0-.5-.22-.5-.5v-5c0-.28.22-.5.5-.5h2c.28 0 .5.22.5.5v5z" fill="white"/><path d="M8 13l4-6 4 6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/><circle cx="12" cy="15" r="2" fill="#fff"/></svg>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onNew(); }} label="Invoice" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Invoice"); }} label="Invoice" color="#f59e0b" iconBg="#92400e">
               <span style={{ fontSize:24 }}>💼</span>
             </PillBtn>
-            <PillBtn onClick={() => { setShowNewJobFolder(false); onNew(); }} label="Quote" color="#f59e0b" iconBg="#92400e">
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onSelectCertType("Quote"); }} label="Quote" color="#f59e0b" iconBg="#92400e">
               <span style={{ fontSize:24 }}>📄</span>
+            </PillBtn>
+            <PillBtn onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#f59e0b" iconBg="#92400e">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </PillBtn>
           </div>
         </div>
@@ -24610,9 +24610,6 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
         <ElecPillBtn onClick={() => setShowNewJobFolder(true)} label="New Job" color="#3b82f6" iconBg="#1d4ed8">
           <svg width="28" height="28" viewBox="0 0 52 52" fill="none"><rect x="22" y="4" width="8" height="44" rx="4" fill="#fff"/><rect x="4" y="22" width="44" height="8" rx="4" fill="#fff"/></svg>
         </ElecPillBtn>
-        <ElecPillBtn onClick={onJobSheets} label="Job Sheets" color="#3b82f6" iconBg="#1d4ed8">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
-        </ElecPillBtn>
         <ElecPillBtn onClick={onRecords} label="Records" color="#3b82f6" iconBg="#1d4ed8">
           <svg width="30" height="26" viewBox="0 0 56 48" fill="none"><rect x="2" y="10" width="52" height="36" rx="5" fill="white"/><rect x="2" y="6" width="22" height="14" rx="5" fill="white"/><rect x="8" y="18" width="40" height="24" rx="3" fill="rgba(59,130,246,0.3)"/></svg>
         </ElecPillBtn>
@@ -24669,6 +24666,9 @@ function ElectricalDashboard({ onBack, currentUser, onNewJob, onRecords, onRepor
             </ElecPillBtn>
             <ElecPillBtn onClick={() => { setShowNewJobFolder(false); setElecScreen("pat"); }} label="PAT Testing" color="#3b82f6" iconBg="#1d4ed8">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            </ElecPillBtn>
+            <ElecPillBtn onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#3b82f6" iconBg="#1d4ed8">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </ElecPillBtn>
           </div>
         </div>
@@ -26313,6 +26313,9 @@ function FireSafetyDashboard({ onBack, currentUser, onSaveCert, onRecords, onRep
             </FirePillBtn>
             <FirePillBtn onClick={() => { setShowNewJobFolder(false); setFireScreen("fireDoor"); }} label="Fire Door Inspection" color="#ef4444" iconBg="#991b1b">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M19 19V5c0-1.1-.9-2-2-2H7c-1.1 0-2 .9-2 2v14H3v2h18v-2h-2zm-4-6h-2v-2h2v2z"/></svg>
+            </FirePillBtn>
+            <FirePillBtn onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#ef4444" iconBg="#991b1b">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </FirePillBtn>
           </div>
         </div>
@@ -27987,9 +27990,6 @@ function PlumbingDashboard({ onBack, currentUser, onNewJob, onRecords, onReport,
         <PlumbPillBtn onClick={() => setShowNewJobFolder(true)} label="New Job" color="#00b4d8" iconBg="#0077b6">
           <svg width="28" height="28" viewBox="0 0 52 52" fill="none"><rect x="22" y="4" width="8" height="44" rx="4" fill="#fff"/><rect x="4" y="22" width="44" height="8" rx="4" fill="#fff"/></svg>
         </PlumbPillBtn>
-        <PlumbPillBtn onClick={onJobSheets} label="Job Sheets" color="#00b4d8" iconBg="#0077b6">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
-        </PlumbPillBtn>
         <PlumbPillBtn onClick={onRecords} label="Records" color="#00b4d8" iconBg="#023e8a">
           <svg width="30" height="26" viewBox="0 0 56 48" fill="none"><rect x="2" y="10" width="52" height="36" rx="5" fill="white"/><rect x="2" y="6" width="22" height="14" rx="5" fill="white"/><rect x="8" y="18" width="40" height="24" rx="3" fill="rgba(0,180,216,0.3)"/></svg>
         </PlumbPillBtn>
@@ -28046,6 +28046,9 @@ function PlumbingDashboard({ onBack, currentUser, onNewJob, onRecords, onReport,
             </PlumbPillBtn>
             <PlumbPillBtn onClick={() => { setShowNewJobFolder(false); setPlumbScreen("rpz"); }} label="RPZ Valve Test Certificate" color="#00b4d8" iconBg="#0077b6">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            </PlumbPillBtn>
+            <PlumbPillBtn onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#00b4d8" iconBg="#0077b6">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </PlumbPillBtn>
           </div>
         </div>
@@ -29761,9 +29764,6 @@ function OilRenewablesDashboard({ onBack, currentUser, onNewJob, onRecords, onRe
         <OilPillBtn onClick={() => setShowNewJobFolder(true)} label="New Job" color="#2d6a4f" iconBg="#1b4332">
           <svg width="28" height="28" viewBox="0 0 52 52" fill="none"><rect x="22" y="4" width="8" height="44" rx="4" fill="#fff" /><rect x="4" y="22" width="44" height="8" rx="4" fill="#fff" /></svg>
         </OilPillBtn>
-        <OilPillBtn onClick={onJobSheets} label="Job Sheets" color="#2d6a4f" iconBg="#1b4332">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8" /><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round" /></svg>
-        </OilPillBtn>
         <OilPillBtn onClick={onRecords} label="Records" color="#2d6a4f" iconBg="#1b4332">
           <svg width="30" height="26" viewBox="0 0 56 48" fill="none"><rect x="2" y="10" width="52" height="36" rx="5" fill="white" /><rect x="2" y="6" width="22" height="14" rx="5" fill="white" /><rect x="8" y="18" width="40" height="24" rx="3" fill="rgba(45,106,79,0.3)" /></svg>
         </OilPillBtn>
@@ -29826,6 +29826,9 @@ function OilRenewablesDashboard({ onBack, currentUser, onNewJob, onRecords, onRe
             </OilPillBtn>
             <OilPillBtn onClick={() => { setShowNewJobFolder(false); setOilScreen("oilSolarThermal"); }} label="Solar Thermal" color="#2d6a4f" iconBg="#1b4332">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="#fff" strokeWidth="1.5" fill="none"/></svg>
+            </OilPillBtn>
+            <OilPillBtn onClick={() => { setShowNewJobFolder(false); onJobSheets(); }} label="Job Sheets" color="#2d6a4f" iconBg="#1b4332">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="white" strokeWidth="1.8"/><path d="M8 6H16M8 10H16M8 14H13" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </OilPillBtn>
           </div>
         </div>
@@ -30892,7 +30895,7 @@ function App({ onLogout }) {
 
 
   // ── Gas Dashboard (existing HomeScreen with back button) ────────────────
-  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("\u2705 "+n+" demo records added!\n\nGo to Records \u2192 Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")} onAdminDashboard={()=>setScreen("adminDashboard")} onPSC={()=>setScreen("psc")} onBankStatements={()=>setScreen("bankStatements")} onGasRateCalc={()=>setScreen("gasRateCalc")} onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")} onBackToTrades={goTradeHome}/>;
+  if (screen === "home") return <HomeScreen onNew={()=>setScreen("newJob")} onSelectCertType={(job) => { if(job==="Gas Safety Certificate") { setScreen("gsc"); setSubScreen("fileRef"); } else if(job==="Boiler Service") { setScreen("bs"); setBsSubScreen("fileRef"); } else if(job==="Warning Notice") { setScreen("warningNotice"); setWnSubScreen("fileRef"); } else if(job==="Invoice") { setInvoiceWizardOpen(true); } else if(job==="Quote") { setQuoteWizardOpen(true); } else if(job === "Leisure Industry Gas Safety Record") { setScreen("leisureRecord"); } else if(job === "Benchmark Commissioning Checklist") { setScreen("benchmark"); } else if(job === "Liquified Petroleum Gas Safety Record") { setScreen("lpgRecord"); } else if(job === "Commercial Gas Safety Certificate") { setScreen("commercialGSC"); } else if(job === "Gas Installation Safety Report") { setScreen("gasInstallReport"); } else if(job === "Commercial Catering Inspection Record") { setScreen("cateringInspection"); } else if(job === "Gas Testing and Purging Record") { setScreen("gasTestPurge"); } else { setScreen("newJob"); } }} onRecords={()=>setScreen("records")} onReport={()=>setScreen("report")} onLogout={onLogout} currentUser={currentUser} onProfile={()=>setScreen("profileEdit")} onPayment={()=>setScreen("paymentDetails")} onClientDetails={()=>setScreen("contacts")} onDemo={()=>{ const n=seedDemoData(setRecords); alert("\u2705 "+n+" demo records added!\n\nGo to Records \u2192 Demo Certificates to view them."); }} onResetOnboarding={()=>advanceOnboarding("payment")} onAssessment={()=>setScreen("safetyAssessment")} accountReports={accountReports} yearlyReports={yearlyReports} records={records} invoices={invoices} quotes={quotes} onCombine={()=>setScreen("combineCerts")} onAdminDashboard={()=>setScreen("adminDashboard")} onPSC={()=>setScreen("psc")} onBankStatements={()=>setScreen("bankStatements")} onGasRateCalc={()=>setScreen("gasRateCalc")} onJobSheets={()=>setScreen("jobSheets")} onEngineerManagement={()=>setScreen("engineerManagement")} onBackToTrades={goTradeHome}/>;
   if (screen === "psc") return <PSCScreen onHome={goHome} engineerData={profileDefaults()} onSave={(rec)=>{ setRecords(prev=>[...prev, rec]); }}/>;
   if (screen === "adminDashboard") return <AdminDashboardScreen onBack={()=>setScreen("home")} onHome={goHome} records={records} invoices={invoices} quotes={quotes}/>;
   if (screen === "contacts") return <ClientContactsScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
