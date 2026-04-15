@@ -337,6 +337,46 @@ export async function signIn(email, password) {
 }
 
 /**
+ * Reset password — sends a password reset email via Supabase
+ */
+export async function resetPassword(email) {
+  if (!supabase) throw new Error('Supabase not configured');
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/#reset-password',
+  });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Update password — used after clicking the reset link
+ */
+export async function updatePassword(newPassword) {
+  if (!supabase) throw new Error('Supabase not configured');
+  const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Look up username (email) by Gas Safe number or engineer name
+ */
+export async function lookupUsername(gasSafeNo, engineerName) {
+  if (!supabase) throw new Error('Supabase not configured');
+  let query = supabase.from('profiles').select('username, engineer_name, gas_safe_no');
+  if (gasSafeNo && gasSafeNo.trim()) {
+    query = query.eq('gas_safe_no', gasSafeNo.trim());
+  } else if (engineerName && engineerName.trim()) {
+    query = query.ilike('engineer_name', `%${engineerName.trim()}%`);
+  } else {
+    throw new Error('Please provide your Gas Safe number or engineer name.');
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+/**
  * Sign out
  */
 export async function signOut() {

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { isSupabaseEnabled } from './supabaseClient';
-import { pushAll, pushProfile, pushContacts, pullAll, mergeRecords, flushSyncQueue, getSession, signIn as supabaseSignIn, signUp as supabaseSignUp, signOut as supabaseSignOut } from './syncEngine';
+import { pushAll, pushProfile, pushContacts, pullAll, mergeRecords, flushSyncQueue, getSession, signIn as supabaseSignIn, signUp as supabaseSignUp, signOut as supabaseSignOut, resetPassword as supabaseResetPassword, updatePassword as supabaseUpdatePassword, lookupUsername as supabaseLookupUsername, onAuthStateChange } from './syncEngine';
 
 // ─── Multi-user auth ──────────────────────────────────────────────────────────
 // Module-level current user — set once on login, never changes during a session
@@ -249,12 +249,22 @@ function LandingScreen({ onLogin, onCreateProfile }) {
 }
 
 // ─── Login Screen ─────────────────────────────────────────────────────────────
-function LoginScreen({ onLogin, onBack }) {
+function LoginScreen({ onLogin, onBack, initialView, onPasswordReset }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Forgot flows: "login" | "forgotPassword" | "forgotUsername" | "resetSent" | "usernameSent" | "newPassword"
+  const [view, setView] = useState(initialView || "login");
+  const [resetEmail, setResetEmail] = useState("");
+  const [gasSafeNo, setGasSafeNo] = useState("");
+  const [engName, setEngName] = useState("");
+  const [foundUsers, setFoundUsers] = useState([]);
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
 
   async function handleLogin() {
     if (!username.trim()) { setError("Please enter your username."); return; }
@@ -271,21 +281,18 @@ function LoginScreen({ onLogin, onBack }) {
         try {
           const { user: sbUser, session } = await supabaseSignIn(username, password);
           if (sbUser && session) {
-            // Build a user entry compatible with the existing system
             const userEntry = {
               username: sbUser.email,
               displayName: sbUser.user_metadata?.engineerName || sbUser.user_metadata?.displayName || sbUser.email,
               supabaseId: sbUser.id,
               isSupabaseUser: true,
             };
-            // Register locally so findUser works next time
             saveRegisteredUser({ ...userEntry, hash: hashed });
             onLogin(userEntry);
             setLoading(false);
             return;
           }
         } catch (sbErr) {
-          // Supabase auth failed — show error
           const msg = sbErr?.message || "Login failed.";
           setError(msg === "Invalid login credentials" ? "Incorrect email or password." : msg);
           setLoading(false);
@@ -293,60 +300,239 @@ function LoginScreen({ onLogin, onBack }) {
         }
       }
 
-      // 3. Neither hardcoded nor Supabase matched
       setError("Incorrect username or password.");
     } catch { setError("Login failed. Please try again."); }
     setLoading(false);
   }
 
+  async function handleResetPassword() {
+    if (!resetEmail.trim()) { setError("Please enter your email address."); return; }
+    setLoading(true); setError("");
+    try {
+      await supabaseResetPassword(resetEmail.trim().toLowerCase());
+      setView("resetSent");
+    } catch (e) {
+      setError(e?.message || "Failed to send reset email. Please try again.");
+    }
+    setLoading(false);
+  }
+
+  async function handleLookupUsername() {
+    if (!gasSafeNo.trim() && !engName.trim()) { setError("Please enter your Gas Safe number or engineer name."); return; }
+    setLoading(true); setError(""); setFoundUsers([]);
+    try {
+      const results = await supabaseLookupUsername(gasSafeNo.trim(), engName.trim());
+      if (results.length === 0) {
+        setError("No account found. Please check your details and try again.");
+      } else {
+        setFoundUsers(results);
+        setView("usernameSent");
+      }
+    } catch (e) {
+      setError(e?.message || "Lookup failed. Please try again.");
+    }
+    setLoading(false);
+  }
+
+  async function handleSetNewPassword() {
+    if (!newPw || newPw.length < 6) { setError("Password must be at least 6 characters."); return; }
+    if (newPw !== confirmPw) { setError("Passwords do not match."); return; }
+    setLoading(true); setError("");
+    try {
+      await supabaseUpdatePassword(newPw);
+      setSuccessMsg("Password updated successfully. You can now sign in.");
+      setView("login");
+      setNewPw(""); setConfirmPw("");
+      if (onPasswordReset) onPasswordReset();
+    } catch (e) {
+      setError(e?.message || "Failed to update password.");
+    }
+    setLoading(false);
+  }
+
+  function maskEmail(email) {
+    if (!email || !email.includes("@")) return email;
+    const [local, domain] = email.split("@");
+    if (local.length <= 2) return local[0] + "***@" + domain;
+    return local[0] + local[1] + "***" + local[local.length-1] + "@" + domain;
+  }
+
+  const cardStyle = { background:"#fff", borderRadius:20, padding:"36px 28px 32px", width:"100%", maxWidth:380, boxShadow:"0 24px 60px rgba(0,0,0,0.3)" };
+  const inputStyle = { width:"100%", padding:"13px 14px", borderRadius:10, border:"2px solid #ddd", fontSize:15, color:"#111", outline:"none", boxSizing:"border-box", fontFamily:"inherit" };
+  const btnPrimary = { width:"100%", padding:15, background:loading?"#aaa":"#0d1f2d", color:loading?"#fff":"#fff200", border:"none", borderRadius:10, fontSize:16, fontWeight:700, cursor:loading?"default":"pointer", marginTop:20, fontFamily:"inherit" };
+  const linkStyle = { color:"#1a3a4a", fontSize:14, cursor:"pointer", textDecoration:"underline", textUnderlineOffset:3, fontWeight:600 };
+
   return (
     <div style={{ minHeight:"100dvh", background:"linear-gradient(135deg, #0d1f2d 0%, #1a3a4a 60%, #35463d 100%)", display:"flex", flexDirection:"column", fontFamily:"'Segoe UI',sans-serif" }}>
       <div style={{ padding:"16px 20px", display:"flex", alignItems:"center", gap:12 }}>
-        <button onClick={onBack} style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:"50%", width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#fff", fontSize:20 }}>‹</button>
-        <div style={{ color:"rgba(255,255,255,0.7)", fontSize:14 }}>Back to home</div>
+        <button onClick={view==="login"?onBack:()=>{ setView("login"); setError(""); setSuccessMsg(""); }} style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:"50%", width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#fff", fontSize:20 }}>‹</button>
+        <div style={{ color:"rgba(255,255,255,0.7)", fontSize:14 }}>{view==="login"?"Back to home":"Back to sign in"}</div>
       </div>
       <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
-        <div style={{ background:"#fff", borderRadius:20, padding:"36px 28px 32px", width:"100%", maxWidth:380, boxShadow:"0 24px 60px rgba(0,0,0,0.3)" }}>
-          <div style={{ textAlign:"center", marginBottom:24 }}>
-            <img src={APP_LOGO_SVG} style={{ height:52, width:52, objectFit:"contain", margin:"0 auto 12px", display:"block" }} alt="Gas Safety App"/>
-            <h1 style={{ fontSize:22, fontWeight:800, color:"#0d1f2d", margin:"0 0 4px" }}>Welcome back</h1>
-            <p style={{ color:"#666", fontSize:14, margin:0 }}>Sign in with your email address</p>
-          </div>
-          <div style={{ marginBottom:12 }}>
-            <div style={{ fontSize:12, fontWeight:600, color:"#444", marginBottom:4 }}>Email Address</div>
-            <input type="email" placeholder="Your email address" value={username}
-              onChange={e=>{ setUsername(e.target.value.trim().toLowerCase()); setError(""); }}
-              onKeyDown={e=>e.key==="Enter"&&handleLogin()}
-              autoCapitalize="none" autoCorrect="off" autoComplete="email"
-              style={{ width:"100%", padding:"13px 14px", borderRadius:10, border:"2px solid #ddd", fontSize:15, color:"#111", outline:"none", boxSizing:"border-box", fontFamily:"inherit" }}/>
-          </div>
-          <div style={{ marginBottom:6 }}>
-            <div style={{ fontSize:12, fontWeight:600, color:"#444", marginBottom:4 }}>Password</div>
-            <div style={{ position:"relative" }}>
-              <input type={show?"text":"password"} placeholder="Your password" value={password}
-                onChange={e=>{ setPassword(e.target.value); setError(""); }}
+
+        {/* ── SIGN IN ── */}
+        {view === "login" && (
+          <div style={cardStyle}>
+            <div style={{ textAlign:"center", marginBottom:24 }}>
+              <img src={APP_LOGO_SVG} style={{ height:52, width:52, objectFit:"contain", margin:"0 auto 12px", display:"block" }} alt="Gas Safety App"/>
+              <h1 style={{ fontSize:22, fontWeight:800, color:"#0d1f2d", margin:"0 0 4px" }}>Welcome back</h1>
+              <p style={{ color:"#666", fontSize:14, margin:0 }}>Sign in with your email address</p>
+            </div>
+            {successMsg && <p style={{ color:"#2e7d32", fontSize:13, margin:"0 0 12px", textAlign:"center", fontWeight:600 }}>{successMsg}</p>}
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:"#444", marginBottom:4 }}>Email Address</div>
+              <input type="email" placeholder="Your email address" value={username}
+                onChange={e=>{ setUsername(e.target.value.trim().toLowerCase()); setError(""); setSuccessMsg(""); }}
                 onKeyDown={e=>e.key==="Enter"&&handleLogin()}
-                autoComplete="current-password"
-                style={{ width:"100%", padding:"13px 46px 13px 14px", borderRadius:10, border:"2px solid #1a3a4a", fontSize:15, color:"#111", outline:"none", boxSizing:"border-box", fontFamily:"inherit" }}/>
-              <button onClick={()=>setShow(v=>!v)} style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:18, color:"#888", padding:0 }}>{show?"🙈":"👁️"}</button>
+                autoCapitalize="none" autoCorrect="off" autoComplete="email"
+                style={inputStyle}/>
+            </div>
+            <div style={{ marginBottom:6 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:"#444", marginBottom:4 }}>Password</div>
+              <div style={{ position:"relative" }}>
+                <input type={show?"text":"password"} placeholder="Your password" value={password}
+                  onChange={e=>{ setPassword(e.target.value); setError(""); }}
+                  onKeyDown={e=>e.key==="Enter"&&handleLogin()}
+                  autoComplete="current-password"
+                  style={{ ...inputStyle, border:"2px solid #1a3a4a", paddingRight:46 }}/>
+                <button onClick={()=>setShow(v=>!v)} style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:18, color:"#888", padding:0 }}>{show?"\u{1F648}":"\u{1F441}\uFE0F"}</button>
+              </div>
+            </div>
+            {error && <p style={{ color:"#d32f2f", fontSize:13, margin:"8px 0 0" }}>{error}</p>}
+            <button onClick={handleLogin} disabled={loading} style={btnPrimary}>
+              {loading ? "Signing in\u2026" : "Sign In"}
+            </button>
+            <div style={{ borderTop:"1px solid #f0f0f0", marginTop:20, paddingTop:16, display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
+              <a onClick={()=>{ setView("forgotPassword"); setError(""); setSuccessMsg(""); setResetEmail(username); }} style={linkStyle}>Forgot your password?</a>
+              <a onClick={()=>{ setView("forgotUsername"); setError(""); setSuccessMsg(""); }} style={linkStyle}>Forgot your email / username?</a>
             </div>
           </div>
-          {error && <p style={{ color:"#d32f2f", fontSize:13, margin:"8px 0 0" }}>{error}</p>}
-          <button onClick={handleLogin} disabled={loading}
-            style={{ width:"100%", padding:15, background:loading?"#aaa":"#0d1f2d", color:loading?"#fff":"#fff200", border:"none", borderRadius:10, fontSize:16, fontWeight:700, cursor:loading?"default":"pointer", marginTop:20, fontFamily:"inherit" }}>
-            {loading ? "Signing in…" : "Sign In"}
-          </button>
-          <div style={{ borderTop:"1px solid #f0f0f0", marginTop:20, paddingTop:16, textAlign:"center" }}>
-            <a onClick={()=>{
-              const subject = encodeURIComponent("Gas Safety App — Password Reset Request");
-              const body = encodeURIComponent(`Hi,\n\nI have forgotten my password for the Gas Safety App.\n\nEmail / Username: ${username || "(please enter your email above)"}\n\nPlease could you reset my account?\n\nThanks`);
-              window.open(`mailto:westlothiangas@gmail.com?subject=${subject}&body=${body}`, "_blank");
-            }}
-            style={{ color:"#1a3a4a", fontSize:14, cursor:"pointer", textDecoration:"underline", textUnderlineOffset:3, fontWeight:600 }}>
-              Forgot your password?
-            </a>
+        )}
+
+        {/* ── FORGOT PASSWORD ── */}
+        {view === "forgotPassword" && (
+          <div style={cardStyle}>
+            <div style={{ textAlign:"center", marginBottom:24 }}>
+              <div style={{ fontSize:40, marginBottom:8 }}>{"\u{1F512}"}</div>
+              <h1 style={{ fontSize:22, fontWeight:800, color:"#0d1f2d", margin:"0 0 4px" }}>Reset Password</h1>
+              <p style={{ color:"#666", fontSize:14, margin:0, lineHeight:1.5 }}>Enter your email address and we'll send you a link to reset your password.</p>
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:"#444", marginBottom:4 }}>Email Address</div>
+              <input type="email" placeholder="Your email address" value={resetEmail}
+                onChange={e=>{ setResetEmail(e.target.value.trim().toLowerCase()); setError(""); }}
+                onKeyDown={e=>e.key==="Enter"&&handleResetPassword()}
+                autoCapitalize="none" autoCorrect="off" autoComplete="email"
+                style={inputStyle}/>
+            </div>
+            {error && <p style={{ color:"#d32f2f", fontSize:13, margin:"8px 0 0" }}>{error}</p>}
+            <button onClick={handleResetPassword} disabled={loading} style={btnPrimary}>
+              {loading ? "Sending\u2026" : "Send Reset Link"}
+            </button>
+            <div style={{ marginTop:16, textAlign:"center" }}>
+              <a onClick={()=>{ setView("login"); setError(""); }} style={linkStyle}>Back to Sign In</a>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* ── RESET SENT CONFIRMATION ── */}
+        {view === "resetSent" && (
+          <div style={cardStyle}>
+            <div style={{ textAlign:"center" }}>
+              <div style={{ fontSize:48, marginBottom:12 }}>{"\u{2709}\uFE0F"}</div>
+              <h1 style={{ fontSize:22, fontWeight:800, color:"#0d1f2d", margin:"0 0 8px" }}>Check Your Email</h1>
+              <p style={{ color:"#666", fontSize:14, margin:"0 0 20px", lineHeight:1.6 }}>We've sent a password reset link to <strong style={{ color:"#0d1f2d" }}>{resetEmail}</strong>. Check your inbox (and spam folder) and click the link to set a new password.</p>
+              <button onClick={()=>{ setView("login"); setError(""); setSuccessMsg(""); }} style={btnPrimary}>Back to Sign In</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── FORGOT USERNAME ── */}
+        {view === "forgotUsername" && (
+          <div style={cardStyle}>
+            <div style={{ textAlign:"center", marginBottom:24 }}>
+              <div style={{ fontSize:40, marginBottom:8 }}>{"\u{1F464}"}</div>
+              <h1 style={{ fontSize:22, fontWeight:800, color:"#0d1f2d", margin:"0 0 4px" }}>Find Your Account</h1>
+              <p style={{ color:"#666", fontSize:14, margin:0, lineHeight:1.5 }}>Enter your Gas Safe registration number or engineer name to find your account.</p>
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:"#444", marginBottom:4 }}>Gas Safe Number</div>
+              <input type="text" placeholder="e.g. 123456" value={gasSafeNo}
+                onChange={e=>{ setGasSafeNo(e.target.value); setError(""); }}
+                onKeyDown={e=>e.key==="Enter"&&handleLookupUsername()}
+                style={inputStyle}/>
+            </div>
+            <div style={{ textAlign:"center", color:"#999", fontSize:13, fontWeight:600, margin:"4px 0" }}>OR</div>
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:"#444", marginBottom:4 }}>Engineer Name</div>
+              <input type="text" placeholder="Your full name" value={engName}
+                onChange={e=>{ setEngName(e.target.value); setError(""); }}
+                onKeyDown={e=>e.key==="Enter"&&handleLookupUsername()}
+                style={inputStyle}/>
+            </div>
+            {error && <p style={{ color:"#d32f2f", fontSize:13, margin:"8px 0 0" }}>{error}</p>}
+            <button onClick={handleLookupUsername} disabled={loading} style={btnPrimary}>
+              {loading ? "Searching\u2026" : "Find My Account"}
+            </button>
+            <div style={{ marginTop:16, textAlign:"center" }}>
+              <a onClick={()=>{ setView("login"); setError(""); }} style={linkStyle}>Back to Sign In</a>
+            </div>
+          </div>
+        )}
+
+        {/* ── USERNAME FOUND ── */}
+        {view === "usernameSent" && (
+          <div style={cardStyle}>
+            <div style={{ textAlign:"center" }}>
+              <div style={{ fontSize:48, marginBottom:12 }}>{"\u{2705}"}</div>
+              <h1 style={{ fontSize:22, fontWeight:800, color:"#0d1f2d", margin:"0 0 8px" }}>Account Found</h1>
+              <p style={{ color:"#666", fontSize:14, margin:"0 0 16px", lineHeight:1.6 }}>We found the following account{foundUsers.length>1?"s":""}:</p>
+              <div style={{ background:"#f5f5f5", borderRadius:12, padding:16, marginBottom:20 }}>
+                {foundUsers.map((u,i) => (
+                  <div key={i} style={{ padding:"8px 0", borderBottom: i<foundUsers.length-1?"1px solid #e0e0e0":"none" }}>
+                    <div style={{ fontSize:15, fontWeight:700, color:"#0d1f2d" }}>{u.engineer_name || "Unknown"}</div>
+                    <div style={{ fontSize:14, color:"#444", marginTop:2 }}>Email: <strong>{maskEmail(u.username)}</strong></div>
+                    {u.gas_safe_no && <div style={{ fontSize:13, color:"#888", marginTop:2 }}>Gas Safe: {u.gas_safe_no}</div>}
+                  </div>
+                ))}
+              </div>
+              <p style={{ color:"#888", fontSize:12, margin:"0 0 16px", lineHeight:1.5 }}>Use the email above to sign in. If you've also forgotten your password, use "Forgot your password?" on the sign in screen.</p>
+              <button onClick={()=>{ setView("login"); setError(""); setSuccessMsg(""); }} style={btnPrimary}>Back to Sign In</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── SET NEW PASSWORD (after clicking reset link) ── */}
+        {view === "newPassword" && (
+          <div style={cardStyle}>
+            <div style={{ textAlign:"center", marginBottom:24 }}>
+              <div style={{ fontSize:40, marginBottom:8 }}>{"\u{1F511}"}</div>
+              <h1 style={{ fontSize:22, fontWeight:800, color:"#0d1f2d", margin:"0 0 4px" }}>Set New Password</h1>
+              <p style={{ color:"#666", fontSize:14, margin:0 }}>Enter your new password below.</p>
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:"#444", marginBottom:4 }}>New Password</div>
+              <div style={{ position:"relative" }}>
+                <input type={showNewPw?"text":"password"} placeholder="Minimum 6 characters" value={newPw}
+                  onChange={e=>{ setNewPw(e.target.value); setError(""); }}
+                  style={{ ...inputStyle, paddingRight:46 }}/>
+                <button onClick={()=>setShowNewPw(v=>!v)} style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:18, color:"#888", padding:0 }}>{showNewPw?"\u{1F648}":"\u{1F441}\uFE0F"}</button>
+              </div>
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:"#444", marginBottom:4 }}>Confirm Password</div>
+              <input type="password" placeholder="Re-enter your password" value={confirmPw}
+                onChange={e=>{ setConfirmPw(e.target.value); setError(""); }}
+                onKeyDown={e=>e.key==="Enter"&&handleSetNewPassword()}
+                style={inputStyle}/>
+            </div>
+            {error && <p style={{ color:"#d32f2f", fontSize:13, margin:"8px 0 0" }}>{error}</p>}
+            <button onClick={handleSetNewPassword} disabled={loading} style={btnPrimary}>
+              {loading ? "Updating\u2026" : "Set New Password"}
+            </button>
+          </div>
+        )}
+
       </div>
     </div>
   );
@@ -31990,6 +32176,19 @@ function AppWithAuth() {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [showPlanSelection, setShowPlanSelection] = useState(false);
   const [showContactImport, setShowContactImport] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+
+  // Listen for Supabase PASSWORD_RECOVERY event (user clicked reset link in email)
+  useEffect(() => {
+    if (!isSupabaseEnabled()) return;
+    const { data: listener } = onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setShowResetPassword(true);
+        setScreen("login");
+      }
+    });
+    return () => { listener?.subscription?.unsubscribe?.(); };
+  }, []);
 
   // On mount: check Stripe subscription for existing sessions (background, non-blocking)
   useEffect(() => {
@@ -32090,7 +32289,7 @@ function AppWithAuth() {
 
   if (authed) return <App onLogout={handleLogout}/>;
 
-  if (screen === "login") return <LoginScreen onLogin={handleLogin} onBack={()=>setScreen("landing")}/>;
+  if (screen === "login") return <LoginScreen onLogin={handleLogin} onBack={()=>setScreen("landing")} initialView={showResetPassword ? "newPassword" : "login"} onPasswordReset={() => setShowResetPassword(false)}/>;
   if (screen === "profileSetup") return <ProfileSetupScreen
     onSave={(profile, userEntry) => {
       // Set the current user first so sk() works correctly
