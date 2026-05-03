@@ -15416,12 +15416,12 @@ function PDFPreview({ certData, appliances, faults, finalChecks, signatureData, 
                 <div style={{ fontWeight:700, marginBottom:3, marginTop:6 }}>Report Received By:</div>
                 <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                   <span style={{ minWidth:32 }}>Name:</span>
-                  <span style={{ flex:1, borderBottom:"1px solid #999" }}>{certData.clientName||""}</span>
+                  <span style={{ flex:1, borderBottom:"1px solid #999" }}>The Tenant</span>
                   <span style={{ minWidth:32, marginLeft:8 }}>Signed:</span>
                   <span style={{ flex:1, borderBottom:"1px solid #999", minHeight:16 }}>
                     {signatureData?.customerSigImage ? (
                       <img src={signatureData.customerSigImage} alt="Customer Signature" style={{ maxHeight:18, maxWidth:80 }}/>
-                    ) : "\u00a0"}
+                    ) : <span style={{ fontStyle:"italic", color:"#555" }}>Not Present</span>}
                   </span>
                   <span style={{ minWidth:26, marginLeft:8 }}>Date:</span>
                   <span style={{ border:"1px solid #999", padding:"1px 4px", minWidth:72, fontSize:8 }}>{fmtShort(certDate)}</span>
