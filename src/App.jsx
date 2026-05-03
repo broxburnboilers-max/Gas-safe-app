@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { isSupabaseEnabled } from './supabaseClient';
 import { pushAll, pushProfile, pushContacts, pullAll, mergeRecords, flushSyncQueue, getSession, signIn as supabaseSignIn, signUp as supabaseSignUp, signOut as supabaseSignOut, resetPassword as supabaseResetPassword, updatePassword as supabaseUpdatePassword, lookupUsername as supabaseLookupUsername, onAuthStateChange } from './syncEngine';
+import { isGmailConfigured, clearGmailToken } from './gmailAuth';
+import { importCitizenGasFromGmail } from './citizenGasImport';
 
 // ─── Multi-user auth ──────────────────────────────────────────────────────────
 // Module-level current user — set once on login, never changes during a session
@@ -19843,18 +19845,24 @@ function BoilerServiceEmailScreen({ onBack, onHome, onImport, defaultEngData }) 
 }
 
 // ─── Email Import Screen ─────────────────────────────────────────────────────
-function EmailImportScreen({ onBack, onHome, onImportCerts, defaultEngineerData }) {
+function EmailImportScreen({ onBack, onHome, onImportCerts, defaultEngineerData, onAddFolder }) {
   const [status, setStatus] = useState("idle"); // idle | loading | parsed | error
   const [message, setMessage] = useState("");
   const [parsedCerts, setParsedCerts] = useState([]);
   const [emailText, setEmailText] = useState("");
+  const [autoBusy, setAutoBusy] = useState(false);
+  const [autoMsg, setAutoMsg] = useState("");
+  const [autoStatus, setAutoStatus] = useState("idle"); // idle | loading | done | error
 
   function parseManualText() {
     if (!emailText.trim()) return;
     setStatus("loading");
     setMessage("Parsing email text...");
     try {
-      const certs = parseEmailTemplate(emailText);
+      // Try the newer Citizen Gas-aware parser first; fall back to the legacy template parser
+      let certs = [];
+      try { certs = parseGSCEmailTemplate(emailText); } catch {}
+      if (!certs || certs.length === 0) certs = parseEmailTemplate(emailText);
       if (!certs || certs.length === 0) throw new Error("No PROPERTY blocks found. Make sure your email uses the template format.");
       setParsedCerts(certs);
       setStatus("parsed");
@@ -19862,6 +19870,96 @@ function EmailImportScreen({ onBack, onHome, onImportCerts, defaultEngineerData 
     } catch(e) {
       setStatus("error");
       setMessage("Error: " + e.message);
+    }
+  }
+
+  // Reuse the same record-shaping logic for both manual and auto imports
+  function shapeCertForImport(cert, idx, baseTime) {
+    const now = baseTime || new Date();
+    const certDate = (() => { if (cert.date) { const iso = normaliseDate(cert.date); const d = new Date(iso); return isNaN(d.getTime()) ? now : d; } return now; })();
+    const inspectionDate = (() => { const d = new Date(certDate); d.setFullYear(d.getFullYear()+1); return d; })();
+    return {
+      certData: {
+        certRef: cert.certRef || ("GSC-" + (now.getTime() + idx)),
+        clientName: cert.clientName || "",
+        clientAddr1: cert.clientAddr1 || "",
+        clientAddr2: cert.clientAddr2 || "",
+        clientAddr3: cert.clientAddr3 || "",
+        clientPostcode: cert.clientPostcode || "",
+        clientTel: cert.clientTel || "",
+        clientEmail: cert.clientEmail || "",
+        instName: cert.instName || cert.clientName || "",
+        instAddr1: cert.instAddr1 || cert.clientAddr1 || "",
+        instAddr2: cert.instAddr2 || cert.clientAddr2 || "",
+        instAddr3: cert.instAddr3 || cert.clientAddr3 || "",
+        instPostcode: cert.instPostcode || cert.clientPostcode || "",
+        instTel: cert.instTel || cert.clientTel || "",
+      },
+      appliances: cert.appliances || [],
+      faults: (cert.faults || []).filter(f => f.details || f.remedial || f.warningNotice),
+      finalChecks: {
+        noGasAtProperty: cert.noGasAtProperty || "NO",
+        gasTightness: cert.gasTightness || "YES",
+        pipeworkVisual: cert.pipeworkVisual || "YES",
+        emergencyControl: cert.emergencyControl || "YES",
+        bonding: cert.bonding || "YES",
+        installationPass: cert.installationPass || "YES",
+        coAlarm: cert.coAlarm || "YES",
+        smokeAlarm: cert.smokeAlarm || "YES",
+        inspectionDate,
+      },
+      signatureData: (()=>{ try { const sig=localStorage.getItem(sk("gsc_engineer_sig")); return sig ? {engineerSigImage: sig} : {}; } catch(e){return {};} })(),
+      engineerData: { ...defaultEngineerData, certDate, engineerName: cert.engineer || (defaultEngineerData && defaultEngineerData.engineerName) || "" },
+      // Carry through Citizen Gas extras + photos
+      photos: cert.photos || [],
+      cookerCapped: cert.cookerCapped || "",
+      tightnessTestResult: cert.tightnessTestResult || "",
+      tightnessTestReading: cert.tightnessTestReading || "",
+      gasWorksDoc: cert.gasWorksDoc || "",
+      gasIsolationDoc: cert.gasIsolationDoc || "",
+      materials: cert.materials || [],
+      importedFromCitizenGas: !!cert.importedFromCitizenGas,
+      sourceMessageId: cert.sourceMessageId || null,
+      gscFolder: cert.gscFolder || null,
+      savedAt: new Date(now.getTime() + idx * 1000).toISOString(),
+      certType: "gsc",
+      type: "gsc",
+    };
+  }
+
+  async function doAutoImportFromGmail() {
+    if (autoBusy) return;
+    if (!isGmailConfigured()) {
+      setAutoStatus("error");
+      setAutoMsg("Gmail import is not configured. Add VITE_GOOGLE_CLIENT_ID in Netlify env vars and redeploy.");
+      return;
+    }
+    setAutoBusy(true);
+    setAutoStatus("loading");
+    setAutoMsg("Connecting to Gmail…");
+    try {
+      const result = await importCitizenGasFromGmail(parseGSCEmailTemplate, (m)=>setAutoMsg(m));
+      if (!result.records.length) {
+        setAutoStatus("done");
+        setAutoMsg(result.skipped > 0
+          ? `No new emails to import (${result.skipped} already imported previously).`
+          : "No matching Citizen Gas emails found in the last 30 days.");
+        return;
+      }
+      // Create the date folder (if folder add handler is available)
+      if (result.folder && onAddFolder) onAddFolder(result.folder);
+      // Shape each cert for Records
+      const baseTime = new Date();
+      const shaped = result.records.map((c, i) => shapeCertForImport(c, i, baseTime));
+      onImportCerts(shaped);
+      const errCount = result.errors?.length || 0;
+      setAutoStatus("done");
+      setAutoMsg(`Imported ${shaped.length} certificate${shaped.length===1?"":"s"} into folder "${result.folder?.name || "Citizen Gas"}"${errCount?` (${errCount} error${errCount===1?"":"s"})`:""}.`);
+    } catch (e) {
+      setAutoStatus("error");
+      setAutoMsg("Auto-import failed: " + (e.message || String(e)));
+    } finally {
+      setAutoBusy(false);
     }
   }
 
@@ -19911,9 +20009,35 @@ function EmailImportScreen({ onBack, onHome, onImportCerts, defaultEngineerData 
       <Header title="Email Import" onBack={onBack}/>
       <div style={{ flex:1, margin:"12px 16px 20px", background:"#fff", borderRadius:20, padding:"20px 18px", overflowY:"auto" }}>
 
+        {/* ─── Auto-import from Citizen Gas (Gmail) ─────────────────────── */}
+        <div style={{ background:"#f0f7ff", borderLeft:`4px solid ${BLUE}`, borderRadius:12, padding:"14px 16px", marginBottom:16, fontSize:13, color:"#222", lineHeight:1.6 }}>
+          <div style={{ fontWeight:800, color:BLUE, marginBottom:6, fontSize:15 }}>📨 Auto-import from Citizen Gas</div>
+          <div style={{ marginBottom:10, color:"#444" }}>
+            Pulls every new Gas Safety Certificate sent from the Citizen Gas app, parses it, names the photos by property &amp; function, and files them into a date-stamped folder under Records.
+          </div>
+          <button onClick={doAutoImportFromGmail} disabled={autoBusy} style={{ width:"100%", background:autoBusy?"#999":BLUE, color:"#fff", border:"none", borderRadius:10, padding:"12px", fontSize:14, fontWeight:700, cursor:autoBusy?"wait":"pointer", marginBottom: autoMsg?10:0 }}>
+            {autoBusy ? "⏳ Importing\u2026" : "📥 Auto-import from Citizen Gas Gmail"}
+          </button>
+          {autoMsg && (
+            <div style={{ background: autoStatus==="error"?"#fff3f3":autoStatus==="done"?"#f0fff4":"#fff", border:`1px solid ${autoStatus==="error"?"#ffcdd2":autoStatus==="done"?"#c8e6c9":"#cfd8dc"}`, borderRadius:8, padding:"10px 12px", fontSize:12, color: autoStatus==="error"?"#c62828":autoStatus==="done"?"#2e7d32":"#37474f" }}>
+              {autoMsg}
+            </div>
+          )}
+          {!isGmailConfigured() && (
+            <div style={{ marginTop:10, fontSize:11, color:"#666", lineHeight:1.5 }}>
+              <strong>Setup:</strong> Add <code>VITE_GOOGLE_CLIENT_ID</code> in Netlify environment variables, then redeploy. Use a Web OAuth Client ID from Google Cloud Console with <code>https://www.gas-safety-app.com</code> as an authorised origin and the <code>gmail.readonly</code> scope.
+            </div>
+          )}
+          {isGmailConfigured() && (
+            <button onClick={()=>{ clearGmailToken(); setAutoMsg("Gmail authorisation cleared. The next import will ask for permission again."); setAutoStatus("idle"); }} style={{ marginTop:8, background:"none", border:"none", color:"#666", fontSize:11, textDecoration:"underline", cursor:"pointer", padding:0 }}>
+              Reset Gmail authorisation
+            </button>
+          )}
+        </div>
+
         {/* Instructions */}
         <div style={{ background:LIGHT_BG, borderRadius:12, padding:"14px 16px", marginBottom:16, fontSize:13, color:"#444", lineHeight:1.6 }}>
-          <strong style={{ color:BLUE }}>How to import:</strong><br/>
+          <strong style={{ color:BLUE }}>Manual import:</strong><br/>
           Open the job email on your phone, copy the full text, paste it below and tap <strong>Parse</strong>. One certificate will be created per property automatically.
         </div>
 
@@ -31181,7 +31305,7 @@ function App({ onLogout }) {
   if (screen === "psc") return <PSCScreen onHome={goHome} engineerData={profileDefaults()} onSave={(rec)=>{ setRecords(prev=>[...prev, rec]); }}/>;
   if (screen === "adminDashboard") return <AdminDashboardScreen onBack={()=>setScreen("home")} onHome={goHome} records={records} invoices={invoices} quotes={quotes}/>;
   if (screen === "contacts") return <ClientContactsScreen onBack={()=>setScreen("home")} onHome={goHome}/>;
-  if (screen === "emailImport") return <EmailImportScreen onBack={()=>setScreen("home")} onHome={goHome} defaultEngineerData={engineerData} onImportCerts={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
+  if (screen === "emailImport") return <EmailImportScreen onBack={()=>setScreen("home")} onHome={goHome} defaultEngineerData={engineerData} onImportCerts={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt || (n.sourceMessageId && e.sourceMessageId===n.sourceMessageId)))])} onAddFolder={(f)=>setGscFolders(prev=>prev.some(x=>x.id===f.id)?prev:[...prev,f])}/>;
   if (screen === "giEmail") return <GasIsolationEmailScreen onBack={()=>setScreen("home")} onHome={goHome} onImport={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
   if (screen === "gwEmail") return <GasWorksEmailScreen onBack={()=>setScreen("home")} onHome={goHome} onImport={(newRecs)=>setRecords(r=>[...r,...newRecs.filter(n=>!r.some(e=>e.savedAt===n.savedAt))])}/>;
 
