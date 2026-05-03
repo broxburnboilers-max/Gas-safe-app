@@ -19053,6 +19053,20 @@ function parseEmailTemplate(text) {
   }
 
   saveCert();
+
+  // Post-process: detect "no gas at property" mentions in faults and force safety checks to NO
+  const NO_GAS_RE = /no\s*gas\s*at\s*(the\s*)?property/i;
+  for (const r of certs) {
+    const faultMentionsNoGas = (r.faults || []).some(f => NO_GAS_RE.test(f.details || "") || NO_GAS_RE.test(f.remedial || ""));
+    if (faultMentionsNoGas) {
+      r.noGasAtProperty = "YES";
+      r.gasTightness = "No";
+      r.pipeworkVisual = "NO";
+      r.emergencyControl = "NO";
+      r.bonding = "NO";
+      r.installationPass = "NO";
+    }
+  }
   return certs;
 }
 
@@ -19307,6 +19321,7 @@ function GasSafetyCertEmailScreen({ onBack, onHome, onImport, defaultEngineerDat
       appliances: cert.appliances || [],
       faults: (cert.faults || []).filter(f => f.details || f.remedial || f.warningNotice),
       finalChecks: {
+        noGasAtProperty: cert.noGasAtProperty || "NO",
         gasTightness: cert.gasTightness || "YES",
         pipeworkVisual: cert.pipeworkVisual || "YES",
         emergencyControl: cert.emergencyControl || "YES",
@@ -19774,6 +19789,7 @@ function EmailImportScreen({ onBack, onHome, onImportCerts, defaultEngineerData 
       appliances: cert.appliances || [],
       faults: cert.faults || [],
       finalChecks: {
+        noGasAtProperty: cert.noGasAtProperty || "NO",
         gasTightness: cert.gasTightness || "YES",
         pipeworkVisual: cert.pipeworkVisual || "YES",
         emergencyControl: cert.emergencyControl || "YES",
