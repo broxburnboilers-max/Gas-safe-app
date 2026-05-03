@@ -14794,9 +14794,28 @@ function StepFinalChecks({ data, onChange, onNext, onBack, onHome, gscStep, gscT
     );
   }
 
+  // Toggle "No Gas at Property" — when YES, auto-set all safety checks to NO
+  const noGas = data.noGasAtProperty || "NO";
+  function setNoGas(v) {
+    if (v === "YES") {
+      onChange({
+        ...data,
+        noGasAtProperty: "YES",
+        gasTightness: "No",
+        pipeworkVisual: "NO",
+        emergencyControl: "NO",
+        bonding: "NO",
+        installationPass: "NO",
+      });
+    } else {
+      onChange({ ...data, noGasAtProperty: "NO" });
+    }
+  }
+
   return (
     <GasFormShell title="Final Checks" subtitle="Gas Safety Certificate" step={gscStep||4} totalSteps={gscTotalSteps||8} stepLabels={gscStepLabels} onBack={onBack} onPrev={onBack} onNext={onNext} onSetStep={onSetGscStep}>
       <div style={GAS_SECTION}>Safety Checks</div>
+      <GASToggle label="No Gas at Property" value={noGas} onChange={setNoGas} options={["YES","NO"]}/>
       <GASToggle label="Gas Tightness Pass" value={data.gasTightness||"N/A"} onChange={v=>onChange({...data,gasTightness:v})} options={["Yes","No","N/A"]}/>
       <ToggleBtn label="Gas Pipe Work Visual Pass" field="pipeworkVisual"/>
       <ToggleBtn label="Emergency Control Accessible" field="emergencyControl"/>
