@@ -19073,7 +19073,7 @@ function parseEmailTemplate(text) {
 // ─── Gas Safety Certificate Email Screen ─────────────────────────────────────
 
 function parseGSCEmailTemplate(text) {
-  const keywords = ["APPLIANCE", "FAULT", "Cert Ref", "Date", "Client Name", "Client Address 1", "Client Address 2", "Client Address 3", "Client Postcode", "Client Tel", "Client Email", "Install Name", "Install Address 1", "Install Address 2", "Install Address 3", "Install Postcode", "Install Tel", "Gas Tightness", "Pipework Visual", "Emergency Control", "Bonding", "Installation Pass", "CO Alarm", "Smoke Alarm", "Location", "Flue Type", "Flue Visual", "Flue Performance", "Type", "Make", "Model", "CO2", "CO", "Combustion Analyser", "Operating Pressure", "Heat Input", "Landlords Appliance", "Appliance Inspected", "Safety Devices", "Ventilation", "Fault Details", "Remedial Work Taken", "Warning Notice Fixed", "Appliance Safe", "Appliance Serviced", "END OF JOB"];
+  const keywords = ["APPLIANCE", "FAULT", "Cert Ref", "Date", "Visit", "Engineer", "Client Name", "Client Address 1", "Client Address 2", "Client Address 3", "Client Postcode", "Client Tel", "Client Email", "Install Name", "Install Address 1", "Install Address 2", "Install Address 3", "Install Postcode", "Install Tel", "Gas Tightness", "Pipework Visual", "Emergency Control", "Bonding", "Installation Pass", "CO Alarm", "Smoke Alarm", "Location", "Flue Type", "Flue Visual", "Flue Performance", "Type", "Make", "Model", "CO2", "CO", "Combustion Analyser", "Operating Pressure", "Heat Input", "Landlords Appliance", "Appliance Inspected", "Safety Devices", "Ventilation", "Fault Details", "Remedial Work Taken", "Warning Notice Fixed", "Appliance Safe", "Appliance Serviced", "Cooker Capped", "Tightness Test Result", "Tightness Test Reading", "Tightness Test Photo", "Gas Works Documentation", "Gas Isolation Documentation", "COOKER CAP & TIGHTNESS TEST", "COOKER INSTALL & TIGHTNESS TEST", "ON-SITE DOCUMENTATION", "MATERIALS USED", "END OF JOB"];
   let processed = text;
   processed = processed.replace(/([^\n])(PROPERTY\s*\d)/gi, "$1\n$2");
   for (const kw of keywords) {
@@ -19089,6 +19089,15 @@ function parseGSCEmailTemplate(text) {
   const records = [];
   let current = null;
   let currentAppliance = null;
+  let inMaterialsSection = false;
+  // Engineer name typically appears at top of email before any PROPERTY block
+  let engineerName = "";
+  {
+    const m = text.match(/^\s*Engineer\s*:\s*(.+?)\s*$/im);
+    if (m) engineerName = m[1].trim();
+  }
+  // Helper: detect "please attach" photo placeholders
+  const PHOTO_RE = /photo\s*saved|please\s*attach|saved\s*to\s*gallery/i;
 
   function field(line, label) {
     const prefix = label + ":";
@@ -19120,7 +19129,7 @@ function parseGSCEmailTemplate(text) {
 
     if (stripped.length > 0 && /^PROPERTY\s*\d/i.test(stripped)) {
       saveCurrent();
-      current = { certRef:"", date:"", clientName:"", clientAddr1:"", clientAddr2:"", clientAddr3:"", clientPostcode:"", clientTel:"", clientEmail:"", instName:"", instAddr1:"", instAddr2:"", instAddr3:"", instPostcode:"", instTel:"", gasTightness:"YES", pipeworkVisual:"YES", emergencyControl:"YES", bonding:"YES", installationPass:"YES", coAlarm:"YES", smokeAlarm:"YES", appliances:[], faults:[] };
+      current = { certRef:"", date:"", visit:"", engineer: engineerName || "", clientName:"", clientAddr1:"", clientAddr2:"", clientAddr3:"", clientPostcode:"", clientTel:"", clientEmail:"", instName:"", instAddr1:"", instAddr2:"", instAddr3:"", instPostcode:"", instTel:"", gasTightness:"YES", pipeworkVisual:"YES", emergencyControl:"YES", bonding:"YES", installationPass:"YES", coAlarm:"YES", smokeAlarm:"YES", cookerCapped:"", tightnessTestResult:"", tightnessTestReading:"", tightnessTestPhoto:false, cookerCappedPhoto:false, gasWorksDoc:"", gasWorksDocPhoto:false, gasIsolationDoc:"", gasIsolationDocPhoto:false, materials:[], appliances:[], faults:[] };
       continue;
     }
     if (/^APPLIANCE\s*\d/i.test(stripped)) {
@@ -19189,6 +19198,42 @@ function parseGSCEmailTemplate(text) {
     if (v("Installation Pass") !== null)  { current.installationPass = v("Installation Pass"); continue; }
     if (v("CO Alarm") !== null)           { current.coAlarm = v("CO Alarm"); continue; }
     if (v("Smoke Alarm") !== null)        { current.smokeAlarm = v("Smoke Alarm"); continue; }
+
+    // Citizen Gas extra fields
+    if (v("Visit") !== null)              { current.visit = v("Visit"); continue; }
+    if (v("Cooker Capped") !== null) {
+      const raw = v("Cooker Capped");
+      current.cookerCapped = raw.replace(/\s*\(.*$/, "").trim();
+      if (PHOTO_RE.test(raw)) current.cookerCappedPhoto = true;
+      continue;
+    }
+    if (v("Tightness Test Result") !== null)  { current.tightnessTestResult = v("Tightness Test Result"); continue; }
+    if (v("Tightness Test Reading") !== null) { current.tightnessTestReading = v("Tightness Test Reading"); continue; }
+    if (v("Tightness Test Photo") !== null) {
+      if (PHOTO_RE.test(v("Tightness Test Photo"))) current.tightnessTestPhoto = true;
+      continue;
+    }
+    if (v("Gas Works Documentation") !== null) {
+      const raw = v("Gas Works Documentation");
+      current.gasWorksDoc = raw.replace(/\s*\(.*$/, "").trim();
+      if (PHOTO_RE.test(raw)) current.gasWorksDocPhoto = true;
+      continue;
+    }
+    if (v("Gas Isolation Documentation") !== null) {
+      const raw = v("Gas Isolation Documentation");
+      current.gasIsolationDoc = raw.replace(/\s*\(.*$/, "").trim();
+      if (PHOTO_RE.test(raw)) current.gasIsolationDocPhoto = true;
+      continue;
+    }
+    // Section markers
+    if (/^MATERIALS\s+USED/i.test(stripped)) { inMaterialsSection = true; continue; }
+    if (/^(COOKER|ON-SITE|FAULTS|APPLIANCE|PROPERTY)/i.test(stripped)) { inMaterialsSection = false; }
+    // Inside MATERIALS USED section, capture each non-divider, non-empty line
+    if (inMaterialsSection && stripped && !/^[-=\s]+$/.test(stripped) && !/^None\.?$/i.test(stripped)) {
+      if (!current.materials) current.materials = [];
+      current.materials.push(stripped);
+      continue;
+    }
   }
   saveCurrent();
 
