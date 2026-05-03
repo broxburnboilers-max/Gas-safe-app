@@ -19191,6 +19191,59 @@ function parseGSCEmailTemplate(text) {
     if (v("Smoke Alarm") !== null)        { current.smokeAlarm = v("Smoke Alarm"); continue; }
   }
   saveCurrent();
+
+  // Post-process: clean up blank appliances/faults and auto-fill Citizen Gas defaults.
+  // Citizen Gas app emails contain only Install Address + minimal appliance fields
+  // and may emit empty APPLIANCE/FAULT blocks. Strip them and apply Citizen Housing
+  // Group as the client (matching Citizen Gas's own import behaviour).
+  for (const r of records) {
+    if (Array.isArray(r.appliances)) {
+      r.appliances = r.appliances.filter(a =>
+        (a.location && a.location.trim()) ||
+        (a.type && a.type.trim()) ||
+        (a.make && a.make.trim()) ||
+        (a.model && a.model.trim()) ||
+        (a.heatInput && a.heatInput.trim())
+      );
+    }
+    if (Array.isArray(r.faults)) {
+      r.faults = r.faults.filter(f =>
+        (f.details && f.details.trim()) ||
+        (f.remedial && f.remedial.trim()) ||
+        (f.warningNotice && f.warningNotice.trim() && f.warningNotice.trim().toUpperCase() !== "NO")
+      );
+    }
+    const hasInstall = (r.instAddr1 && r.instAddr1.trim()) || (r.instPostcode && r.instPostcode.trim());
+    const hasClient = (r.clientName && r.clientName.trim()) || (r.clientAddr1 && r.clientAddr1.trim());
+    if (hasInstall && !hasClient) {
+      r.clientName = "Citizen Housing Group Ltd";
+      r.clientAddr1 = "Lakeside";
+      r.clientAddr2 = "4040 Solihull Pkwy";
+      r.clientAddr3 = "Birmingham";
+      r.clientPostcode = "B37 7YN";
+      r.clientTel = "0300 790 6555";
+      r.clientEmail = "admin@dsplumbingsolutions.co.uk";
+      if (!r.instName || !r.instName.trim()) r.instName = "The Tenant";
+    }
+  }
+
+  // Post-process: detect "no gas at property" in faults and force safety checks to NO
+  const NO_GAS_RE_GSC = /no\s*gas\s*at\s*(the\s*)?property/i;
+  for (const r of records) {
+    const flagYes = String(r.noGasAtProperty || "").trim().toUpperCase() === "YES";
+    const faultMentionsNoGas = (r.faults || []).some(f =>
+      NO_GAS_RE_GSC.test(f.details || "") || NO_GAS_RE_GSC.test(f.remedial || "")
+    );
+    if (flagYes || faultMentionsNoGas) {
+      r.noGasAtProperty = "YES";
+      r.gasTightness = "No";
+      r.pipeworkVisual = "NO";
+      r.emergencyControl = "NO";
+      r.bonding = "NO";
+      r.installationPass = "NO";
+    }
+  }
+
   return records;
 }
 
